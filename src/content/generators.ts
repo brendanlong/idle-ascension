@@ -202,8 +202,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     icon: '🌍',
     description: 'A world inside your body, with its own sun, rivers and spirit veins.',
     minRealm: 'daoSeeking',
-    baseCost: 5e21,
-    baseQps: 4.3e8,
+    baseCost: 2e22,
+    baseQps: 1.7e9,
     upgradeNames: [
       'World Seed',
       'Heaven and Earth Separate',
@@ -234,8 +234,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     icon: '🛕',
     description: 'Mortals in countless worlds burn incense to you. Their faith becomes qi.',
     minRealm: 'immortalAscension',
-    baseCost: 3e26,
-    baseQps: 2.1e10,
+    baseCost: 5e27,
+    baseQps: 1.2e11,
     upgradeNames: [
       'Wayside Shrines',
       'Golden Statues',
@@ -250,8 +250,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     icon: '🏛️',
     description: 'A throne among the immortals, and a share of heaven itself.',
     minRealm: 'immortalAscension',
-    baseCost: 5e27,
-    baseQps: 1.5e11,
+    baseCost: 3e29,
+    baseQps: 3e12,
     upgradeNames: [
       'Jade Tablet of Office',
       'Celestial Bureaucracy',
@@ -266,8 +266,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     icon: '🌑',
     description: 'A fragment of the nothing that came before heaven and earth.',
     minRealm: 'immortalAscension',
-    baseCost: 8e28,
-    baseQps: 1.1e12,
+    baseCost: 2e31,
+    baseQps: 8e13,
     upgradeNames: [
       'Touching the Void',
       'Chaos Qi',

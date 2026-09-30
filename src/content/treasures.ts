@@ -57,8 +57,8 @@ export const TREASURES: readonly TreasureDef[] = [
     rarity: 'common',
     minRealm: 'qiCondensation',
     effects: [
-      { type: 'mult', stat: 'moteSpawnMult', value: 1.5 },
-      { type: 'mult', stat: 'moteValueMult', value: 2 },
+      { type: 'mult', stat: 'moteSpawnMult', value: 1.25 },
+      { type: 'mult', stat: 'moteValueMult', value: 1.5 },
     ],
   },
   {
@@ -172,8 +172,8 @@ export const TREASURES: readonly TreasureDef[] = [
     rarity: 'common',
     minRealm: 'daoSeeking',
     effects: [
-      { type: 'mult', stat: 'moteSpawnMult', value: 1.5 },
-      { type: 'mult', stat: 'moteValueMult', value: 4 },
+      { type: 'mult', stat: 'moteSpawnMult', value: 1.25 },
+      { type: 'mult', stat: 'moteValueMult', value: 1.5 },
     ],
   },
   {

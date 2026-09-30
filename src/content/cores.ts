@@ -58,8 +58,8 @@ export const ELEMENTS: readonly ElementDef[] = [
     color: '#4f8fd6',
     description: 'Flow. Qi motes appear more often and are worth more.',
     effects: (g) => [
-      { type: 'mult', stat: 'moteSpawnMult', value: 1.5 + 0.1 * g },
-      { type: 'mult', stat: 'moteValueMult', value: 2 + g },
+      { type: 'mult', stat: 'moteSpawnMult', value: 1.25 + 0.05 * g },
+      { type: 'mult', stat: 'moteValueMult', value: 1.5 + 0.25 * g },
     ],
   },
 ];

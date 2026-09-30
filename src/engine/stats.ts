@@ -34,6 +34,11 @@ export interface Stats {
 
 const BASE_MOTE_SPAWN_PER_SECOND = 1;
 const MOTE_CLICK_FRACTION = 0.3;
+/**
+ * A mote is also worth at least this many seconds of qi/s (before mote
+ * multipliers), so motes stay relevant once production outgrows clicking.
+ */
+const MOTE_QPS_SECONDS = 0.05;
 
 export function realmMultiplier(stage: number): number {
   let mult = 1;
@@ -120,7 +125,9 @@ export function computeStats(state: GameState, includeBuffs = true): Stats {
     clickPower,
     autoClickQps,
     qps: generatorQps + autoClickQps,
-    moteValue: clickPower * MOTE_CLICK_FRACTION * mods.moteValueMult,
+    moteValue:
+      Math.max(clickPower * MOTE_CLICK_FRACTION, (generatorQps + autoClickQps) * MOTE_QPS_SECONDS) *
+      mods.moteValueMult,
     moteSpawnPerSecond: BASE_MOTE_SPAWN_PER_SECOND * mods.moteSpawnMult,
   };
 }

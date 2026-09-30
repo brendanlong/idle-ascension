@@ -98,7 +98,7 @@ const senseUpgrades: UpgradeDef[] = [
     unlock: { type: 'realm', realm: 'qiCondensation' },
     effects: [
       { type: 'mult', stat: 'moteSpawnMult', value: 1.5 },
-      { type: 'mult', stat: 'moteValueMult', value: 2 },
+      { type: 'mult', stat: 'moteValueMult', value: 1.5 },
     ],
   },
   {
@@ -107,10 +107,7 @@ const senseUpgrades: UpgradeDef[] = [
     description: 'Qi spirals toward you like water into a drain.',
     cost: 400_000,
     unlock: { type: 'realm', realm: 'foundation' },
-    effects: [
-      { type: 'mult', stat: 'moteSpawnMult', value: 1.5 },
-      { type: 'mult', stat: 'moteValueMult', value: 3 },
-    ],
+    effects: [{ type: 'mult', stat: 'moteSpawnMult', value: 1.5 }],
   },
   {
     id: 'sense-3',
@@ -118,7 +115,7 @@ const senseUpgrades: UpgradeDef[] = [
     description: 'Your awareness blankets the mountain. No mote escapes you.',
     cost: 2e11,
     unlock: { type: 'realm', realm: 'nascentSoul' },
-    effects: [{ type: 'mult', stat: 'moteValueMult', value: 5 }],
+    effects: [{ type: 'mult', stat: 'moteValueMult', value: 2 }],
   },
   {
     id: 'sense-4',
@@ -127,8 +124,8 @@ const senseUpgrades: UpgradeDef[] = [
     cost: 5e24,
     unlock: { type: 'realm', realm: 'daoSeeking' },
     effects: [
-      { type: 'mult', stat: 'moteValueMult', value: 10 },
       { type: 'mult', stat: 'moteSpawnMult', value: 1.5 },
+      { type: 'mult', stat: 'moteValueMult', value: 1.5 },
     ],
   },
 ];
