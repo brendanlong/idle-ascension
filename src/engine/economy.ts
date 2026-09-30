@@ -105,13 +105,35 @@ export function availableUpgrades(state: GameState): UpgradeDef[] {
   );
 }
 
-export function buyUpgrade(state: GameState, id: string): boolean {
+function purchaseUpgrade(state: GameState, id: string): UpgradeDef | null {
   const u = UPGRADES_BY_ID.get(id);
-  if (!u || state.upgrades[id] || !meetsCondition(state, u.unlock)) return false;
-  if (!spendQi(state, u.cost)) return false;
+  if (!u || state.upgrades[id] || !meetsCondition(state, u.unlock)) return null;
+  if (!spendQi(state, u.cost)) return null;
   state.upgrades[id] = true;
-  log(`You master the ${u.name}.`, 'good');
-  return true;
+  return u;
+}
+
+export function buyUpgrade(state: GameState, id: string): boolean {
+  const u = purchaseUpgrade(state, id);
+  if (u) log(`You master the ${u.name}.`, 'good');
+  return u !== null;
+}
+
+/** The techniques "Buy all" would get: going down the list, each one you can still afford. */
+export function affordableUpgrades(state: GameState): UpgradeDef[] {
+  let qi = state.qi;
+  return availableUpgrades(state).filter((u) => {
+    if (u.cost > qi) return false;
+    qi -= u.cost;
+    return true;
+  });
+}
+
+export function buyAllUpgrades(state: GameState): number {
+  const bought = affordableUpgrades(state).filter((u) => purchaseUpgrade(state, u.id));
+  if (bought.length === 1) log(`You master the ${bought[0].name}.`, 'good');
+  else if (bought.length > 1) log(`You master ${bought.length} techniques.`, 'good');
+  return bought.length;
 }
 
 // --- Buffs & treasures ---

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { GENERATORS } from '../../content/generators';
 import { firstStageOfRealm } from '../../content/realms';
 import {
+  affordableUpgrades,
+  buyAllUpgrades,
   buyGenerator,
   buyUpgrade,
   click,
@@ -69,6 +71,17 @@ describe('clicking and upgrades', () => {
     expect(click(state, computeStats(state))).toBe(1);
     expect(state.qi).toBe(1);
     expect(state.stats.loopClicks).toBe(1);
+  });
+
+  it('buys all affordable techniques, cheapest first', () => {
+    const state = newGame({ stage: firstStageOfRealm('qiCondensation'), qi: 8_500 });
+    state.stats.loopClicks = 150;
+    // Available: Iron Palm 100, Spiritual Sense 300, Cloud-Parting Palm 5,000, Sunflower Manual 7,777.
+    expect(affordableUpgrades(state).map((u) => u.id)).toEqual(['palm-1', 'sense-1', 'palm-2']);
+    expect(buyAllUpgrades(state)).toBe(3);
+    expect(state.qi).toBe(8_500 - 100 - 300 - 5_000);
+    expect(state.upgrades.sunflower).toBeUndefined();
+    expect(buyAllUpgrades(state)).toBe(0);
   });
 
   it('only sells unlocked upgrades', () => {

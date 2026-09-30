@@ -532,6 +532,10 @@ header.top h1 {
 .card.treasure.unknown {
   opacity: 0.5;
 }
+.buy-all {
+  width: 100%;
+  margin-bottom: 0.6rem;
+}
 .mastered {
   margin-top: 1rem;
   font-size: 0.85rem;
