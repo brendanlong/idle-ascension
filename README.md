@@ -31,6 +31,15 @@ npm run sim -- 1 72 45   # headless balance sim: clicks/sec, max hours, minutes 
 npm run format
 ```
 
+### Deployment
+
+The game is a static site: saves live in the browser's `localStorage`. Every push to `main` runs
+`.github/workflows/deploy.yml`, which tests, builds and publishes `dist/` to GitHub Pages
+(Settings → Pages → Source: GitHub Actions).
+
+Because saves are tied to the site's origin, changing the domain later starts players over (they can
+carry progress across with Settings → Export/Import).
+
 ### Layout
 
 ```
