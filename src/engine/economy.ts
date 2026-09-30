@@ -1,12 +1,19 @@
 import { BUFFS_BY_ID } from '../content/buffs';
 import { GENERATORS, GENERATORS_BY_ID, GENERATOR_COST_GROWTH } from '../content/generators';
-import { TREASURES, TREASURES_BY_ID } from '../content/treasures';
+import {
+  MAX_TREASURE_LEVEL,
+  OWNED_TREASURE_WEIGHT_FACTOR,
+  RARITIES,
+  TREASURES,
+  TREASURES_BY_ID,
+  type TreasureDef,
+} from '../content/treasures';
 import { UPGRADES, UPGRADES_BY_ID, type UpgradeDef } from '../content/upgrades';
 import { firstStageOfRealm } from '../content/realms';
 import { meetsCondition } from './conditions';
 import type { Modifiers } from './effects';
 import { log } from './events';
-import { pick, type Rng } from './rng';
+import { weightedPick, type Rng } from './rng';
 import type { GameState } from './state';
 import type { Stats } from './stats';
 
@@ -99,18 +106,36 @@ export function addBuff(state: GameState, id: string): void {
   else state.buffs.push({ id, remaining: def.duration });
 }
 
-export function findableTreasures(state: GameState): string[] {
+/** Treasures an encounter could give now: unfound ones, or owned ones below max level. */
+export function findableTreasures(state: GameState): TreasureDef[] {
   return TREASURES.filter(
-    (t) => !state.treasures[t.id] && state.stage >= firstStageOfRealm(t.minRealm),
-  ).map((t) => t.id);
+    (t) =>
+      (state.treasures[t.id] ?? 0) < MAX_TREASURE_LEVEL &&
+      state.stage >= firstStageOfRealm(t.minRealm),
+  );
+}
+
+export function treasureWeight(state: GameState, t: TreasureDef): number {
+  const owned = (state.treasures[t.id] ?? 0) > 0;
+  return RARITIES[t.rarity].weight * (owned ? OWNED_TREASURE_WEIGHT_FACTOR : 1);
 }
 
 export function pickRandomTreasure(state: GameState, rng: Rng): string | null {
-  const options = findableTreasures(state);
-  return options.length === 0 ? null : pick(rng, options);
+  const options = findableTreasures(state).map((t) => ({
+    id: t.id,
+    weight: treasureWeight(state, t),
+  }));
+  return options.length === 0 ? null : weightedPick(rng, options).id;
 }
 
+/** Grants a treasure, or refines it one level if already owned. */
 export function grantTreasure(state: GameState, id: string): void {
-  state.treasures[id] = true;
-  log(`Obtained treasure: ${TREASURES_BY_ID.get(id)!.name}!`, 'epic');
+  const def = TREASURES_BY_ID.get(id)!;
+  const level = Math.min(MAX_TREASURE_LEVEL, (state.treasures[id] ?? 0) + 1);
+  state.treasures[id] = level;
+  if (level === 1) {
+    log(`Obtained ${RARITIES[def.rarity].name.toLowerCase()} treasure: ${def.name}!`, 'epic');
+  } else {
+    log(`Your ${def.name} absorbs it and grows stronger. (Level ${level})`, 'epic');
+  }
 }

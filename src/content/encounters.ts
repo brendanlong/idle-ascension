@@ -2,7 +2,9 @@
  * Fortuitous encounters. Claiming one picks a reward kind from the encounter's
  * weighted table, then builds its log text from a random intro plus a random
  * outcome line for that reward. Text can use {placeholders} from NAME_TABLES
- * (see names.ts), and treasure lines can use {treasure}.
+ * (see names.ts). Treasure lines use {treasure}, which includes its article:
+ * "the Ring of the Old Master" for a first find, "another Ring of the Old
+ * Master" when refining one you own. Don't write "the {treasure}".
  *
  * Across all encounters, one-time qi windfalls should be the most common
  * reward, then timed buffs, then permanent treasures (content.test.ts checks
@@ -91,9 +93,9 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
       treasure: {
         weight: 30,
         texts: [
-          'On a stone altar rests the {treasure}. It seems to have been waiting for you.',
-          'A skeleton clutches its last will: "To whoever finds this: take the {treasure}."',
-          'Deeper in, behind a collapsed wall, you find the {treasure}.',
+          'On a stone altar rests {treasure}. It seems to have been waiting for you.',
+          'A skeleton clutches its last will: "To whoever finds this: take {treasure}."',
+          'Deeper in, behind a collapsed wall, you find {treasure}.',
         ],
       },
     },
@@ -137,8 +139,8 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
       treasure: {
         weight: 8,
         texts: [
-          'In his haste to flee he drops the {treasure}. Finders keepers.',
-          'His {relative} arrives, sees what happened, and hands you the {treasure} as an apology.',
+          'In his haste to flee he drops {treasure}. Finders keepers.',
+          'His {relative} arrives, sees what happened, and hands you {treasure} as an apology.',
         ],
       },
     },
@@ -180,7 +182,7 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
       },
       treasure: {
         weight: 5,
-        texts: ['Digging up the herb, you find the {treasure} beneath its roots.'],
+        texts: ['Digging up the herb, you find {treasure} beneath its roots.'],
       },
     },
   },
@@ -222,7 +224,7 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
       },
       treasure: {
         weight: 5,
-        texts: ['When you come out of your trance, the {treasure} is lying in your lap. Odd.'],
+        texts: ['When you come out of your trance, you find {treasure} lying in your lap. Odd.'],
       },
     },
   },
@@ -267,9 +269,9 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
       treasure: {
         weight: 45,
         texts: [
-          'He presses the {treasure} on you. "Worthless junk," he says, winking.',
-          'When you look back, he is gone. The {treasure} sits where he was.',
-          '"Took you long enough," he grumbles, and hands you the {treasure}.',
+          'He presses {treasure} on you. "Worthless junk," he says, winking.',
+          'When you look back, he is gone. Where he sat lies {treasure}.',
+          '"Took you long enough," he grumbles, and hands you {treasure}.',
         ],
       },
     },
@@ -311,7 +313,7 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
       },
       treasure: {
         weight: 10,
-        texts: ['First prize: the {treasure}. The runner-up weeps openly.'],
+        texts: ['First prize: {treasure}. The runner-up weeps openly.'],
       },
     },
   },
@@ -348,8 +350,8 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
       treasure: {
         weight: 50,
         texts: [
-          'Everyone ignores a dusty lot. You bid one spirit stone. It turns out to be the {treasure}.',
-          'You recognize the {treasure} from a past life. The auctioneer does not.',
+          'Everyone ignores a dusty lot. You bid one spirit stone. It turns out to be {treasure}.',
+          'In a past life, you saw {treasure} sell for a fortune. The auctioneer has no idea.',
         ],
       },
     },
@@ -392,7 +394,7 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
       },
       treasure: {
         weight: 5,
-        texts: ['Where the omen fades, the {treasure} rises from the earth.'],
+        texts: ['Where the omen fades, {treasure} rises from the earth.'],
       },
     },
   },

@@ -31,7 +31,7 @@ describe('regression', () => {
   it('resets progress but keeps memories, perks, and lifetime stats', () => {
     const state = newGame({ stage: CORE_FORMATION, qi: 1e9, qiEarnedTotal: 1e12 });
     state.generators.herb = 50;
-    state.treasures.ring = true;
+    state.treasures.ring = 3;
     state.prestige.perks.meridians = 1;
     state.prestige.memories = 5;
     state.stats.totalClicks = 99;
@@ -51,10 +51,10 @@ describe('regression', () => {
 
   it('applies soul-bound treasures, buried stash, and Dao heart perks', () => {
     const state = newGame({ stage: CORE_FORMATION });
-    state.treasures.ring = true;
+    state.treasures.ring = 3;
     state.prestige.perks = { soulbound: 1, stash: 1, daoHeart: 1 };
     const next = regress(state, 0)!;
-    expect(next.treasures.ring).toBe(true);
+    expect(next.treasures.ring).toBe(3);
     expect(next.generators.cushion).toBe(10);
     expect(next.stage).toBe(3);
   });

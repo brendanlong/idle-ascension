@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CORE_GRADES } from '../../content/cores';
+import { MAX_TREASURE_LEVEL } from '../../content/treasures';
 import { STAGES } from '../../content/realms';
 import { deserialize, exportSave, importSave, serialize } from '../save';
 import { SAVE_VERSION } from '../state';
@@ -40,7 +41,7 @@ describe('save/load', () => {
     Object.assign(raw, {
       stage: 999,
       upgrades: { 'palm-1': true, removed: true },
-      treasures: { ring: true, gone: true },
+      treasures: { ring: 99, pill: 0, gone: 2 },
       cores: [
         { element: 'fire', grade: 99 },
         { element: 'fire', grade: 1 },
@@ -58,13 +59,20 @@ describe('save/load', () => {
     const loaded = deserialize(JSON.stringify(raw));
     expect(loaded.stage).toBe(STAGES.length - 1);
     expect(loaded.upgrades).toEqual({ 'palm-1': true });
-    expect(loaded.treasures).toEqual({ ring: true });
+    expect(loaded.treasures).toEqual({ ring: MAX_TREASURE_LEVEL });
     expect(loaded.cores).toEqual([{ element: 'fire', grade: CORE_GRADES.length - 1 }]);
     expect(loaded.buffs.map((b) => b.id)).toEqual(['epiphany']);
     expect(loaded.tribulation).toBeNull();
     expect(loaded.generators).not.toHaveProperty('removedGenerator');
     expect(loaded.prestige.perks).toEqual({ meridians: 5 });
     expect(loaded.encounter.active).toBeNull();
+  });
+
+  it('migrates v1 owned-treasure flags to levels', () => {
+    const raw = JSON.parse(serialize(newGame()));
+    raw.saveVersion = 1;
+    raw.treasures = { ring: true, pendant: true };
+    expect(deserialize(JSON.stringify(raw)).treasures).toEqual({ ring: 1, pendant: 1 });
   });
 
   it('rejects saves from the future', () => {

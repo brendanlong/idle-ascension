@@ -1,7 +1,7 @@
 import type { ElementId } from '../content/cores';
 import { GENERATORS } from '../content/generators';
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export interface CoreState {
   element: ElementId;
@@ -52,7 +52,8 @@ export interface GameState {
   generators: Record<string, number>;
   upgrades: Record<string, true>;
   cores: CoreState[];
-  treasures: Record<string, true>;
+  /** Treasure id → level (1 when first found). */
+  treasures: Record<string, number>;
   buffs: ActiveBuff[];
   encounter: { nextIn: number; active: ActiveEncounter | null };
   tribulation: TribulationState | null;

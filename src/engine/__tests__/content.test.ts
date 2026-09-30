@@ -82,6 +82,8 @@ describe('content integrity', () => {
       check(e.rewards.windfall?.texts ?? []);
       for (const o of e.rewards.buff?.options ?? []) check(o.texts);
       check(e.rewards.treasure?.texts ?? [], ['treasure']);
+      // {treasure} supplies its own article ("the X" or "another X").
+      for (const t of e.rewards.treasure?.texts ?? []) expect(t).not.toMatch(/\bthe \{treasure\}/i);
     }
   });
 

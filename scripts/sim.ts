@@ -1,11 +1,13 @@
 /**
  * Headless balance simulation: a greedy bot plays the game and reports how
- * long each milestone takes. Run with `npm run sim -- [clicksPerSecond] [hours] [stallMinutes]`.
+ * long each milestone takes. Run with `npm run sim -- [clicksPerSecond] [hours] [stallMinutes]`,
+ * optionally with SIM_SEED=<n> to try a different random seed.
  */
 import { ELEMENTS, type ElementId } from '../src/content/cores';
 import { GENERATORS } from '../src/content/generators';
 import { PERKS } from '../src/content/perks';
 import { REALMS, STAGES, stageName } from '../src/content/realms';
+import { MAX_TREASURE_LEVEL, TREASURES } from '../src/content/treasures';
 import { attemptBreakthrough, autoDisperse, nextStage } from '../src/engine/breakthrough';
 import {
   canFormCore,
@@ -43,7 +45,7 @@ const MOTE_CATCH_RATE = 0.4;
 const STALL_SECONDS = Number(process.argv[4] ?? 45) * 60;
 const CORE_ORDER: ElementId[] = ['wood', 'fire', 'water', 'earth', 'metal'];
 
-let seed = 12345;
+let seed = Number(process.env.SIM_SEED ?? 12345);
 const rng = () => {
   seed = (seed * 1664525 + 1013904223) % 2 ** 32;
   return seed / 2 ** 32;
@@ -152,5 +154,9 @@ while (time < maxHours * 3600) {
 
 console.log(
   `\nFinal: ${stageName(state.stage)} after ${formatDuration(time)}, ${state.prestige.loops} regressions`,
+);
+const treasureLevels = Object.values(state.treasures);
+console.log(
+  `Treasures: ${treasureLevels.length}/${TREASURES.length} found, levels ${treasureLevels.reduce((a, b) => a + b, 0)}/${TREASURES.length * MAX_TREASURE_LEVEL}`,
 );
 console.log(`Realms: ${REALMS.length}, stages: ${STAGES.length}, elements: ${ELEMENTS.length}`);

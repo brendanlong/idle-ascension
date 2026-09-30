@@ -3,9 +3,9 @@ import { CORE_GRADES, ELEMENTS, ELEMENTS_BY_ID, GENERATING_CYCLE_BONUS } from '.
 import { GENERATORS } from '../content/generators';
 import { PERKS } from '../content/perks';
 import { REALMS, STAGES, firstStageOfRealm } from '../content/realms';
-import { TREASURES_BY_ID } from '../content/treasures';
+import { TREASURES_BY_ID, type TreasureDef } from '../content/treasures';
 import { UPGRADES_BY_ID } from '../content/upgrades';
-import { applyEffects, baseModifiers, type Modifiers } from './effects';
+import { applyEffects, baseModifiers, scaleEffect, type Effect, type Modifiers } from './effects';
 import type { GameState } from './state';
 
 export interface Stats {
@@ -44,15 +44,19 @@ export function generatingPairs(elements: ReadonlySet<string>): number {
   ).length;
 }
 
+export function treasureEffects(treasure: TreasureDef, level: number): Effect[] {
+  return [...(treasure.fixedEffects ?? []), ...treasure.effects.map((e) => scaleEffect(e, level))];
+}
+
 export function computeModifiers(state: GameState, includeBuffs = true): Modifiers {
   const mods = baseModifiers();
   for (const id of Object.keys(state.upgrades)) {
     const u = UPGRADES_BY_ID.get(id);
     if (u) applyEffects(mods, u.effects);
   }
-  for (const id of Object.keys(state.treasures)) {
+  for (const [id, level] of Object.entries(state.treasures)) {
     const t = TREASURES_BY_ID.get(id);
-    if (t) applyEffects(mods, t.effects);
+    if (t) applyEffects(mods, treasureEffects(t, level));
   }
   for (const perk of PERKS) applyEffects(mods, perk.effects, state.prestige.perks[perk.id] ?? 0);
   for (const core of state.cores) {

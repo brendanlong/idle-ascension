@@ -104,7 +104,8 @@ export function claimEncounter(state: GameState, stats: Stats, rng: Rng): boolea
       break;
     }
     case 'treasure': {
-      vars.treasure = TREASURES_BY_ID.get(treasureId!)!.name;
+      const name = TREASURES_BY_ID.get(treasureId!)!.name;
+      vars.treasure = state.treasures[treasureId!] ? `another ${name}` : `the ${name}`;
       story(pick(rng, def.rewards.treasure!.texts));
       grantTreasure(state, treasureId!);
       break;
