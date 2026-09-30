@@ -121,7 +121,8 @@ export class FlowingCurrent implements TrialGame {
   static readonly RADIUS = 34;
   /** Catching this fraction of the orbs counts as a perfect score. */
   static readonly PERFECT_FRACTION = 0.8;
-  readonly duration = 14;
+  /** Spawning time plus how long the last orb takes to cross the field. */
+  readonly duration: number;
   elapsed = 0;
   orbs: (Point & { phase: number })[] = [];
   spawned = 0;
@@ -135,6 +136,7 @@ export class FlowingCurrent implements TrialGame {
   constructor(width: number, height: number, rng: Rng) {
     this.width = width;
     this.height = height;
+    this.duration = FlowingCurrent.SPAWN_SECONDS + (width + 30) / FlowingCurrent.SPEED;
     this.amplitude = height * (0.2 + rng() * 0.15);
     this.frequency = 0.8 + rng() * 0.6;
   }
@@ -257,13 +259,15 @@ export class CarveFormation implements TrialGame {
     const r = Math.min(width, height) * 0.36;
     const star = rng() < 0.5;
     const start = rng() * Math.PI * 2;
-    // A circle, or a five-pointed star drawn by skipping points.
-    this.points = Array.from({ length: CarveFormation.POINTS }, (_, i) => {
-      const k = star ? (i * 3) % CarveFormation.POINTS : i;
-      const angle = start + (k / CarveFormation.POINTS) * Math.PI * 2;
-      const radius = star && k % 2 === 1 ? r * 0.45 : r;
+    // A circle, or a five-pointed star's outline (alternating outer and inner points).
+    const innerRadius = r * (Math.cos((2 * Math.PI) / 5) / Math.cos(Math.PI / 5));
+    const ring = Array.from({ length: CarveFormation.POINTS }, (_, i) => {
+      const angle = start + (i / CarveFormation.POINTS) * Math.PI * 2;
+      const radius = star && i % 2 === 1 ? innerRadius : r;
       return { x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius };
     });
+    // Finish back where you started to close the shape.
+    this.points = [...ring, ring[0]];
   }
 
   get current(): Point | null {
@@ -297,11 +301,11 @@ export class CarveFormation implements TrialGame {
   }
 
   score(): number {
-    return this.reached / CarveFormation.POINTS;
+    return this.reached / this.points.length;
   }
 
   finished(): boolean {
-    return this.reached >= CarveFormation.POINTS || this.elapsed >= this.duration;
+    return this.reached >= this.points.length || this.elapsed >= this.duration;
   }
 }
 
@@ -323,12 +327,15 @@ export class RainOfBlades implements TrialGame {
   static readonly HIT_RADIUS = 14;
   /** This many hits drops the score to zero. */
   static readonly MAX_HITS = 6;
+  /** Seconds before staying outside the field starts to count. */
+  static readonly GRACE = 1.5;
   readonly duration = 12;
   elapsed = 0;
   hits = 0;
   blades: Blade[] = [];
   private spawnTimer = 0.6;
   private outside = 0;
+  private seenPointer = false;
   private readonly width: number;
   private readonly height: number;
   private readonly rng: Rng;
@@ -341,8 +348,10 @@ export class RainOfBlades implements TrialGame {
 
   step(dt: number, pointer: Point | null): void {
     this.elapsed += dt;
-    // Leaving the field isn't a way out: every second outside counts as a hit.
-    if (!pointer) {
+    // Leaving the field isn't a way out: every second outside counts as a hit,
+    // after a short grace period to get the cursor in there.
+    if (pointer) this.seenPointer = true;
+    else if (this.seenPointer || this.elapsed > RainOfBlades.GRACE) {
       this.outside += dt;
       if (this.outside >= 1) {
         this.outside -= 1;

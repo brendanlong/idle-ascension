@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { CORE_GRADES, ELEMENTS_BY_ID, type ElementId } from '../../content/cores';
+import { CORE_GRADES, ELEMENTS_BY_ID } from '../../content/cores';
 import { ENCOUNTERS_BY_ID } from '../../content/encounters';
 import { REALMS, STAGES } from '../../content/realms';
 import { TRIALS_BY_ELEMENT } from '../../content/trials';
-import { currentTribulationTrial, recordTribulationTrial } from '../../engine/breakthrough';
+import {
+  beginTribulationTrial,
+  currentTribulationTrial,
+  recordTribulationTrial,
+} from '../../engine/breakthrough';
 import { absorbMotes, click } from '../../engine/economy';
 import { claimEncounter } from '../../engine/encounters';
 import { acceptTrial, completeTrial } from '../../engine/trials';
@@ -198,7 +202,8 @@ export function QiField() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const orbRef = useRef<HTMLButtonElement>(null);
   const [sim] = useState(() => new FieldSim());
-  const [activeTrial, setActiveTrial] = useState<ElementId | null>(null);
+  /** Last cursor position over the field, handed to trials so they know where it starts. */
+  const lastPointer = useRef<{ x: number; y: number } | null>(null);
   const { state } = game;
   const realm = REALMS[STAGES[state.stage].realmIndex];
 
@@ -262,6 +267,9 @@ export function QiField() {
   const trib = state.tribulation;
   const tribElement = currentTribulationTrial(state);
   const tribDef = trib && REALMS[STAGES[trib.targetStage].realmIndex].tribulation;
+  const activeTrial = state.trial.active;
+  // The overlay takes over the pointer; don't keep absorbing motes at a stale spot.
+  if (tribElement || activeTrial) sim.pointer = null;
   const trialOffer = state.trial.offer;
   const trialOfferDef = trialOffer && TRIALS_BY_ELEMENT.get(trialOffer.element);
 
@@ -269,8 +277,14 @@ export function QiField() {
     <div
       class="qi-field"
       ref={containerRef}
-      onPointerMove={(e) => (sim.pointer = localPoint(e))}
-      onPointerLeave={() => (sim.pointer = null)}
+      onPointerMove={(e) => {
+        sim.pointer = localPoint(e);
+        lastPointer.current = sim.pointer;
+      }}
+      onPointerLeave={() => {
+        sim.pointer = null;
+        lastPointer.current = null;
+      }}
     >
       <canvas ref={canvasRef} />
       <button
@@ -303,7 +317,7 @@ export function QiField() {
         <button
           class="encounter trial-offer"
           style={{ left: `${trialOffer.x * 100}%`, top: `${trialOffer.y * 100}%` }}
-          onClick={() => setActiveTrial(game.act((s) => acceptTrial(s)))}
+          onClick={() => game.act((s) => acceptTrial(s))}
           title="An elemental trial. Optional; the better you do, the bigger the reward."
         >
           <span class="encounter-icon">{trialOfferDef.icon}</span>
@@ -315,6 +329,8 @@ export function QiField() {
         <TrialOverlay
           key={`${trib.targetStage}-${trib.scores.length}`}
           element={tribElement}
+          pointer={lastPointer}
+          onStart={() => game.act((s) => beginTribulationTrial(s))}
           title={`${tribDef.name} · Trial ${trib.scores.length + 1} of ${trib.trials.length}`}
           subtitle={`Average ${Math.round(trib.passScore * 100)}% or better to pass`}
           speed={trib.speed}
@@ -325,10 +341,10 @@ export function QiField() {
           <TrialOverlay
             element={activeTrial}
             title={`${ELEMENTS_BY_ID.get(activeTrial)!.name} Trial`}
-            onDone={(score) => {
-              game.act((s, stats) => completeTrial(s, stats, activeTrial, score, Math.random));
-              setActiveTrial(null);
-            }}
+            pointer={lastPointer}
+            onDone={(score) =>
+              game.act((s, stats) => completeTrial(s, stats, activeTrial, score, Math.random))
+            }
           />
         )
       )}

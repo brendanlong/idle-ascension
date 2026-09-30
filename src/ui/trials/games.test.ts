@@ -71,6 +71,28 @@ describe('trial games', () => {
     }));
     expect(circling).toBeGreaterThanOrEqual(0.6);
     expect(run(new RainOfBlades(W, H, seeded()), () => ({ x: W / 2, y: H / 2 }))).toBeLessThan(0.5);
+    // Staying out of the field fails after a short grace period...
     expect(run(new RainOfBlades(W, H, seeded()), () => null)).toBe(0);
+    // ...as does leaving once you're in.
+    const late = new RainOfBlades(W, H, seeded());
+    const lateScore = run(late, (t) =>
+      t < 1 ? null : { x: W / 2 + Math.cos(t * 1.2) * 150, y: H / 2 + Math.sin(t * 1.2) * 150 },
+    );
+    expect(lateScore).toBeGreaterThanOrEqual(0.6);
+    const leaver = new RainOfBlades(W, H, seeded());
+    expect(run(leaver, (t) => (t < 0.5 ? { x: W / 2, y: H / 2 } : null))).toBe(0);
+  });
+
+  it('Carve the Formation: the shape closes back on its first point', () => {
+    const game = new CarveFormation(W, H, seeded());
+    expect(game.points.at(-1)).toEqual(game.points[0]);
+  });
+
+  it('Flowing Current: lasts as long as the last orb takes to cross the field', () => {
+    const narrow = new FlowingCurrent(400, H, seeded());
+    const wide = new FlowingCurrent(1200, H, seeded());
+    expect(wide.duration).toBeGreaterThan(narrow.duration);
+    run(narrow, () => null);
+    expect(narrow.elapsed).toBeLessThanOrEqual(narrow.duration + 0.1);
   });
 });

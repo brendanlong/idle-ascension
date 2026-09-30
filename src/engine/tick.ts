@@ -11,7 +11,7 @@ import { computeStats } from './stats';
 /** Gaps longer than this are treated as offline time rather than simulated live. */
 export const OFFLINE_THRESHOLD_SECONDS = 60;
 const QUIP_INTERVAL_SECONDS = 240;
-/** Live gaps are simulated in steps no longer than this, so bolts and buffs resolve in order. */
+/** Live gaps are simulated in steps no longer than this, so timers and buffs resolve in order. */
 const MAX_STEP_SECONDS = 0.25;
 
 export interface TickOptions {

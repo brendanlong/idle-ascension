@@ -67,7 +67,7 @@ export const PERKS: readonly PerkDef[] = [
   {
     id: 'lightning',
     name: 'Memory of Lightning',
-    description: 'You have died to these tribulations before. You know where the bolts will fall.',
+    description: 'You have died to these tribulations before. You know what the heavens will test.',
     maxLevel: Infinity,
     baseCost: 5,
     costGrowth: 4,

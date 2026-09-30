@@ -33,7 +33,7 @@ export function tickTrials(state: GameState, dt: number, rng: Rng): void {
     if (trial.offer.remaining <= 0) trial.offer = null;
     return;
   }
-  if (state.tribulation || !trialsUnlocked(state)) return;
+  if (state.tribulation || state.trial.active || !trialsUnlocked(state)) return;
   trial.nextIn -= dt;
   if (trial.nextIn <= 0) {
     trial.offer = {
@@ -46,11 +46,17 @@ export function tickTrials(state: GameState, dt: number, rng: Rng): void {
   }
 }
 
-/** Takes the offered trial, returning its element for the UI to run, or null if none. */
+/** Starts the offered trial; the UI runs whatever is in `state.trial.active`. */
 export function acceptTrial(state: GameState): ElementId | null {
   const offer = state.trial.offer;
+  if (!offer || state.trial.active || state.tribulation) return null;
   state.trial.offer = null;
-  return offer?.element ?? null;
+  state.trial.active = offer.element;
+  return offer.element;
+}
+
+export function validScore(score: number): number {
+  return Number.isFinite(score) ? Math.min(1, Math.max(0, score)) : 0;
 }
 
 export interface TrialResult {
@@ -68,7 +74,8 @@ export function completeTrial(
   rng: Rng,
 ): TrialResult {
   const def = TRIALS_BY_ELEMENT.get(element)!;
-  const clamped = Math.min(1, Math.max(0, score));
+  const clamped = validScore(score);
+  if (state.trial.active === element) state.trial.active = null;
   const affinity = state.cores.some((c) => c.element === element) ? TRIAL_AFFINITY_MULT : 1;
   const seconds = TRIAL_REWARD_BASE_SECONDS + TRIAL_REWARD_SECONDS_PER_SCORE * clamped;
   const qi = (stats.qps * seconds + stats.clickPower * 20) * affinity;

@@ -108,7 +108,7 @@ const STAT_LABELS: Record<MultStat | AddStat, string> = {
   coreCostMult: 'core costs',
   clickFlat: 'base click power',
   clickQpsFraction: 'of qi/s added to each click',
-  tribulationLeniency: 'tribulation leniency (lowers the pass mark)',
+  tribulationLeniency: 'tribulation pass marks',
   autoClicksPerSecond: 'automatic clicks per second',
   offlineCapHours: 'hours of closed-door cultivation (offline cap)',
   offlineEfficiency: 'closed-door cultivation efficiency',
@@ -119,7 +119,6 @@ const STAT_LABELS: Record<MultStat | AddStat, string> = {
 
 const PERCENT_ADD_STATS: ReadonlySet<AddStat> = new Set([
   'clickQpsFraction',
-  'tribulationLeniency',
   'offlineEfficiency',
   'memoryBonus',
 ]);
@@ -133,6 +132,9 @@ export function describeEffect(effect: Effect, generatorName?: (id: string) => s
     case 'mult':
       return `×${trimNumber(effect.value)} ${STAT_LABELS[effect.stat]}`;
     case 'add': {
+      if (effect.stat === 'tribulationLeniency') {
+        return `−${trimNumber(effect.value * 100)} points on tribulation pass marks`;
+      }
       const sign = effect.value >= 0 ? '+' : '';
       const amount = PERCENT_ADD_STATS.has(effect.stat)
         ? `${trimNumber(effect.value * 100)}%`

@@ -23,6 +23,8 @@ import { fillTemplate } from './text';
 
 export function tickEncounters(state: GameState, stats: Stats, dt: number, rng: Rng): void {
   const enc = state.encounter;
+  // Encounters would be hidden under a trial, so they wait until it's over.
+  if (state.tribulation || state.trial.active) return;
   if (enc.active) {
     enc.active.remaining -= dt;
     if (enc.active.remaining <= 0) {
@@ -31,7 +33,6 @@ export function tickEncounters(state: GameState, stats: Stats, dt: number, rng: 
     }
     return;
   }
-  if (state.tribulation) return;
   enc.nextIn -= dt * stats.mods.encounterRateMult;
   if (enc.nextIn <= 0) spawnEncounter(state, rng);
 }

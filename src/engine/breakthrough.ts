@@ -12,6 +12,7 @@ import { addBuff, spendQi } from './economy';
 import type { Modifiers } from './effects';
 import { log } from './events';
 import { defaultRng, type Rng } from './rng';
+import { validScore } from './trials';
 import type { GameState } from './state';
 
 /** Fraction of the breakthrough cost returned when a tribulation fails. */
@@ -30,6 +31,7 @@ export function breakthroughBlocker(state: GameState): string | null {
   const next = nextStage(state);
   if (!next) return 'You stand at the peak of all cultivation.';
   if (state.tribulation) return 'The tribulation is underway!';
+  if (state.trial.active) return 'Finish your trial first.';
   const requirement = REALMS[next.realmIndex].requirement;
   if (next.isMajor && requirement && !meetsCondition(state, requirement)) {
     return describeCondition(requirement);
@@ -74,6 +76,7 @@ export function attemptBreakthrough(
       scores: [],
       passScore: tribulationPassScore(trib, mods),
       speed: tribulationSpeed(mods),
+      started: false,
     };
     log(`Dark clouds gather overhead. The ${trib.name} descends!`, 'bad');
     return 'tribulation';
@@ -106,19 +109,41 @@ export function tribulationAverage(scores: readonly number[]): number {
   return scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
 }
 
+/** Marks the current trial as in progress (see forfeitInterruptedTrials). */
+export function beginTribulationTrial(state: GameState): void {
+  if (state.tribulation) state.tribulation.started = true;
+}
+
 /** Records a finished trial's score (0-1), resolving the tribulation after the last one. */
 export function recordTribulationTrial(state: GameState, score: number): void {
   const t = state.tribulation;
   if (!t) return;
-  t.scores.push(Math.min(1, Math.max(0, score)));
+  const clamped = validScore(score);
+  t.scores.push(clamped);
+  t.started = false;
   if (t.scores.length < t.trials.length) {
     log(
-      `Trial ${t.scores.length} of ${t.trials.length}: ${Math.round(score * 100)}%. The heavens are not finished with you.`,
+      `Trial ${t.scores.length} of ${t.trials.length}: ${Math.round(clamped * 100)}%. The heavens are not finished with you.`,
       'info',
     );
     return;
   }
   finishTribulation(state, tribulationAverage(t.scores) >= t.passScore);
+}
+
+/**
+ * Called on load: a trial interrupted by reloading scores 0 rather than
+ * being retried, and an interrupted optional trial is simply lost.
+ */
+export function forfeitInterruptedTrials(state: GameState): void {
+  if (state.trial.active) {
+    state.trial.active = null;
+    log('Your trial was interrupted.', 'info');
+  }
+  if (state.tribulation?.started) {
+    log('You fled mid-trial. The heavens count it as a failure.', 'bad');
+    recordTribulationTrial(state, 0);
+  }
 }
 
 /** Walking away mid-tribulation counts as being overwhelmed by it. */

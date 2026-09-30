@@ -110,6 +110,7 @@ function sanitize(state: GameState): GameState {
     state.encounter.active = null;
   }
 
+  if (state.trial.active && !ELEMENTS_BY_ID.has(state.trial.active)) state.trial.active = null;
   const offer = state.trial.offer;
   if (
     offer &&
@@ -134,7 +135,8 @@ function sanitize(state: GameState): GameState {
     t.scores.every(isFiniteNumber) &&
     isFiniteNumber(t.passScore) &&
     isFiniteNumber(t.speed) &&
-    t.speed > 0;
+    t.speed > 0 &&
+    typeof t.started === 'boolean';
   if (!validTribulation) state.tribulation = null;
 
   const formats: NumberFormat[] = ['short', 'myriad', 'scientific'];

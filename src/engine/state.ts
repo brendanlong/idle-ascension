@@ -37,6 +37,8 @@ export interface TribulationState {
   passScore: number;
   /** Trial game speed (below 1 is slower). */
   speed: number;
+  /** True while the current trial is being played, so a reload mid-trial can't retry it. */
+  started: boolean;
 }
 
 export type NumberFormat = 'short' | 'myriad' | 'scientific';
@@ -54,7 +56,8 @@ export interface GameState {
   treasures: Record<string, number>;
   buffs: ActiveBuff[];
   encounter: { nextIn: number; active: ActiveEncounter | null };
-  trial: { nextIn: number; offer: TrialOffer | null };
+  /** `active` is an optional trial being played right now. */
+  trial: { nextIn: number; offer: TrialOffer | null; active: ElementId | null };
   tribulation: TribulationState | null;
   prestige: {
     /** Total Memories ever earned. Spent Memories still count toward the qi bonus. */
@@ -103,7 +106,7 @@ export function createInitialState(now = Date.now()): GameState {
     treasures: {},
     buffs: [],
     encounter: { nextIn: 45, active: null },
-    trial: { nextIn: 90, offer: null },
+    trial: { nextIn: 90, offer: null, active: null },
     tribulation: null,
     prestige: { memories: 0, perks: {}, loops: 0 },
     stats: {

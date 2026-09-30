@@ -15,6 +15,8 @@ export function TrialOverlay({
   title,
   subtitle,
   speed = 1,
+  pointer,
+  onStart,
   onDone,
 }: {
   element: ElementId;
@@ -22,18 +24,28 @@ export function TrialOverlay({
   subtitle?: string;
   /** Game speed; below 1 is slower (tribulation slowdown). */
   speed?: number;
+  /**
+   * The cursor position in field coordinates, shared with the qi field so a
+   * trial knows where the cursor is before it first moves.
+   */
+  pointer: { current: Point | null };
+  /** Called when play begins, after the intro. */
+  onStart?: () => void;
   onDone: (score: number) => void;
 }) {
   const def = TRIALS_BY_ELEMENT.get(element)!;
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const pointer = useRef<Point | null>(null);
+  /** The game's coordinate space is the field size at mount; pointer input is scaled into it. */
+  const gameSize = useRef({ width: 1, height: 1 });
   const gameRef = useRef<TrialGame | null>(null);
   const [phase, setPhase] = useState<'intro' | 'playing' | 'result'>('intro');
   const [progress, setProgress] = useState(0);
   const [score, setScore] = useState(0);
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
+  const onStartRef = useRef(onStart);
+  onStartRef.current = onStart;
 
   useEffect(() => {
     const container = containerRef.current!;
@@ -45,6 +57,7 @@ export function TrialOverlay({
     canvas.width = width * dpr;
     canvas.height = height * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    gameSize.current = { width, height };
     const game = createTrialGame(element, width, height);
     gameRef.current = game;
 
@@ -60,6 +73,7 @@ export function TrialOverlay({
         current = 'playing';
         phaseTime = 0;
         setPhase('playing');
+        onStartRef.current?.();
       } else if (current === 'playing') {
         game.step(dt * speed, pointer.current);
         setProgress(Math.min(1, game.elapsed / game.duration));
@@ -83,7 +97,12 @@ export function TrialOverlay({
 
   const localPoint = (e: PointerEvent): Point => {
     const rect = containerRef.current!.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const { width, height } = gameSize.current;
+    // The canvas stretches if the field resizes mid-trial; map back to game space.
+    return {
+      x: ((e.clientX - rect.left) * width) / rect.width,
+      y: ((e.clientY - rect.top) * height) / rect.height,
+    };
   };
 
   return (
