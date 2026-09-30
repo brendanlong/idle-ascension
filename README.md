@@ -18,7 +18,8 @@ npm run dev
 - **Resources**: meditation cushions, spirit herbs, pill furnaces, disciples, spirit veins, secret realms… each produces qi per second.
 - **Techniques**: one-off upgrades (palm techniques, scriptures, and ×2 upgrades for each resource at ownership milestones).
 - **Breakthroughs**: spend qi to advance through realms — Qi Condensation (9 layers), Foundation Establishment, Core Formation, Nascent Soul, Spirit Severing, Dao Seeking, Immortal Ascension, Godhood. Each stage multiplies all qi gain.
-- **Heavenly Tribulations**: major breakthroughs from Core Formation onward summon lightning bolts that you have to click before they land. If too many land, the breakthrough fails and you're injured.
+- **Elemental trials**: short mouse mini-games, one per element: click the flame seals, sweep through a flowing current, chase a wood spirit, trace an earth formation, dodge a rain of blades. From Foundation Establishment, optional trials appear now and then for rewards that scale with your score.
+- **Heavenly Tribulations**: major breakthroughs from Core Formation onward are a series of elemental trials (1–3, more in later realms). Average below the pass mark and the breakthrough fails and you're injured. Leniency lowers the pass mark; slowdown slows the trials.
 - **Cores**: from Core Formation you condense cores. Each is attuned to one of the Five Elements (its colour/effect) and refined through metal grades (Mud → Iron → Bronze → … → Primordial). Your realm limits how far you can refine. Cores adjacent in the generating cycle (Wood → Fire → Earth → Metal → Water → Wood) grant a bonus.
 - **Fortuitous encounters**: arrogant young masters, hidden caves, mysterious old beggars… click them for qi windfalls, buffs, or treasures.
 - **Regression (prestige)**: once you've reached Core Formation, court death and let your mother's jade pendant send you back to age sixteen. You keep **Memories** (+2% qi each, forever) and spend them on permanent insights.
@@ -62,6 +63,7 @@ src/
     tick.ts        Time: live ticks and offline progress.
     save.ts        (De)serialization with versioned migrations and default-filling.
   ui/        Preact components. game.ts owns the state, runs the clock, and autosaves.
+    trials/  The elemental trial mini-games (DOM-free, tested by scripting a player) and their overlay.
 scripts/sim.ts   Greedy bot for balance testing.
 ```
 

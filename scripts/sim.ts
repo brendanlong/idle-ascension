@@ -8,7 +8,7 @@ import { GENERATORS } from '../src/content/generators';
 import { PERKS } from '../src/content/perks';
 import { REALMS, STAGES, stageName } from '../src/content/realms';
 import { MAX_TREASURE_LEVEL, TREASURES } from '../src/content/treasures';
-import { attemptBreakthrough, autoDisperse, nextStage } from '../src/engine/breakthrough';
+import { attemptBreakthrough, nextStage, recordTribulationTrial } from '../src/engine/breakthrough';
 import {
   canFormCore,
   canRefineCore,
@@ -27,6 +27,7 @@ import {
   isGeneratorVisible,
 } from '../src/engine/economy';
 import { claimEncounter } from '../src/engine/encounters';
+import { acceptTrial, completeTrial } from '../src/engine/trials';
 import { formatDuration, formatNumber } from '../src/engine/format';
 import {
   buyPerk,
@@ -42,6 +43,9 @@ import { tick } from '../src/engine/tick';
 const clicksPerSecond = Number(process.argv[2] ?? 3);
 const maxHours = Number(process.argv[3] ?? 48);
 const MOTE_CATCH_RATE = 0.4;
+/** How well the bot plays elemental trials (0-1), for tribulations and optional offers. */
+const TRIBULATION_TRIAL_SCORE = 0.8;
+const OPTIONAL_TRIAL_SCORE = 0.7;
 const STALL_SECONDS = Number(process.argv[4] ?? 45) * 60;
 const CORE_ORDER: ElementId[] = ['wood', 'fire', 'water', 'earth', 'metal'];
 
@@ -83,13 +87,9 @@ function spend(): void {
     let stats = computeStats(state);
     const next = nextStage(state);
     if (next && state.qi >= next.cost) {
-      const result = attemptBreakthrough(state, stats.mods);
+      const result = attemptBreakthrough(state, stats.mods, rng);
       if (result !== 'blocked') {
-        autoDisperse(state);
-        for (let i = 0; i < 40 && state.tribulation; i++) {
-          tick(state, 0.5, rng);
-          autoDisperse(state);
-        }
+        while (state.tribulation) recordTribulationTrial(state, TRIBULATION_TRIAL_SCORE);
         lastProgress = time;
         bought = true;
         continue;
@@ -148,6 +148,8 @@ while (time < maxHours * 3600) {
   for (let i = 0; i < clicksPerSecond; i++) click(state, stats);
   absorbMotes(state, stats, stats.moteSpawnPerSecond * MOTE_CATCH_RATE);
   if (state.encounter.active) claimEncounter(state, stats, rng);
+  const trial = acceptTrial(state);
+  if (trial) completeTrial(state, stats, trial, OPTIONAL_TRIAL_SCORE, rng);
   tick(state, 1, rng);
   time++;
   activity().seconds++;

@@ -21,24 +21,22 @@ export interface ActiveEncounter {
   remaining: number;
 }
 
-export interface Bolt {
-  id: number;
+export interface TrialOffer {
+  element: ElementId;
   x: number;
   y: number;
   remaining: number;
-  duration: number;
 }
 
 export interface TribulationState {
   targetStage: number;
-  boltsToSpawn: number;
-  totalBolts: number;
-  spawnTimer: number;
-  interval: number;
-  bolts: Bolt[];
-  hits: number;
-  allowedHits: number;
-  nextBoltId: number;
+  /** Elements of the trials to face, in order. */
+  trials: ElementId[];
+  /** Scores (0-1) of the trials finished so far. */
+  scores: number[];
+  passScore: number;
+  /** Trial game speed (below 1 is slower). */
+  speed: number;
 }
 
 export type NumberFormat = 'short' | 'myriad' | 'scientific';
@@ -56,6 +54,7 @@ export interface GameState {
   treasures: Record<string, number>;
   buffs: ActiveBuff[];
   encounter: { nextIn: number; active: ActiveEncounter | null };
+  trial: { nextIn: number; offer: TrialOffer | null };
   tribulation: TribulationState | null;
   prestige: {
     /** Total Memories ever earned. Spent Memories still count toward the qi bonus. */
@@ -70,6 +69,7 @@ export interface GameState {
     playTime: number;
     loopTime: number;
     encountersClaimed: number;
+    trialsCompleted: number;
     tribulationsSurvived: number;
     tribulationsFailed: number;
     bestStage: number;
@@ -103,6 +103,7 @@ export function createInitialState(now = Date.now()): GameState {
     treasures: {},
     buffs: [],
     encounter: { nextIn: 45, active: null },
+    trial: { nextIn: 90, offer: null },
     tribulation: null,
     prestige: { memories: 0, perks: {}, loops: 0 },
     stats: {
@@ -112,6 +113,7 @@ export function createInitialState(now = Date.now()): GameState {
       playTime: 0,
       loopTime: 0,
       encountersClaimed: 0,
+      trialsCompleted: 0,
       tribulationsSurvived: 0,
       tribulationsFailed: 0,
       bestStage: 0,

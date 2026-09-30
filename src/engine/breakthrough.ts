@@ -1,14 +1,25 @@
-import { FINAL_STAGE, REALMS, STAGES, stageName, type StageDef } from '../content/realms';
+import { ELEMENTS, type ElementId } from '../content/cores';
+import {
+  FINAL_STAGE,
+  REALMS,
+  STAGES,
+  stageName,
+  type StageDef,
+  type TribulationDef,
+} from '../content/realms';
 import { describeCondition, meetsCondition } from './conditions';
 import { addBuff, spendQi } from './economy';
 import type { Modifiers } from './effects';
 import { log } from './events';
-import { randomBetween, type Rng } from './rng';
+import { defaultRng, type Rng } from './rng';
 import type { GameState } from './state';
 
-const BASE_BOLT_DURATION = 1.6;
 /** Fraction of the breakthrough cost returned when a tribulation fails. */
 const FAILURE_REFUND = 0.7;
+/** Leniency can't push a pass mark below this. */
+const MIN_PASS_SCORE = 0.25;
+/** Slowdown can't make trials slower than this speed. */
+const MIN_TRIAL_SPEED = 0.5;
 
 export function nextStage(state: GameState): StageDef | null {
   return state.stage < FINAL_STAGE ? STAGES[state.stage + 1] : null;
@@ -29,7 +40,29 @@ export function breakthroughBlocker(state: GameState): string | null {
 
 export type BreakthroughResult = 'advanced' | 'tribulation' | 'blocked';
 
-export function attemptBreakthrough(state: GameState, mods: Modifiers): BreakthroughResult {
+export function tribulationPassScore(def: TribulationDef, mods: Modifiers): number {
+  return Math.max(MIN_PASS_SCORE, def.passScore - mods.tribulationLeniency);
+}
+
+export function tribulationSpeed(mods: Modifiers): number {
+  return Math.max(MIN_TRIAL_SPEED, 1 / mods.tribulationSlowMult);
+}
+
+/** `count` different elements in random order. */
+function randomElements(rng: Rng, count: number): ElementId[] {
+  const pool = ELEMENTS.map((e) => e.id);
+  const picked: ElementId[] = [];
+  while (picked.length < count && pool.length > 0) {
+    picked.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
+  }
+  return picked;
+}
+
+export function attemptBreakthrough(
+  state: GameState,
+  mods: Modifiers,
+  rng: Rng = defaultRng,
+): BreakthroughResult {
   const next = nextStage(state);
   if (!next || breakthroughBlocker(state) !== null) return 'blocked';
   spendQi(state, next.cost);
@@ -37,16 +70,12 @@ export function attemptBreakthrough(state: GameState, mods: Modifiers): Breakthr
   if (next.isMajor && trib) {
     state.tribulation = {
       targetStage: next.index,
-      boltsToSpawn: trib.bolts,
-      totalBolts: trib.bolts,
-      spawnTimer: 1.5,
-      interval: trib.interval,
-      bolts: [],
-      hits: 0,
-      allowedHits: mods.tribulationAllowedHits,
-      nextBoltId: 1,
+      trials: randomElements(rng, trib.trials),
+      scores: [],
+      passScore: tribulationPassScore(trib, mods),
+      speed: tribulationSpeed(mods),
     };
-    log(`Dark clouds gather overhead. The ${trib.name} descends! Disperse the lightning!`, 'bad');
+    log(`Dark clouds gather overhead. The ${trib.name} descends!`, 'bad');
     return 'tribulation';
   }
   advanceTo(state, next.index);
@@ -67,56 +96,47 @@ export function advanceTo(state: GameState, stage: number): void {
   }
 }
 
-export function tickTribulation(state: GameState, mods: Modifiers, dt: number, rng: Rng): void {
+/** The element of the trial to face next, or null if there's no tribulation. */
+export function currentTribulationTrial(state: GameState): ElementId | null {
   const t = state.tribulation;
-  if (!t) return;
-
-  for (const bolt of t.bolts) bolt.remaining -= dt;
-  const landed = t.bolts.filter((b) => b.remaining <= 0);
-  if (landed.length > 0) {
-    t.hits += landed.length;
-    t.bolts = t.bolts.filter((b) => b.remaining > 0);
-    log(`Lightning strikes you! (${t.hits}/${t.allowedHits} you can endure)`, 'bad');
-  }
-
-  t.spawnTimer -= dt;
-  while (t.boltsToSpawn > 0 && t.spawnTimer <= 0) {
-    const duration = BASE_BOLT_DURATION * mods.tribulationBoltTimeMult;
-    t.bolts.push({
-      id: t.nextBoltId++,
-      x: randomBetween(rng, 0.1, 0.9),
-      y: randomBetween(rng, 0.1, 0.9),
-      remaining: duration,
-      duration,
-    });
-    t.boltsToSpawn--;
-    t.spawnTimer += t.interval;
-  }
-
-  if (t.boltsToSpawn === 0 && t.bolts.length === 0) finishTribulation(state);
+  return t ? (t.trials[t.scores.length] ?? null) : null;
 }
 
-export function disperseBolt(state: GameState, boltId: number): boolean {
+export function tribulationAverage(scores: readonly number[]): number {
+  return scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+}
+
+/** Records a finished trial's score (0-1), resolving the tribulation after the last one. */
+export function recordTribulationTrial(state: GameState, score: number): void {
   const t = state.tribulation;
-  if (!t) return false;
-  const before = t.bolts.length;
-  t.bolts = t.bolts.filter((b) => b.id !== boltId);
-  return t.bolts.length < before;
+  if (!t) return;
+  t.scores.push(Math.min(1, Math.max(0, score)));
+  if (t.scores.length < t.trials.length) {
+    log(
+      `Trial ${t.scores.length} of ${t.trials.length}: ${Math.round(score * 100)}%. The heavens are not finished with you.`,
+      'info',
+    );
+    return;
+  }
+  finishTribulation(state, tribulationAverage(t.scores) >= t.passScore);
 }
 
 /** Walking away mid-tribulation counts as being overwhelmed by it. */
 export function abandonTribulation(state: GameState): void {
-  if (!state.tribulation) return;
-  state.tribulation.hits = Infinity;
-  finishTribulation(state);
+  if (state.tribulation) finishTribulation(state, false);
 }
 
-function finishTribulation(state: GameState): void {
+function finishTribulation(state: GameState, passed: boolean): void {
   const t = state.tribulation!;
   state.tribulation = null;
-  if (t.hits <= t.allowedHits) {
+  const average = Math.round(tribulationAverage(t.scores) * 100);
+  const needed = Math.round(t.passScore * 100);
+  if (passed) {
     state.stats.tribulationsSurvived++;
-    log('The clouds part. You have survived the tribulation!', 'good');
+    log(
+      `The clouds part (${average}%, needed ${needed}%). You have survived the tribulation!`,
+      'good',
+    );
     advanceTo(state, t.targetStage);
   } else {
     state.stats.tribulationsFailed++;
@@ -124,13 +144,8 @@ function finishTribulation(state: GameState): void {
     state.qi += STAGES[t.targetStage].cost * FAILURE_REFUND;
     addBuff(state, 'injured');
     log(
-      'The lightning overwhelms you. Your breakthrough fails and your meridians are scorched.',
+      `The tribulation overwhelms you (${average}%, needed ${needed}%). Your breakthrough fails and your meridians are scorched.`,
       'bad',
     );
   }
-}
-
-/** For tests and headless simulation: disperse every bolt as soon as it appears. */
-export function autoDisperse(state: GameState): void {
-  if (state.tribulation) state.tribulation.bolts = [];
 }

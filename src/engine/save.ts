@@ -110,17 +110,31 @@ function sanitize(state: GameState): GameState {
     state.encounter.active = null;
   }
 
+  const offer = state.trial.offer;
+  if (
+    offer &&
+    !(
+      ELEMENTS_BY_ID.has(offer.element) && [offer.x, offer.y, offer.remaining].every(isFiniteNumber)
+    )
+  ) {
+    state.trial.offer = null;
+  }
+
   const t = state.tribulation;
   const validTribulation =
     t &&
     isFiniteNumber(t.targetStage) &&
     t.targetStage > 0 &&
     t.targetStage <= FINAL_STAGE &&
-    Array.isArray(t.bolts) &&
-    t.bolts.every((b) => isPlainObject(b) && [b.id, b.x, b.y, b.remaining].every(isFiniteNumber)) &&
-    [t.boltsToSpawn, t.spawnTimer, t.interval, t.hits, t.allowedHits, t.nextBoltId].every(
-      isFiniteNumber,
-    );
+    Array.isArray(t.trials) &&
+    t.trials.length > 0 &&
+    t.trials.every((e) => ELEMENTS_BY_ID.has(e)) &&
+    Array.isArray(t.scores) &&
+    t.scores.length < t.trials.length &&
+    t.scores.every(isFiniteNumber) &&
+    isFiniteNumber(t.passScore) &&
+    isFiniteNumber(t.speed) &&
+    t.speed > 0;
   if (!validTribulation) state.tribulation = null;
 
   const formats: NumberFormat[] = ['short', 'myriad', 'scientific'];

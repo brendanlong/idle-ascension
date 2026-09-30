@@ -1,7 +1,8 @@
 import { OLD_MASTER_QUIPS } from '../content/lore';
-import { abandonTribulation, tickTribulation } from './breakthrough';
+import { abandonTribulation } from './breakthrough';
 import { gainQi } from './economy';
 import { tickEncounters } from './encounters';
+import { tickTrials } from './trials';
 import { log } from './events';
 import { pick, defaultRng, type Rng } from './rng';
 import type { GameState } from './state';
@@ -14,16 +15,11 @@ const QUIP_INTERVAL_SECONDS = 240;
 const MAX_STEP_SECONDS = 0.25;
 
 export interface TickOptions {
-  /** Freeze the tribulation (e.g. while the tab is hidden and the player can't respond). */
+  /** Keep an in-progress tribulation through offline time (the tab was only hidden). */
   pauseTribulation?: boolean;
 }
 
-export function tick(
-  state: GameState,
-  dt: number,
-  rng: Rng = defaultRng,
-  options: TickOptions = {},
-): void {
+export function tick(state: GameState, dt: number, rng: Rng = defaultRng): void {
   const stats = computeStats(state);
   gainQi(state, stats.qps * dt);
   state.stats.playTime += dt;
@@ -33,7 +29,7 @@ export function tick(
   state.buffs = state.buffs.filter((b) => b.remaining > 0);
 
   tickEncounters(state, stats, dt, rng);
-  if (!options.pauseTribulation) tickTribulation(state, stats.mods, dt, rng);
+  tickTrials(state, dt, rng);
 
   if (state.treasures.ring && rng() < dt / QUIP_INTERVAL_SECONDS) {
     log(`The Old Master: ${pick(rng, OLD_MASTER_QUIPS)}`, 'lore');
@@ -60,6 +56,7 @@ export function applyOfflineProgress(
   state.stats.loopTime += seconds;
   state.buffs = state.buffs.filter((b) => (b.remaining -= seconds) > 0);
   state.encounter.active = null;
+  state.trial.offer = null;
   if (!options.pauseTribulation) abandonTribulation(state);
   return { seconds, cappedSeconds, qi };
 }
@@ -75,7 +72,7 @@ export function advanceClock(
   state.lastTick = now;
   if (seconds > OFFLINE_THRESHOLD_SECONDS) return applyOfflineProgress(state, seconds, options);
   for (let remaining = seconds; remaining > 0; remaining -= MAX_STEP_SECONDS) {
-    tick(state, Math.min(remaining, MAX_STEP_SECONDS), rng, options);
+    tick(state, Math.min(remaining, MAX_STEP_SECONDS), rng);
   }
   return null;
 }

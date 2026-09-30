@@ -1,7 +1,12 @@
 import { BUFFS_BY_ID } from '../../content/buffs';
 import { CORE_GRADES } from '../../content/cores';
 import { REALMS, STAGES, stageName, type RealmDef } from '../../content/realms';
-import { attemptBreakthrough, breakthroughBlocker, nextStage } from '../../engine/breakthrough';
+import {
+  attemptBreakthrough,
+  breakthroughBlocker,
+  nextStage,
+  tribulationPassScore,
+} from '../../engine/breakthrough';
 import { describeEffect } from '../../engine/effects';
 import { formatDuration } from '../../engine/format';
 import { game } from '../game';
@@ -56,8 +61,12 @@ function BreakthroughBox() {
       {blocker && blocker !== 'Not enough qi.' && <div class="blocker">{blocker}</div>}
       {tribulation && (
         <div class="muted small">
-          {tribulation.bolts} bolts will fall. Click each before it strikes. You can endure{' '}
-          {stats.mods.tribulationAllowedHits}.
+          You'll face{' '}
+          {tribulation.trials === 1
+            ? 'an elemental trial'
+            : `${tribulation.trials} elemental trials`}{' '}
+          and need an average of {Math.round(tribulationPassScore(tribulation, stats.mods) * 100)}%
+          to pass.
         </div>
       )}
       {unlocks.length > 0 && (

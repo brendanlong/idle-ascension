@@ -37,6 +37,12 @@ export const BUFFS: readonly BuffDef[] = [
     effects: [{ type: 'mult', stat: 'globalMult', value: 2 }],
   },
   {
+    id: 'swordIntent',
+    name: 'Sword Intent',
+    duration: 60,
+    effects: [{ type: 'mult', stat: 'globalMult', value: 3 }],
+  },
+  {
     id: 'injured',
     name: 'Grievous Injury',
     duration: 60,

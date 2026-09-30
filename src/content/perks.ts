@@ -73,8 +73,8 @@ export const PERKS: readonly PerkDef[] = [
     costGrowth: 4,
     scaling: 'diminishing',
     effects: [
-      { type: 'add', stat: 'tribulationAllowedHits', value: 1 },
-      { type: 'mult', stat: 'tribulationBoltTimeMult', value: 1.2 },
+      { type: 'add', stat: 'tribulationLeniency', value: 0.05 },
+      { type: 'mult', stat: 'tribulationSlowMult', value: 1.2 },
     ],
   },
   {

@@ -18,8 +18,9 @@ describe('treasures', () => {
 
   it('keeps fixed effects constant across levels', () => {
     const state = newGame();
-    state.treasures.robe = MAX_TREASURE_LEVEL;
-    expect(computeStats(state).mods.tribulationAllowedHits).toBe(2);
+    state.treasures.sword = MAX_TREASURE_LEVEL;
+    // The sword's slowdown is fixed; only its qi bonus grows.
+    expect(computeStats(state).mods.tribulationSlowMult).toBe(1.25);
   });
 
   it('refines a treasure you already own, up to the max level', () => {
