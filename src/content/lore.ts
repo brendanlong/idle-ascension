@@ -23,12 +23,12 @@ export const REGRESSION_STORY: readonly (readonly string[])[] = [
   [
     'As darkness takes you, the jade pendant at your throat blazes with white light...',
     "Your mother's jade pendant cracks. Light pours out of it, and the world folds in on itself...",
-    'Somewhere far away, a jade pendant grows warm. Time begins to run backward...',
+    'At your throat, the jade pendant grows warm. Time begins to run backward...',
   ],
   [
-    'You open your eyes in the woodshed. You are sixteen again. Your meridians are sealed.',
+    'You open your eyes in the woodshed. You are sixteen again.',
     'You wake to the smell of damp straw and a cousin kicking the woodshed door. You are sixteen again.',
-    'Rain drums on the woodshed roof, exactly as it did the first time. You are sixteen, and your meridians are sealed.',
+    'Rain drums on the woodshed roof, exactly as it did the first time. You are sixteen again.',
   ],
   [
     'But you remember everything.',

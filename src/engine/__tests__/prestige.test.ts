@@ -81,14 +81,13 @@ describe('regression', () => {
     expect(describeSpecialPerk(PERKS_BY_ID.get('soulbound')!, 3)).toMatch(/level 3/);
   });
 
-  it('scales diminishing perks logarithmically, rounding whole-number stats down', () => {
-    const foresight = PERKS_BY_ID.get('foresight')!;
-    const rate = (level: number) => perkEffects(foresight, level)[0].value;
-    expect(rate(1)).toBeCloseTo(1.25);
-    expect(rate(3)).toBeCloseTo(1.5);
-    expect(rate(15)).toBeCloseTo(2);
+  it('keeps diminishing perks at their old rate up to the old cap, then slows down', () => {
+    const rate = (level: number) => perkEffects(PERKS_BY_ID.get('foresight')!, level)[0].value;
+    expect(rate(4)).toBeCloseTo(1.25 ** 4);
+    expect(rate(5)).toBeCloseTo(1.25 ** 4 * 1.25);
+    expect(rate(7)).toBeCloseTo(1.25 ** 4 * 1.5);
     const hits = (level: number) => perkEffects(PERKS_BY_ID.get('lightning')!, level)[0].value;
-    expect([1, 2, 3, 7].map(hits)).toEqual([1, 1, 2, 3]);
+    expect([1, 2, 3, 4, 5, 6, 10].map(hits)).toEqual([1, 2, 3, 4, 4, 5, 6]);
   });
 
   it('compounds ordinary perks', () => {

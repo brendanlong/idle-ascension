@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CORE_GRADES } from '../../content/cores';
+import { PERK_LEVEL_LIMIT } from '../../content/perks';
 import { MAX_TREASURE_LEVEL } from '../../content/treasures';
 import { STAGES } from '../../content/realms';
 import { deserialize, exportSave, importSave, serialize } from '../save';
@@ -73,6 +74,25 @@ describe('save/load', () => {
     raw.saveVersion = 1;
     raw.treasures = { ring: true, pendant: true };
     expect(deserialize(JSON.stringify(raw)).treasures).toEqual({ ring: 1, pendant: 1 });
+  });
+
+  it('raises v2 Soul-Bound Treasures as far as Memories cover it', () => {
+    const raw = JSON.parse(serialize(newGame()));
+    raw.saveVersion = 2;
+    raw.prestige.memories = 1000;
+    raw.prestige.perks = { soulbound: 1 };
+    // Levels cost 40, 120, 360, 1080: level 3 totals 520, level 4 totals 1600.
+    expect(deserialize(JSON.stringify(raw)).prestige.perks.soulbound).toBe(3);
+    raw.prestige.memories = 40;
+    expect(deserialize(JSON.stringify(raw)).prestige.perks.soulbound).toBe(1);
+  });
+
+  it('limits absurd perk levels from edited saves', () => {
+    const raw = JSON.parse(serialize(newGame()));
+    raw.prestige.perks = { meridians: 1e12, soulbound: 1e12 };
+    const loaded = deserialize(JSON.stringify(raw));
+    expect(loaded.prestige.perks.meridians).toBe(PERK_LEVEL_LIMIT);
+    expect(loaded.prestige.perks.soulbound).toBe(MAX_TREASURE_LEVEL);
   });
 
   it('rejects saves from the future', () => {

@@ -144,7 +144,7 @@ export function describeEffect(effect: Effect, generatorName?: (id: string) => s
 /** Each level past the first adds this fraction of the level-1 bonus. */
 export const LEVEL_BONUS_GROWTH = 0.5;
 
-/** Stats that only make sense as whole numbers; scaled values round down. */
+/** Stats that only make sense as whole numbers; diminishing perks round these down. */
 const INTEGER_STATS: ReadonlySet<AddStat> = new Set([
   'tribulationAllowedHits',
   'coreSlots',
@@ -157,10 +157,7 @@ const INTEGER_STATS: ReadonlySet<AddStat> = new Set([
  * never reach zero.
  */
 export function effectAtStrength(effect: Effect, strength: number): Effect {
-  if (effect.type === 'add') {
-    const value = effect.value * strength;
-    return { ...effect, value: INTEGER_STATS.has(effect.stat) ? Math.floor(value) : value };
-  }
+  if (effect.type === 'add') return { ...effect, value: effect.value * strength };
   const value =
     effect.value < 1
       ? 1 / (1 + (1 / effect.value - 1) * strength)
@@ -173,15 +170,21 @@ export function scaleEffect(effect: Effect, level: number): Effect {
   return effectAtStrength(effect, 1 + (level - 1) * LEVEL_BONUS_GROWTH);
 }
 
-/**
- * Logarithmic scaling: level 1 is the base bonus, and each doubling of the
- * level adds the base bonus again (levels 1, 3, 7, 15 give 1×, 2×, 3×, 4×).
- */
-export function diminishingEffect(effect: Effect, level: number): Effect {
-  return effectAtStrength(effect, Math.log2(1 + level));
-}
-
 /** Compound scaling: multipliers multiply each level (×2, ×4, ×8), additions add up. */
 export function compoundEffect(effect: Effect, level: number): Effect {
   return { ...effect, value: effect.type === 'add' ? effect.value * level : effect.value ** level };
+}
+
+/**
+ * Compound for the first `fullLevels` levels, then logarithmic: each doubling
+ * of the levels beyond that adds one more level-1 bonus (1, 3, 7, 15 extra
+ * levels give 1, 2, 3, 4 more bonuses). For effects that would break the game
+ * if they kept growing at a flat rate.
+ */
+export function diminishingEffect(effect: Effect, level: number, fullLevels: number): Effect {
+  const full = compoundEffect(effect, Math.min(level, fullLevels));
+  const extra = effectAtStrength(effect, Math.log2(1 + Math.max(0, level - fullLevels)));
+  if (effect.type !== 'add') return { ...effect, value: full.value * extra.value };
+  const value = full.value + extra.value;
+  return { ...effect, value: INTEGER_STATS.has(effect.stat) ? Math.floor(value) : value };
 }

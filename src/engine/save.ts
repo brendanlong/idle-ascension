@@ -2,10 +2,11 @@ import { BUFFS_BY_ID } from '../content/buffs';
 import { CORE_GRADES, ELEMENTS_BY_ID, type ElementId } from '../content/cores';
 import { ENCOUNTERS_BY_ID } from '../content/encounters';
 import { GENERATORS_BY_ID } from '../content/generators';
-import { PERKS_BY_ID } from '../content/perks';
+import { PERKS_BY_ID, PERK_LEVEL_LIMIT } from '../content/perks';
 import { FINAL_STAGE } from '../content/realms';
 import { MAX_TREASURE_LEVEL, TREASURES_BY_ID } from '../content/treasures';
 import { UPGRADES_BY_ID } from '../content/upgrades';
+import { memoriesSpentOn } from './prestige';
 import { SAVE_VERSION, createInitialState, type GameState, type NumberFormat } from './state';
 
 type RawSave = Record<string, unknown>;
@@ -22,6 +23,23 @@ const migrations: Record<number, (save: RawSave) => RawSave> = {
       save.treasures = Object.fromEntries(
         Object.entries(save.treasures).map(([id, owned]) => [id, owned === true ? 1 : owned]),
       );
+    }
+    return save;
+  },
+  // v3: Soul-Bound Treasures became leveled, and level 1 used to keep every
+  // treasure level. Raise it as far as the player's Memories cover, so
+  // unspent Memories never go negative.
+  2: (save) => {
+    const prestige = save.prestige;
+    if (!isPlainObject(prestige) || !isPlainObject(prestige.perks)) return save;
+    const perks = prestige.perks as Record<string, number>;
+    const memories = typeof prestige.memories === 'number' ? prestige.memories : 0;
+    if (!(perks.soulbound >= 1)) return save;
+    while (
+      perks.soulbound < MAX_TREASURE_LEVEL &&
+      memoriesSpentOn({ ...perks, soulbound: perks.soulbound + 1 }) <= memories
+    ) {
+      perks.soulbound++;
     }
     return save;
   },
@@ -90,7 +108,9 @@ function sanitize(state: GameState): GameState {
   const perks: Record<string, number> = {};
   for (const [id, level] of Object.entries(state.prestige.perks)) {
     const def = PERKS_BY_ID.get(id);
-    if (def && isFiniteNumber(level) && level > 0) perks[id] = clampInt(level, 0, def.maxLevel);
+    if (def && isFiniteNumber(level) && level > 0) {
+      perks[id] = clampInt(level, 0, Math.min(def.maxLevel, PERK_LEVEL_LIMIT));
+    }
   }
   state.prestige.perks = perks;
 

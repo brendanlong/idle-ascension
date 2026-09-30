@@ -11,14 +11,10 @@ export interface PerkDef {
   baseCost: number;
   costGrowth: number;
   requires?: readonly string[];
-  /** Level-1 effects; `scaling` decides how they grow. */
+  /** Level-1 effects. They compound each level (×2, ×4, ×8) unless diminishAfter is set. */
   effects: readonly Effect[];
-  /**
-   * compound (default): multipliers multiply each level (×2, ×4, ×8).
-   * diminishing: logarithmic, for effects that would break the game if they
-   * kept growing at a flat rate (see diminishingEffect).
-   */
-  scaling?: 'compound' | 'diminishing';
+  /** After this many levels, further levels grow logarithmically (see diminishingEffect). */
+  diminishAfter?: number;
   /** Non-effect behaviour, handled in engine/prestige.ts. */
   special?: 'keepTreasures' | 'startingResources';
 }
@@ -61,7 +57,7 @@ export const PERKS: readonly PerkDef[] = [
     baseCost: 3,
     costGrowth: 3,
     requires: ['meridians'],
-    scaling: 'diminishing',
+    diminishAfter: 4,
     effects: [{ type: 'mult', stat: 'encounterRateMult', value: 1.25 }],
   },
   {
@@ -71,7 +67,7 @@ export const PERKS: readonly PerkDef[] = [
     maxLevel: Infinity,
     baseCost: 5,
     costGrowth: 4,
-    scaling: 'diminishing',
+    diminishAfter: 3,
     effects: [
       { type: 'add', stat: 'tribulationAllowedHits', value: 1 },
       { type: 'mult', stat: 'tribulationBoltTimeMult', value: 1.15 },
@@ -104,7 +100,7 @@ export const PERKS: readonly PerkDef[] = [
     maxLevel: Infinity,
     baseCost: 5,
     costGrowth: 3,
-    scaling: 'diminishing',
+    diminishAfter: 3,
     effects: [
       { type: 'add', stat: 'offlineCapHours', value: 4 },
       { type: 'add', stat: 'offlineEfficiency', value: 0.1 },
@@ -146,6 +142,9 @@ export const PERKS: readonly PerkDef[] = [
 ];
 
 export const PERKS_BY_ID: ReadonlyMap<string, PerkDef> = new Map(PERKS.map((p) => [p.id, p]));
+
+/** Save files can't push uncapped perks past this (the cost is already ~1e95 Memories). */
+export const PERK_LEVEL_LIMIT = 200;
 
 export function perkCost(perk: PerkDef, currentLevel: number): number {
   return Math.ceil(perk.baseCost * perk.costGrowth ** currentLevel);
