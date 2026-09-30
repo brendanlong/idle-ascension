@@ -114,7 +114,9 @@ h3 {
 .app {
   max-width: 1500px;
   margin: 0 auto;
-  padding: 0.75rem;
+  /* Installed on a phone, the page runs under the status bar and notch. */
+  padding: calc(0.75rem + env(safe-area-inset-top)) calc(0.75rem + env(safe-area-inset-right))
+    calc(0.75rem + env(safe-area-inset-bottom)) calc(0.75rem + env(safe-area-inset-left));
 }
 
 header.top {
@@ -469,7 +471,7 @@ header.top h1 {
 /* --- Tabs --- */
 
 .tabs {
-  max-height: calc(100vh - 110px);
+  max-height: calc(100vh - 110px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   padding: 0;
@@ -666,7 +668,8 @@ header.top h1 {
   align-items: center;
   justify-content: center;
   z-index: 100;
-  padding: 1rem;
+  padding: calc(1rem + env(safe-area-inset-top)) calc(1rem + env(safe-area-inset-right))
+    calc(1rem + env(safe-area-inset-bottom)) calc(1rem + env(safe-area-inset-left));
 }
 .modal {
   max-width: 560px;
@@ -687,7 +690,8 @@ header.top h1 {
 /* --- Phone layout (see MOBILE_QUERY in App.tsx) --- */
 
 .app.mobile {
-  padding: 0 0.4rem 0.6rem;
+  padding: 0 calc(0.4rem + env(safe-area-inset-right)) calc(0.6rem + env(safe-area-inset-bottom))
+    calc(0.4rem + env(safe-area-inset-left));
 }
 .mobile-top {
   position: sticky;
@@ -695,7 +699,7 @@ header.top h1 {
   z-index: 50;
   background: var(--bg);
   margin: 0 -0.4rem 0.5rem;
-  padding: 0 0.4rem;
+  padding: env(safe-area-inset-top) 0.4rem 0;
   border-bottom: 1px solid var(--border);
 }
 .app.mobile header.top {
