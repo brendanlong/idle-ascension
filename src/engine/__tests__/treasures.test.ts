@@ -8,9 +8,18 @@ import { newGame } from './helpers';
 
 describe('treasures', () => {
   it('scales bonuses linearly and reductions multiplicatively', () => {
-    expect(scaleEffect({ type: 'mult', stat: 'globalMult', value: 1.5 }, 3).value).toBe(2.5);
-    expect(scaleEffect({ type: 'add', stat: 'tribulationAllowedHits', value: 1 }, 3).value).toBe(3);
-    expect(scaleEffect({ type: 'mult', stat: 'coreCostMult', value: 0.5 }, 3).value).toBe(0.125);
+    // Level 3 has twice the level-1 bonus.
+    expect(scaleEffect({ type: 'mult', stat: 'globalMult', value: 1.5 }, 3).value).toBe(2);
+    expect(scaleEffect({ type: 'add', stat: 'autoClicksPerSecond', value: 5 }, 3).value).toBe(10);
+    expect(scaleEffect({ type: 'mult', stat: 'coreCostMult', value: 0.5 }, 3).value).toBeCloseTo(
+      1 / 3,
+    );
+  });
+
+  it('keeps fixed effects constant across levels', () => {
+    const state = newGame();
+    state.treasures.robe = MAX_TREASURE_LEVEL;
+    expect(computeStats(state).mods.tribulationAllowedHits).toBe(2);
   });
 
   it('refines a treasure you already own, up to the max level', () => {
@@ -20,7 +29,7 @@ describe('treasures', () => {
     expect(computeStats(state).mods.globalMult).toBeCloseTo(base * 1.5);
     grantTreasure(state, 'ring');
     expect(state.treasures.ring).toBe(2);
-    expect(computeStats(state).mods.globalMult).toBeCloseTo(base * 2);
+    expect(computeStats(state).mods.globalMult).toBeCloseTo(base * 1.75);
     for (let i = 0; i < 10; i++) grantTreasure(state, 'ring');
     expect(state.treasures.ring).toBe(MAX_TREASURE_LEVEL);
     expect(findableTreasures(state).map((t) => t.id)).not.toContain('ring');

@@ -136,6 +136,6 @@ export function grantTreasure(state: GameState, id: string): void {
   if (level === 1) {
     log(`Obtained ${RARITIES[def.rarity].name.toLowerCase()} treasure: ${def.name}!`, 'epic');
   } else {
-    log(`It merges with the ${def.name} you carry, which grows stronger. (Level ${level})`, 'epic');
+    log(`Your ${def.name} absorbs it and grows stronger. (Level ${level})`, 'epic');
   }
 }

@@ -49,6 +49,15 @@ describe('encounters', () => {
     expect(logs[0].text).not.toMatch(/\{\w+\}/);
   });
 
+  it('calls a refined duplicate "another" instead of "the"', () => {
+    const state = newGame({ stage: firstStageOfRealm('qiCondensation') });
+    for (const t of TREASURES) state.treasures[t.id] = 1;
+    const logs = claim(state, 'beggar', seqRng(0.99));
+    expect(logs[0].text).toMatch(/another /);
+    expect(logs[0].text).not.toMatch(/the another/);
+    expect(logs[1].text).toMatch(/Level 2/);
+  });
+
   it('can grant a timed buff', () => {
     const state = newGame({ stage: firstStageOfRealm('coreFormation') });
     // Omen: windfall 15 / buff 80 / treasure 5, then heavensFavor 3 / epiphany 1.

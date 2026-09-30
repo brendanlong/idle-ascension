@@ -45,7 +45,7 @@ export function generatingPairs(elements: ReadonlySet<string>): number {
 }
 
 export function treasureEffects(treasure: TreasureDef, level: number): Effect[] {
-  return treasure.effects.map((e) => scaleEffect(e, level));
+  return [...(treasure.fixedEffects ?? []), ...treasure.effects.map((e) => scaleEffect(e, level))];
 }
 
 export function computeModifiers(state: GameState, includeBuffs = true): Modifiers {

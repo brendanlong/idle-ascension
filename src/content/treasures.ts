@@ -34,6 +34,8 @@ export interface TreasureDef {
   minRealm: string;
   /** Effects at level 1; see scaleEffect() for how they grow with level. */
   effects: readonly Effect[];
+  /** Effects that stay the same at every level (for stats with natural caps). */
+  fixedEffects?: readonly Effect[];
 }
 
 export const TREASURES: readonly TreasureDef[] = [
@@ -76,7 +78,8 @@ export const TREASURES: readonly TreasureDef[] = [
     description: 'Woven from the hair of a lightning-struck ox. Smells faintly of ozone.',
     rarity: 'common',
     minRealm: 'foundation',
-    effects: [{ type: 'add', stat: 'tribulationAllowedHits', value: 1 }],
+    fixedEffects: [{ type: 'add', stat: 'tribulationAllowedHits', value: 1 }],
+    effects: [{ type: 'mult', stat: 'tribulationBoltTimeMult', value: 1.1 }],
   },
   {
     id: 'mouse',
@@ -117,10 +120,8 @@ export const TREASURES: readonly TreasureDef[] = [
     description: 'Even broken, it hums with killing intent that cows the heavens.',
     rarity: 'rare',
     minRealm: 'coreFormation',
-    effects: [
-      { type: 'mult', stat: 'globalMult', value: 2 },
-      { type: 'mult', stat: 'tribulationBoltTimeMult', value: 1.25 },
-    ],
+    fixedEffects: [{ type: 'mult', stat: 'tribulationBoltTimeMult', value: 1.25 }],
+    effects: [{ type: 'mult', stat: 'globalMult', value: 2 }],
   },
   // --- Nascent Soul ---
   {
@@ -140,7 +141,7 @@ export const TREASURES: readonly TreasureDef[] = [
     description: 'One chime and your heart grows still, even under a sky full of lightning.',
     rarity: 'common',
     minRealm: 'spiritSevering',
-    effects: [{ type: 'mult', stat: 'tribulationBoltTimeMult', value: 1.3 }],
+    effects: [{ type: 'mult', stat: 'tribulationBoltTimeMult', value: 1.2 }],
   },
   {
     id: 'gourd',
@@ -217,10 +218,8 @@ export const TREASURES: readonly TreasureDef[] = [
     description: 'Wearing it, you cultivate even in your sleep. Especially in your sleep.',
     rarity: 'uncommon',
     minRealm: 'immortalAscension',
-    effects: [
-      { type: 'add', stat: 'offlineEfficiency', value: 0.15 },
-      { type: 'add', stat: 'offlineCapHours', value: 4 },
-    ],
+    fixedEffects: [{ type: 'add', stat: 'offlineEfficiency', value: 0.15 }],
+    effects: [{ type: 'add', stat: 'offlineCapHours', value: 4 }],
   },
   {
     id: 'peach',

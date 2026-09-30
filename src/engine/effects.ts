@@ -143,13 +143,20 @@ export function describeEffect(effect: Effect, generatorName?: (id: string) => s
   }
 }
 
+/** Each level past the first adds this fraction of the level-1 bonus. */
+export const LEVEL_BONUS_GROWTH = 0.5;
+
 /**
- * An effect at a given level, for things that grow linearly (treasures):
- * bonus multipliers grow their bonus (×1.5 → ×2 → ×2.5), additions add up,
- * and reductions (multipliers below 1) compound so they never reach zero.
+ * An effect at a given level (treasures). The bonus part grows linearly:
+ * ×1.5 → ×1.75 → ×2, and +1 → +1.5 → +2. Reductions mirror that by scaling
+ * the reciprocal, so ×0.5 → ×0.4 → ×0.33 and never reaches zero.
  */
 export function scaleEffect(effect: Effect, level: number): Effect {
-  if (effect.type === 'add') return { ...effect, value: effect.value * level };
-  const value = effect.value < 1 ? effect.value ** level : 1 + (effect.value - 1) * level;
+  const strength = 1 + (level - 1) * LEVEL_BONUS_GROWTH;
+  if (effect.type === 'add') return { ...effect, value: effect.value * strength };
+  const value =
+    effect.value < 1
+      ? 1 / (1 + (1 / effect.value - 1) * strength)
+      : 1 + (effect.value - 1) * strength;
   return { ...effect, value };
 }
