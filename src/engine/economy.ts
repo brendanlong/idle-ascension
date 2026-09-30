@@ -16,11 +16,11 @@ import {
 import { UPGRADES, UPGRADES_BY_ID, type UpgradeDef } from '../content/upgrades';
 import { firstStageOfRealm } from '../content/realms';
 import { meetsCondition } from './conditions';
-import type { Modifiers } from './effects';
+import { describeEffects, type Modifiers } from './effects';
 import { log } from './events';
 import { weightedPick, type Rng } from './rng';
 import type { GameState } from './state';
-import type { Stats } from './stats';
+import { treasureEffects, type Stats } from './stats';
 
 export function gainQi(state: GameState, amount: number): void {
   state.qi += amount;
@@ -113,9 +113,15 @@ function purchaseUpgrade(state: GameState, id: string): UpgradeDef | null {
   return u;
 }
 
+/** "the Iron Palm technique (×2 cultivation (click) power)" */
+function techniqueLabel(u: UpgradeDef): string {
+  const name = u.name.replace(/^The /, '');
+  return `the ${name} technique (${describeEffects(u.effects)})`;
+}
+
 export function buyUpgrade(state: GameState, id: string): boolean {
   const u = purchaseUpgrade(state, id);
-  if (u) log(`You master the ${u.name}.`, 'good');
+  if (u) log(`You master ${techniqueLabel(u)}.`, 'good');
   return u !== null;
 }
 
@@ -131,8 +137,11 @@ export function affordableUpgrades(state: GameState): UpgradeDef[] {
 
 export function buyAllUpgrades(state: GameState): number {
   const bought = affordableUpgrades(state).filter((u) => purchaseUpgrade(state, u.id));
-  if (bought.length === 1) log(`You master the ${bought[0].name}.`, 'good');
-  else if (bought.length > 1) log(`You master ${bought.length} techniques.`, 'good');
+  if (bought.length === 1) log(`You master ${techniqueLabel(bought[0])}.`, 'good');
+  else if (bought.length > 1) {
+    const list = bought.map((u) => `${u.name} (${describeEffects(u.effects)})`).join('; ');
+    log(`You master ${bought.length} techniques: ${list}.`, 'good');
+  }
   return bought.length;
 }
 
@@ -173,9 +182,13 @@ export function grantTreasure(state: GameState, id: string): void {
   const def = TREASURES_BY_ID.get(id)!;
   const level = Math.min(MAX_TREASURE_LEVEL, (state.treasures[id] ?? 0) + 1);
   state.treasures[id] = level;
+  const effects = describeEffects(treasureEffects(def, level));
   if (level === 1) {
-    log(`Obtained ${RARITIES[def.rarity].name.toLowerCase()} treasure: ${def.name}!`, 'epic');
+    log(
+      `Obtained ${RARITIES[def.rarity].name.toLowerCase()} treasure: ${def.name}! (${effects})`,
+      'epic',
+    );
   } else {
-    log(`Your ${def.name} absorbs it and grows stronger. (Level ${level})`, 'epic');
+    log(`Your ${def.name} absorbs it and grows stronger. Level ${level}: ${effects}.`, 'epic');
   }
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { onLog } from '../events';
 import { GENERATORS } from '../../content/generators';
 import { firstStageOfRealm } from '../../content/realms';
 import {
@@ -6,6 +7,7 @@ import {
   buyAllUpgrades,
   buyGenerator,
   buyUpgrade,
+  grantTreasure,
   click,
   generatorCost,
   isGeneratorVisible,
@@ -90,5 +92,44 @@ describe('clicking and upgrades', () => {
     state.stats.loopClicks = 15;
     expect(buyUpgrade(state, 'palm-1')).toBe(true);
     expect(computeStats(state).clickPower).toBe(2);
+  });
+});
+
+describe('log messages', () => {
+  function logs(fn: () => void): string[] {
+    const out: string[] = [];
+    const off = onLog((e) => out.push(e.text));
+    fn();
+    off();
+    return out;
+  }
+
+  it('describes what a technique does when you master it', () => {
+    const state = newGame({ qi: 1e30, stage: firstStageOfRealm('daoSeeking') });
+    state.stats.loopClicks = 15;
+    expect(logs(() => buyUpgrade(state, 'palm-1'))).toEqual([
+      'You master the Iron Palm technique (×2 cultivation (click) power).',
+    ]);
+    expect(logs(() => buyUpgrade(state, 'scripture-5'))).toEqual([
+      'You master the Wordless Sutra technique (×3 all qi gain).',
+    ]);
+  });
+
+  it('lists each technique bought with Buy all', () => {
+    const state = newGame({ stage: firstStageOfRealm('qiCondensation'), qi: 500 });
+    state.stats.loopClicks = 15;
+    expect(logs(() => buyAllUpgrades(state))).toEqual([
+      'You master 2 techniques: Iron Palm (×2 cultivation (click) power); Spiritual Sense (×1.5 qi mote frequency, ×1.5 qi mote value).',
+    ]);
+  });
+
+  it('describes treasures when found and when refined', () => {
+    const state = newGame();
+    expect(logs(() => grantTreasure(state, 'ring'))[0]).toBe(
+      'Obtained rare treasure: Ring of the Old Master! (×1.5 all qi gain, +1% of qi/s added to each click)',
+    );
+    expect(logs(() => grantTreasure(state, 'ring'))[0]).toBe(
+      'Your Ring of the Old Master absorbs it and grows stronger. Level 2: ×1.75 all qi gain, +1.5% of qi/s added to each click.',
+    );
   });
 });

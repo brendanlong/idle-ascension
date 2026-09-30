@@ -1,3 +1,5 @@
+import { generatorName } from '../content/generators';
+
 /**
  * Every bonus in the game (upgrades, treasures, perks, cores, buffs, realms)
  * is expressed as a list of Effects, which fold into a single Modifiers object.
@@ -144,6 +146,11 @@ export function describeEffect(effect: Effect, generatorName?: (id: string) => s
     case 'generatorMult':
       return `×${trimNumber(effect.value)} ${generatorName?.(effect.generator) ?? effect.generator} output`;
   }
+}
+
+/** "×2 Pill Furnace output, +1% of qi/s added to each click" */
+export function describeEffects(effects: readonly Effect[]): string {
+  return effects.map((e) => describeEffect(e, generatorName)).join(', ');
 }
 
 /** Each level past the first adds this fraction of the level-1 bonus. */

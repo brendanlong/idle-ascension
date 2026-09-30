@@ -1,6 +1,5 @@
 import { BUFFS_BY_ID } from '../../content/buffs';
 import { CORE_GRADES } from '../../content/cores';
-import { generatorName } from '../../content/generators';
 import { REALMS, STAGES, stageName, type RealmDef } from '../../content/realms';
 import {
   attemptBreakthrough,
@@ -8,7 +7,7 @@ import {
   nextStage,
   tribulationPassScore,
 } from '../../engine/breakthrough';
-import { describeEffect } from '../../engine/effects';
+import { describeEffect, describeEffects } from '../../engine/effects';
 import { formatDuration } from '../../engine/format';
 import { game } from '../game';
 
@@ -133,9 +132,7 @@ export function CultivationPanel() {
               return (
                 <li key={b.id} class={def.harmful ? 'harmful' : 'helpful'}>
                   {def.name} <span class="muted">{Math.ceil(b.remaining)}s</span>
-                  <div class="buff-effects">
-                    {def.effects.map((e) => describeEffect(e, generatorName)).join(', ')}
-                  </div>
+                  <div class="buff-effects">{describeEffects(def.effects)}</div>
                 </li>
               );
             })}

@@ -9,11 +9,10 @@ import {
   type RewardKind,
   type WindfallReward,
 } from '../content/encounters';
-import { generatorName } from '../content/generators';
 import { firstStageOfRealm } from '../content/realms';
 import { TREASURES_BY_ID } from '../content/treasures';
 import { addBuff, gainQi, grantTreasure, pickRandomTreasure } from './economy';
-import { describeEffect } from './effects';
+import { describeEffects } from './effects';
 import { log } from './events';
 import { formatNumber } from './format';
 import { pick, randomBetween, weightedPick, type Rng } from './rng';
@@ -100,7 +99,7 @@ export function claimEncounter(state: GameState, stats: Stats, rng: Rng): boolea
       const buff = BUFFS_BY_ID.get(option.buff)!;
       story(pick(rng, option.texts));
       addBuff(state, buff.id);
-      const effects = buff.effects.map((e) => describeEffect(e, generatorName)).join(', ');
+      const effects = describeEffects(buff.effects);
       log(`${buff.name}: ${effects} for ${buff.duration}s`, 'good');
       break;
     }
