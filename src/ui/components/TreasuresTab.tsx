@@ -1,4 +1,4 @@
-import { REALMS_BY_ID } from '../../content/realms';
+import { REALMS_BY_ID, firstStageOfRealm } from '../../content/realms';
 import { MAX_TREASURE_LEVEL, RARITIES, TREASURES } from '../../content/treasures';
 import { describeEffects } from '../../engine/effects';
 import { treasureEffects } from '../../engine/stats';
@@ -7,16 +7,21 @@ import { game } from '../game';
 export function TreasuresTab() {
   const { state } = game;
   const found = TREASURES.filter((t) => state.treasures[t.id]);
+  // Only tease treasures you could find now; owned ones always show.
+  const shown = TREASURES.filter(
+    (t) => state.treasures[t.id] || state.stage >= firstStageOfRealm(t.minRealm),
+  );
+  const moreLater = shown.length < TREASURES.length;
 
   return (
     <div class="tab-body">
       <p class="muted small">
         Treasures are found through fortuitous encounters: watch the qi field for mysterious
         strangers, hidden caves, and old beggars. Finding one you already own refines it, up to
-        level {MAX_TREASURE_LEVEL}. Found {found.length} / {TREASURES.length}.
+        level {MAX_TREASURE_LEVEL}. Found {found.length}.
       </p>
       <ul class="card-list">
-        {TREASURES.map((t) => {
+        {shown.map((t) => {
           const rarity = RARITIES[t.rarity];
           const level = state.treasures[t.id] ?? 0;
           if (level === 0) {
@@ -27,7 +32,7 @@ export function TreasuresTab() {
                   <span class="rarity">{rarity.name}</span>
                 </div>
                 <span class="muted small">
-                  Found from {REALMS_BY_ID.get(t.minRealm)?.name ?? t.minRealm} onward
+                  Can be found in {REALMS_BY_ID.get(t.minRealm)?.name ?? t.minRealm} and beyond
                 </span>
               </li>
             );
@@ -54,6 +59,7 @@ export function TreasuresTab() {
           );
         })}
       </ul>
+      {moreLater && <p class="muted small">More treasures may await in higher realms…</p>}
     </div>
   );
 }
