@@ -1,0 +1,107 @@
+import { BUFFS_BY_ID } from '../content/buffs';
+import { CORE_GRADES, ELEMENTS, ELEMENTS_BY_ID, GENERATING_CYCLE_BONUS } from '../content/cores';
+import { GENERATORS } from '../content/generators';
+import { PERKS } from '../content/perks';
+import { REALMS, STAGES, firstStageOfRealm } from '../content/realms';
+import { TREASURES_BY_ID } from '../content/treasures';
+import { UPGRADES_BY_ID } from '../content/upgrades';
+import { applyEffects, baseModifiers, type Modifiers } from './effects';
+import type { GameState } from './state';
+
+export interface Stats {
+  mods: Modifiers;
+  realmMult: number;
+  memoryMult: number;
+  cycleMult: number;
+  /** Qi/s produced by a single unit of each generator, after all bonuses. */
+  generatorUnitQps: Record<string, number>;
+  generatorQps: number;
+  clickPower: number;
+  autoClickQps: number;
+  /** Total passive qi/s. */
+  qps: number;
+  moteValue: number;
+  moteSpawnPerSecond: number;
+}
+
+const BASE_MOTE_SPAWN_PER_SECOND = 1;
+const MOTE_CLICK_FRACTION = 0.3;
+
+export function realmMultiplier(stage: number): number {
+  let mult = 1;
+  for (let i = 1; i <= stage; i++) mult *= REALMS[STAGES[i].realmIndex].stageMultiplier;
+  return mult;
+}
+
+export function unlockedCoreSlots(state: GameState, mods: Modifiers): number {
+  return state.stage >= firstStageOfRealm('coreFormation') ? mods.coreSlots : 0;
+}
+
+/** Number of adjacent pairs in the generating cycle among the given elements. */
+export function generatingPairs(elements: ReadonlySet<string>): number {
+  return ELEMENTS.filter(
+    (e, i) => elements.has(e.id) && elements.has(ELEMENTS[(i + 1) % ELEMENTS.length].id),
+  ).length;
+}
+
+export function computeModifiers(state: GameState, includeBuffs = true): Modifiers {
+  const mods = baseModifiers();
+  for (const id of Object.keys(state.upgrades)) {
+    const u = UPGRADES_BY_ID.get(id);
+    if (u) applyEffects(mods, u.effects);
+  }
+  for (const id of Object.keys(state.treasures)) {
+    const t = TREASURES_BY_ID.get(id);
+    if (t) applyEffects(mods, t.effects);
+  }
+  for (const perk of PERKS) applyEffects(mods, perk.effects, state.prestige.perks[perk.id] ?? 0);
+  for (const core of state.cores) {
+    const element = ELEMENTS_BY_ID.get(core.element);
+    if (element) applyEffects(mods, element.effects(core.grade));
+  }
+  if (includeBuffs) {
+    for (const b of state.buffs) {
+      const def = BUFFS_BY_ID.get(b.id);
+      if (def) applyEffects(mods, def.effects);
+    }
+  }
+  const currentRealm = STAGES[state.stage].realmIndex;
+  for (let r = 0; r <= currentRealm; r++) applyEffects(mods, REALMS[r].effects ?? []);
+  return mods;
+}
+
+export function computeStats(state: GameState, includeBuffs = true): Stats {
+  const mods = computeModifiers(state, includeBuffs);
+  const realmMult = realmMultiplier(state.stage);
+  const memoryMult = 1 + state.prestige.memories * mods.memoryBonus;
+  const cycleMult =
+    GENERATING_CYCLE_BONUS ** generatingPairs(new Set(state.cores.map((c) => c.element)));
+  const coreMult = state.cores.reduce((m, c) => m * CORE_GRADES[c.grade].mult, 1);
+  const global = mods.globalMult * realmMult * memoryMult * cycleMult * coreMult;
+
+  const generatorUnitQps: Record<string, number> = {};
+  let generatorQps = 0;
+  for (const g of GENERATORS) {
+    const unit = g.baseQps * (mods.generatorMult[g.id] ?? 1) * global;
+    generatorUnitQps[g.id] = unit;
+    generatorQps += unit * (state.generators[g.id] ?? 0);
+  }
+
+  const clickPower =
+    mods.clickFlat * mods.clickMult * global + mods.clickQpsFraction * generatorQps;
+  const autoClickQps = mods.autoClicksPerSecond * clickPower;
+
+  return {
+    mods,
+    realmMult,
+    memoryMult,
+    cycleMult,
+    generatorUnitQps,
+    generatorQps,
+    clickPower,
+    autoClickQps,
+    qps: generatorQps + autoClickQps,
+    moteValue: clickPower * MOTE_CLICK_FRACTION * mods.moteValueMult,
+    moteSpawnPerSecond: BASE_MOTE_SPAWN_PER_SECOND * mods.moteSpawnMult,
+  };
+}
