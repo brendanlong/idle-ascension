@@ -1,4 +1,3 @@
-import { BUFFS_BY_ID } from '../content/buffs';
 import type { ElementId } from '../content/cores';
 import { firstStageOfRealm } from '../content/realms';
 import {
@@ -15,7 +14,7 @@ import {
   TRIAL_TREASURE_CHANCE,
   TRIAL_TREASURE_SCORE,
 } from '../content/trials';
-import { addBuff, gainQi, grantTreasure, pickRandomTreasure } from './economy';
+import { addBuff, describeBuff, gainQi, grantTreasure, pickRandomTreasure } from './economy';
 import { log } from './events';
 import { formatNumber } from './format';
 import { pick, randomBetween, type Rng } from './rng';
@@ -92,7 +91,7 @@ export function completeTrial(
   if (clamped >= TRIAL_BUFF_SCORE) {
     buff = def.buff;
     addBuff(state, buff);
-    log(`${BUFFS_BY_ID.get(buff)!.name}!`, 'good');
+    log(describeBuff(buff), 'good');
   }
 
   let treasure: string | null = null;

@@ -155,6 +155,12 @@ export function addBuff(state: GameState, id: string): void {
   else state.buffs.push({ id, remaining: def.duration });
 }
 
+/** "Sudden Epiphany: ×7 all qi gain for 77s" */
+export function describeBuff(id: string): string {
+  const def = BUFFS_BY_ID.get(id)!;
+  return `${def.name}: ${describeEffects(def.effects)} for ${def.duration}s`;
+}
+
 /** Treasures an encounter could give now: unfound ones, or owned ones below max level. */
 export function findableTreasures(state: GameState): TreasureDef[] {
   return TREASURES.filter(

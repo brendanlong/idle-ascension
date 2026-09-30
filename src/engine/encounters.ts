@@ -1,4 +1,3 @@
-import { BUFFS_BY_ID } from '../content/buffs';
 import {
   ENCOUNTERS,
   ENCOUNTERS_BY_ID,
@@ -11,8 +10,7 @@ import {
 } from '../content/encounters';
 import { firstStageOfRealm } from '../content/realms';
 import { TREASURES_BY_ID } from '../content/treasures';
-import { addBuff, gainQi, grantTreasure, pickRandomTreasure } from './economy';
-import { describeEffects } from './effects';
+import { addBuff, describeBuff, gainQi, grantTreasure, pickRandomTreasure } from './economy';
 import { log } from './events';
 import { formatNumber } from './format';
 import { pick, randomBetween, weightedPick, type Rng } from './rng';
@@ -96,11 +94,9 @@ export function claimEncounter(state: GameState, stats: Stats, rng: Rng): boolea
     }
     case 'buff': {
       const option = weightedPick(rng, def.rewards.buff!.options);
-      const buff = BUFFS_BY_ID.get(option.buff)!;
       story(pick(rng, option.texts));
-      addBuff(state, buff.id);
-      const effects = describeEffects(buff.effects);
-      log(`${buff.name}: ${effects} for ${buff.duration}s`, 'good');
+      addBuff(state, option.buff);
+      log(describeBuff(option.buff), 'good');
       break;
     }
     case 'treasure': {
