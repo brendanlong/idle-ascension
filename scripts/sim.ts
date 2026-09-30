@@ -61,7 +61,8 @@ interface RealmActivity {
   seconds: number;
   generatorsBought: number;
   techniques: number;
-  newGenerators: string[];
+  /** Generator types the bot bought for the first time (not ones granted by Buried Stash). */
+  firstBought: string[];
 }
 let realmActivity: Record<string, RealmActivity> = {};
 function activity(): RealmActivity {
@@ -70,7 +71,7 @@ function activity(): RealmActivity {
     seconds: 0,
     generatorsBought: 0,
     techniques: 0,
-    newGenerators: [],
+    firstBought: [],
   });
 }
 const reachedRealm = new Set<number>();
@@ -130,7 +131,7 @@ function spend(): void {
     if (b && state.qi - b.cost >= reserve && buyGenerator(state, stats.mods, b.id)) {
       bought = true;
       activity().generatorsBought++;
-      if (state.generators[b.id] === 1) activity().newGenerators.push(b.id);
+      if (state.generators[b.id] === 1) activity().firstBought.push(b.id);
     }
   }
 }
@@ -185,7 +186,7 @@ console.log(
 console.log('Final loop by realm:');
 for (const [realm, r] of Object.entries(realmActivity)) {
   console.log(
-    `  ${realm.padEnd(26)} ${formatDuration(r.seconds).padStart(8)}  bought ${String(r.generatorsBought).padStart(5)} resources, ${String(r.techniques).padStart(3)} techniques  ${r.newGenerators.join(', ')}`,
+    `  ${realm.padEnd(26)} ${formatDuration(r.seconds).padStart(8)}  bought ${String(r.generatorsBought).padStart(5)} resources, ${String(r.techniques).padStart(3)} techniques  ${r.firstBought.length ? `first bought: ${r.firstBought.join(', ')}` : ''}`,
   );
 }
 const treasureLevels = Object.values(state.treasures);

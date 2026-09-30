@@ -166,7 +166,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
   },
   {
     id: 'sect',
-    name: 'Your Own Sect',
+    name: 'Founded Sect',
     icon: '🏯',
     description: 'A mountain, a gate, and a thousand disciples who call you Patriarch.',
     minRealm: 'spiritSevering',

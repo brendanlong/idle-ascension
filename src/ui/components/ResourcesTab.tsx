@@ -1,30 +1,42 @@
-import { useState } from 'preact/hooks';
 import { GENERATORS } from '../../content/generators';
-import { REALMS_BY_ID } from '../../content/realms';
+import { describeCondition } from '../../engine/conditions';
 import {
   buyGenerator,
   generatorCost,
+  isGeneratorUnlocked,
   isGeneratorVisible,
   maxAffordable,
   nextLockedGenerator,
 } from '../../engine/economy';
 import { game } from '../game';
 
-const BUY_AMOUNTS = [1, 10, 100, 'max'] as const;
-type BuyAmount = (typeof BUY_AMOUNTS)[number];
+export const BUY_AMOUNTS = [1, 10, 100, 'max'] as const;
+export type BuyAmount = (typeof BUY_AMOUNTS)[number];
 
-export function ResourcesTab() {
-  const [amount, setAmount] = useState<BuyAmount>(1);
+export function ResourcesTab({
+  amount,
+  onAmountChange,
+}: {
+  amount: BuyAmount;
+  onAmountChange: (amount: BuyAmount) => void;
+}) {
   const { state, stats } = game;
   const visible = GENERATORS.filter((_, i) => isGeneratorVisible(state, i));
-  const locked = nextLockedGenerator(state);
-  const hiddenCount = GENERATORS.length - visible.length - (locked ? 1 : 0);
+  const undiscovered =
+    GENERATORS.filter((g) => isGeneratorUnlocked(state, g)).length - visible.length;
+  // Only tease the next realm's resource once everything available now has been found.
+  const locked = undiscovered === 0 ? nextLockedGenerator(state) : null;
 
   return (
     <div class="tab-body">
       <div class="buy-amounts" role="group" aria-label="Buy amount">
         {BUY_AMOUNTS.map((a) => (
-          <button key={a} class={amount === a ? 'selected' : ''} onClick={() => setAmount(a)}>
+          <button
+            key={a}
+            class={amount === a ? 'selected' : ''}
+            aria-pressed={amount === a}
+            onClick={() => onAmountChange(a)}
+          >
             {a === 'max' ? 'Max' : `×${a}`}
           </button>
         ))}
@@ -60,20 +72,20 @@ export function ResourcesTab() {
             </li>
           );
         })}
-      </ul>
-      {locked && (
-        <div class="shop-item locked" aria-disabled="true">
-          <span class="shop-icon">{locked.icon}</span>
-          <span class="shop-main">
-            <span class="shop-name">{locked.name}</span>
-            <span class="shop-desc">
-              Requires {REALMS_BY_ID.get(locked.minRealm!)?.name ?? locked.minRealm}
+        {locked && (
+          <li class="shop-item locked">
+            <span class="shop-icon">{locked.icon}</span>
+            <span class="shop-main">
+              <span class="shop-name">{locked.name} (locked)</span>
+              <span class="shop-desc">
+                {describeCondition({ type: 'realm', realm: locked.minRealm! })}
+              </span>
             </span>
-          </span>
-        </div>
-      )}
-      {hiddenCount > 0 && (
-        <p class="muted small">{hiddenCount} more cultivation resources remain undiscovered…</p>
+          </li>
+        )}
+      </ul>
+      {undiscovered > 0 && (
+        <p class="muted small">{undiscovered} more cultivation resources remain undiscovered…</p>
       )}
     </div>
   );
