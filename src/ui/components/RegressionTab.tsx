@@ -1,18 +1,24 @@
 import { useState } from 'preact/hooks';
+import { REGRESSION_STORY } from '../../content/lore';
 import { PERKS, PERKS_BY_ID, perkCost } from '../../content/perks';
-import { describeEffect } from '../../engine/effects';
+import { describeEffect, type Effect } from '../../engine/effects';
+import { perkEffects } from '../../engine/stats';
 import {
   availableMemories,
   buyPerk,
+  describeSpecialPerk,
   memoriesForStage,
   pendingMemories,
   perkStatus,
   regress,
   regressionBlocker,
 } from '../../engine/prestige';
+import { composeStory } from '../../engine/text';
 import { game } from '../game';
 
-export function RegressionTab({ onRegressed }: { onRegressed: () => void }) {
+const describeEffects = (effects: Effect[]) => effects.map((e) => describeEffect(e)).join(', ');
+
+export function RegressionTab({ onRegressed }: { onRegressed: (story: string[]) => void }) {
   const [confirming, setConfirming] = useState(false);
   const { state, stats } = game;
   const pending = pendingMemories(state);
@@ -21,10 +27,14 @@ export function RegressionTab({ onRegressed }: { onRegressed: () => void }) {
 
   const doRegress = () => {
     setConfirming(false);
+    const gained = pendingMemories(game.state);
     const next = regress(game.state);
     if (!next) return;
     game.replaceState(next);
-    onRegressed();
+    onRegressed([
+      ...composeStory(REGRESSION_STORY, Math.random),
+      `You carry ${game.fmt(gained)} new Memories back with you.`,
+    ]);
   };
 
   return (
@@ -53,7 +63,7 @@ export function RegressionTab({ onRegressed }: { onRegressed: () => void }) {
       <p class="muted small">
         Each Memory permanently grants +{Math.round(stats.mods.memoryBonus * 100)}% qi gain, even
         after you spend it on insights below. Regressing resets your realm, qi, resources,
-        techniques, cores and treasures.
+        techniques, cores and treasures (except what Soul-Bound Treasures keeps).
       </p>
 
       {!confirming ? (
@@ -85,13 +95,23 @@ export function RegressionTab({ onRegressed }: { onRegressed: () => void }) {
               <div class="card-head">
                 <strong>{p.name}</strong>
                 <span class="muted">
-                  {level}/{p.maxLevel}
+                  {Number.isFinite(p.maxLevel) ? `${level}/${p.maxLevel}` : `Level ${level}`}
                 </span>
               </div>
               <p class="flavor">{p.description}</p>
-              {p.effects.length > 0 && (
-                <p class="effect">
-                  Per level: {p.effects.map((e) => describeEffect(e)).join(', ')}
+              {p.effects.length > 0 && level > 0 && (
+                <p class="effect">Now: {describeEffects(perkEffects(p, level))}</p>
+              )}
+              {p.effects.length > 0 && status !== 'maxed' && (
+                <p class="muted small">
+                  {level > 0 ? 'Next level' : 'First level'}:{' '}
+                  {describeEffects(perkEffects(p, level + 1))}
+                </p>
+              )}
+              {p.special && level > 0 && <p class="effect">Now: {describeSpecialPerk(p, level)}</p>}
+              {p.special && status !== 'maxed' && (
+                <p class="muted small">
+                  {level > 0 ? 'Next level' : 'First level'}: {describeSpecialPerk(p, level + 1)}
                 </p>
               )}
               {status === 'locked' && (
@@ -105,7 +125,7 @@ export function RegressionTab({ onRegressed }: { onRegressed: () => void }) {
                   disabled={status !== 'available'}
                   onClick={() => game.act((s) => buyPerk(s, p.id))}
                 >
-                  Learn ({perkCost(p, level)} Memories)
+                  Learn ({game.fmt(perkCost(p, level))} Memories)
                 </button>
               )}
             </li>

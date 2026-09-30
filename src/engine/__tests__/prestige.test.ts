@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
+import { PERKS_BY_ID } from '../../content/perks';
 import { firstStageOfRealm } from '../../content/realms';
 import {
   availableMemories,
   buyPerk,
+  describeSpecialPerk,
   pendingMemories,
+  perkStatus,
   regress,
   regressionBlocker,
+  stashGenerators,
 } from '../prestige';
+import { perkEffects } from '../stats';
 import { newGame } from './helpers';
 
 const CORE_FORMATION = firstStageOfRealm('coreFormation');
@@ -51,12 +56,51 @@ describe('regression', () => {
 
   it('applies soul-bound treasures, buried stash, and Dao heart perks', () => {
     const state = newGame({ stage: CORE_FORMATION });
-    state.treasures.ring = 3;
-    state.prestige.perks = { soulbound: 1, stash: 1, daoHeart: 1 };
+    state.treasures = { ring: 3, pendant: 1 };
+    state.prestige.perks = { soulbound: 2, stash: 2, daoHeart: 1 };
     const next = regress(state, 0)!;
-    expect(next.treasures.ring).toBe(3);
+    // Soul-Bound level 2 keeps treasures at up to level 2.
+    expect(next.treasures).toEqual({ ring: 2, pendant: 1 });
     expect(next.generators.cushion).toBe(10);
+    expect(next.generators.array).toBe(10);
     expect(next.stage).toBe(3);
+  });
+
+  it('describes what special perks give', () => {
+    const stash = PERKS_BY_ID.get('stash')!;
+    expect(describeSpecialPerk(stash, 1)).toBe(
+      'Start each loop with 10 Meditation Cushions, 5 Spirit Herb Patches',
+    );
+    expect(stashGenerators(3)).toEqual({
+      cushion: 10,
+      herb: 5,
+      array: 10,
+      furnace: 11,
+      disciple: 5,
+    });
+    expect(describeSpecialPerk(PERKS_BY_ID.get('soulbound')!, 3)).toMatch(/level 3/);
+  });
+
+  it('scales diminishing perks logarithmically, rounding whole-number stats down', () => {
+    const foresight = PERKS_BY_ID.get('foresight')!;
+    const rate = (level: number) => perkEffects(foresight, level)[0].value;
+    expect(rate(1)).toBeCloseTo(1.25);
+    expect(rate(3)).toBeCloseTo(1.5);
+    expect(rate(15)).toBeCloseTo(2);
+    const hits = (level: number) => perkEffects(PERKS_BY_ID.get('lightning')!, level)[0].value;
+    expect([1, 2, 3, 7].map(hits)).toEqual([1, 1, 2, 3]);
+  });
+
+  it('compounds ordinary perks', () => {
+    expect(perkEffects(PERKS_BY_ID.get('meridians')!, 3)[0].value).toBe(8);
+    expect(perkEffects(PERKS_BY_ID.get('meridians')!, 0)).toEqual([]);
+  });
+
+  it('lets uncapped perks be bought past their old caps', () => {
+    const state = newGame();
+    state.prestige.memories = 1e9;
+    for (let i = 0; i < 10; i++) expect(buyPerk(state, 'meridians')).toBe(true);
+    expect(perkStatus(state, 'meridians')).toBe('available');
   });
 
   it('buys perks with unspent memories and respects prerequisites', () => {

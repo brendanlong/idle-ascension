@@ -5,11 +5,37 @@ export const INTRO_TEXT = [
   'They will regret calling you trash.',
 ];
 
-export const REGRESSION_TEXT = [
-  'You stand before the Blood Demon Sect Master, knowing exactly how this ends.',
-  'His palm caves in your chest. As darkness takes you, the jade pendant at your throat blazes with white light...',
-  'You open your eyes in the woodshed. You are sixteen again. Your meridians are sealed. Your treasures are gone.',
-  'But you remember everything.',
+/**
+ * The regression story is one random line from each part, in order. Each
+ * death is a self-contained scene so it can't clash with the other parts.
+ * Placeholders come from NAME_TABLES (names.ts).
+ */
+export const REGRESSION_STORY: readonly (readonly string[])[] = [
+  [
+    'You stand before the Blood Demon Sect Master, knowing exactly how this ends. His palm caves in your chest.',
+    'You insult the {elderTitle} of the {sect} to their face, on purpose. They do not take it well.',
+    'You walk into {place}, where an ancient {beast} the size of a mountain sleeps. It wakes up hungry.',
+    "You challenge Young Master {surname}'s {relative} to a duel you cannot win. You do not win.",
+    'You swallow an untested pill from a rival alchemist. Your meridians light up like fireworks, then go dark.',
+    'You face a heavenly tribulation three realms too early. The ninth bolt finds you.',
+    'You stop breathing during closed-door cultivation and simply do not start again. Your disciples assume you are concentrating very hard.',
+  ],
+  [
+    'As darkness takes you, the jade pendant at your throat blazes with white light...',
+    "Your mother's jade pendant cracks. Light pours out of it, and the world folds in on itself...",
+    'Somewhere far away, a jade pendant grows warm. Time begins to run backward...',
+  ],
+  [
+    'You open your eyes in the woodshed. You are sixteen again. Your meridians are sealed.',
+    'You wake to the smell of damp straw and a cousin kicking the woodshed door. You are sixteen again.',
+    'Rain drums on the woodshed roof, exactly as it did the first time. You are sixteen, and your meridians are sealed.',
+  ],
+  [
+    'But you remember everything.',
+    'The elders still call you trash. They have no idea.',
+    'This time, you know which cliffs to fall off.',
+    'Somewhere, Young Master {surname} does not yet know he is doomed.',
+  ],
 ];
 
 export const VICTORY_TEXT = [

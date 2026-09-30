@@ -54,7 +54,7 @@ describe('save/load', () => {
       tribulation: { targetStage: 'x' },
     });
     raw.generators.removedGenerator = 5;
-    raw.prestige.perks = { meridians: 99, removed: 1 };
+    raw.prestige.perks = { stash: 99, removed: 1 };
     raw.encounter.active = { id: 'nope', x: 0.5, y: 0.5, remaining: 5 };
     const loaded = deserialize(JSON.stringify(raw));
     expect(loaded.stage).toBe(STAGES.length - 1);
@@ -64,7 +64,7 @@ describe('save/load', () => {
     expect(loaded.buffs.map((b) => b.id)).toEqual(['epiphany']);
     expect(loaded.tribulation).toBeNull();
     expect(loaded.generators).not.toHaveProperty('removedGenerator');
-    expect(loaded.prestige.perks).toEqual({ meridians: 5 });
+    expect(loaded.prestige.perks).toEqual({ stash: 6 });
     expect(loaded.encounter.active).toBeNull();
   });
 
