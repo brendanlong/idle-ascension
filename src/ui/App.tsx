@@ -128,7 +128,7 @@ export function App() {
   const [buyAmount, setBuyAmount] = useState<BuyAmount>(1);
   const tabs = visibleTabs();
   const mobileTabs: { id: TabId; label: string }[] = [
-    { id: 'cultivate', label: '气 Cultivate' },
+    { id: 'cultivate', label: 'Cultivate' },
     ...tabs,
   ];
   const available = mobile ? mobileTabs : tabs;

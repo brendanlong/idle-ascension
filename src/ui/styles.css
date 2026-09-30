@@ -712,11 +712,7 @@ header.top h1 {
 }
 .mobile-tabs {
   display: flex;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.mobile-tabs::-webkit-scrollbar {
-  display: none;
+  flex-wrap: wrap;
 }
 .mobile-tabs button {
   position: relative;
@@ -724,7 +720,7 @@ header.top h1 {
   border: none;
   border-radius: 0;
   background: transparent;
-  padding: 0.55rem 0.7rem;
+  padding: 0.45rem 0.55rem;
   color: var(--muted);
 }
 .mobile-tabs button.active {
