@@ -31,7 +31,7 @@ export function SettingsTab() {
 
   const doImport = () => {
     try {
-      game.replaceState(importSave(saveText));
+      game.replaceState(importSave(saveText), { freshStart: true });
       setMessage('Save imported.');
     } catch (e) {
       setMessage(`Import failed: ${(e as Error).message}`);
@@ -107,7 +107,7 @@ export function SettingsTab() {
           <button
             class="primary danger"
             onClick={() => {
-              game.replaceState(createInitialState());
+              game.replaceState(createInitialState(), { freshStart: true });
               setResetArmed(false);
             }}
           >

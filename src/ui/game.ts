@@ -91,8 +91,17 @@ class GameController {
     return result;
   }
 
-  replaceState(state: GameState): void {
+  /**
+   * Swaps in a new state. `freshStart` is for a different game entirely (hard
+   * reset, importing a save): it also clears the log and any pending
+   * offline report. Regression continues the same story, so it keeps them.
+   */
+  replaceState(state: GameState, { freshStart = false } = {}): void {
     state.lastTick = Date.now();
+    if (freshStart) {
+      this.log = [];
+      this.offlineReport = null;
+    }
     forfeitInterruptedTrials(state);
     this.state = state;
     this.save();
