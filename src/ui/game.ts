@@ -4,7 +4,7 @@ import { formatNumber } from '../engine/format';
 import { NewerSaveError, deserialize, serialize } from '../engine/save';
 import { createInitialState, type GameState } from '../engine/state';
 import { computeStats, type Stats } from '../engine/stats';
-import { advanceClock, type OfflineReport } from '../engine/tick';
+import { advanceClock, type OfflineReport, type TickOptions } from '../engine/tick';
 
 const STORAGE_KEY = 'idle-ascension-save';
 const TICK_MS = 100;
@@ -39,8 +39,13 @@ class GameController {
     setInterval(() => this.update(), TICK_MS);
     setInterval(() => this.save(), AUTOSAVE_MS);
     window.addEventListener('beforeunload', () => this.save());
+    // The clock stops while the tab is hidden. Coming back catches up: short
+    // absences are simulated live, and anything over a minute counts as
+    // closed-door cultivation (offline rules, with a summary). A tribulation
+    // in progress waits for you rather than failing.
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) this.save();
+      else this.update({ pauseTribulation: true });
     });
   }
 
@@ -70,11 +75,9 @@ class GameController {
     localStorage.setItem(STORAGE_KEY, serialize(this.state));
   }
 
-  private update(): void {
-    if (this.haltReason) return;
-    const report = advanceClock(this.state, Date.now(), Math.random, {
-      pauseTribulation: document.hidden,
-    });
+  private update(options: TickOptions = {}): void {
+    if (this.haltReason || document.hidden) return;
+    const report = advanceClock(this.state, Date.now(), Math.random, options);
     if (report && report.qi > 0) this.offlineReport = report;
     this.refresh();
   }

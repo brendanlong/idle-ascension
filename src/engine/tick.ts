@@ -46,7 +46,11 @@ export interface OfflineReport {
   qi: number;
 }
 
-export function applyOfflineProgress(state: GameState, seconds: number): OfflineReport {
+export function applyOfflineProgress(
+  state: GameState,
+  seconds: number,
+  options: TickOptions = {},
+): OfflineReport {
   // Buffs are excluded: an Epiphany shouldn't last through an 8 hour nap.
   const stats = computeStats(state, false);
   const cappedSeconds = Math.min(seconds, stats.mods.offlineCapHours * 3600);
@@ -56,7 +60,7 @@ export function applyOfflineProgress(state: GameState, seconds: number): Offline
   state.stats.loopTime += seconds;
   state.buffs = state.buffs.filter((b) => (b.remaining -= seconds) > 0);
   state.encounter.active = null;
-  abandonTribulation(state);
+  if (!options.pauseTribulation) abandonTribulation(state);
   return { seconds, cappedSeconds, qi };
 }
 
@@ -69,7 +73,7 @@ export function advanceClock(
 ): OfflineReport | null {
   const seconds = Math.max(0, (now - state.lastTick) / 1000);
   state.lastTick = now;
-  if (seconds > OFFLINE_THRESHOLD_SECONDS) return applyOfflineProgress(state, seconds);
+  if (seconds > OFFLINE_THRESHOLD_SECONDS) return applyOfflineProgress(state, seconds, options);
   for (let remaining = seconds; remaining > 0; remaining -= MAX_STEP_SECONDS) {
     tick(state, Math.min(remaining, MAX_STEP_SECONDS), rng, options);
   }
