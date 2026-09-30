@@ -231,14 +231,12 @@ export function App() {
               <RealmSummary compact />
               <BreakthroughBox />
             </section>
-            <QiField />
-            <section class="panel cultivation">
-              <Conditions />
-              <details>
-                <summary>Cultivation stats</summary>
-                <CultivationStats />
-              </details>
-            </section>
+            <QiField overlay={<CultivationStats />} />
+            {state.buffs.length > 0 && (
+              <section class="panel cultivation">
+                <Conditions />
+              </section>
+            )}
             <LogPanel />
           </main>
         ) : (

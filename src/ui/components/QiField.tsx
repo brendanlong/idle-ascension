@@ -1,3 +1,4 @@
+import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { CORE_GRADES, ELEMENTS_BY_ID } from '../../content/cores';
 import { ENCOUNTERS_BY_ID } from '../../content/encounters';
@@ -198,7 +199,8 @@ function draw(ctx: CanvasRenderingContext2D, sim: FieldSim, time: number): void 
   ctx.globalAlpha = 1;
 }
 
-export function QiField() {
+/** `overlay` is shown in the field's corner, beneath the motes, without catching the pointer. */
+export function QiField({ overlay }: { overlay?: ComponentChildren } = {}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const orbRef = useRef<HTMLButtonElement>(null);
@@ -292,6 +294,7 @@ export function QiField() {
       }}
     >
       <canvas ref={canvasRef} />
+      {overlay && <div class="field-overlay">{overlay}</div>}
       <button
         ref={orbRef}
         class="orb"

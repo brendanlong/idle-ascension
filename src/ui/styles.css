@@ -767,10 +767,21 @@ header.top h1 {
 .mobile-cultivate .log {
   height: 160px;
 }
-.mobile-cultivate details summary {
-  color: var(--gold);
-  cursor: pointer;
-  margin-top: 0.3rem;
+.field-overlay {
+  position: absolute;
+  top: 0.4rem;
+  left: 0.5rem;
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  padding: 0.25rem 0.45rem;
+  border-radius: 6px;
+  background: rgba(10, 8, 6, 0.55);
+}
+.field-overlay .stat-list {
+  font-size: 0.72rem;
+  gap: 0 0.6rem;
 }
 .mobile-panel {
   padding: 0;
