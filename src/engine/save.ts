@@ -11,11 +11,14 @@ import { SAVE_VERSION, createInitialState, type GameState, type NumberFormat } f
 type RawSave = Record<string, unknown>;
 
 /**
- * migrations[n] upgrades a save from version n to n + 1. When changing the
- * shape of GameState in a way that defaults can't fill in, bump SAVE_VERSION
- * and add a migration here. The game hasn't been released yet, so for now
- * it's fine to skip migrations and let sanitize() drop whatever no longer
- * fits. Never lower SAVE_VERSION: newer saves are refused, not overwritten.
+ * migrations[n] upgrades a save from version n to n + 1.
+ *
+ * Players have real saves now, so don't lose their progress: when changing
+ * GameState in a way that defaults can't fill in (renaming or reshaping a
+ * field, changing what a value means), bump SAVE_VERSION, add a migration
+ * here, and add a fixture for the new version in __tests__/fixtures/ (keep
+ * the old ones: the fixture test loads every one of them). Never lower
+ * SAVE_VERSION: newer saves are refused, not overwritten.
  */
 const migrations: Record<number, (save: RawSave) => RawSave> = {};
 
