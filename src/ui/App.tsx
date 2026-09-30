@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
 import { INTRO_TEXT, VICTORY_TEXT } from '../content/lore';
 import { firstStageOfRealm } from '../content/realms';
 import { formatDuration } from '../engine/format';
@@ -71,14 +71,61 @@ function Header() {
   );
 }
 
+function TabBar({
+  tabs,
+  selected,
+  onSelect,
+  isDisabled = () => false,
+  alert = null,
+  class: className,
+}: {
+  tabs: { id: TabId; label: string }[];
+  selected: TabId;
+  onSelect: (id: TabId) => void;
+  isDisabled?: (id: TabId) => boolean;
+  /** A tab to mark as needing attention. */
+  alert?: TabId | null;
+  class?: string;
+}) {
+  return (
+    <nav role="tablist" class={className}>
+      {tabs.map((t) => (
+        <button
+          key={t.id}
+          role="tab"
+          aria-selected={selected === t.id}
+          class={selected === t.id ? 'active' : ''}
+          disabled={isDisabled(t.id)}
+          onClick={() => onSelect(t.id)}
+        >
+          {t.label}
+          {alert === t.id && (
+            <>
+              <span class="tab-alert" aria-hidden="true" />
+              <span class="sr-only"> (an encounter or trial is waiting)</span>
+            </>
+          )}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
 export function App() {
   useGame();
   useDynamicFavicon(game.state);
-  const mobile = useMediaQuery(MOBILE_QUERY);
+  const { state } = game;
+  // A running trial lives in the qi field. Switching layout (e.g. rotating a
+  // phone past the breakpoint) or leaving the Cultivate tab would remount it
+  // and restart the trial, so both wait until the trial is over.
+  const trialRunning = Boolean(currentTribulationTrial(state) || state.trial.active);
+  const wantsMobile = useMediaQuery(MOBILE_QUERY);
+  const layout = useRef(wantsMobile);
+  if (!trialRunning) layout.current = wantsMobile;
+  const mobile = layout.current;
   const [tab, setTab] = useState<TabId>('cultivate');
   const [regressionStory, setRegressionStory] = useState<string[] | null>(null);
   const [buyAmount, setBuyAmount] = useState<BuyAmount>(1);
-  const { state } = game;
   const tabs = visibleTabs();
   const mobileTabs: { id: TabId; label: string }[] = [
     { id: 'cultivate', label: '气 Cultivate' },
@@ -163,31 +210,20 @@ export function App() {
   );
 
   if (mobile) {
-    // A running trial lives in the qi field; leaving the tab would restart it.
-    const trialRunning = Boolean(currentTribulationTrial(state) || state.trial.active);
     const shown = trialRunning ? 'cultivate' : activeTab;
     const needsAttention = Boolean(state.encounter.active || state.trial.offer);
     return (
       <div class="app mobile">
         <div class="mobile-top">
           <Header />
-          <nav role="tablist" class="mobile-tabs">
-            {mobileTabs.map((t) => (
-              <button
-                key={t.id}
-                role="tab"
-                aria-selected={shown === t.id}
-                class={shown === t.id ? 'active' : ''}
-                disabled={trialRunning && t.id !== 'cultivate'}
-                onClick={() => setTab(t.id)}
-              >
-                {t.label}
-                {t.id === 'cultivate' && needsAttention && shown !== 'cultivate' && (
-                  <span class="tab-alert" aria-label="Something is happening" />
-                )}
-              </button>
-            ))}
-          </nav>
+          <TabBar
+            class="mobile-tabs"
+            tabs={mobileTabs}
+            selected={shown}
+            onSelect={setTab}
+            isDisabled={(id) => trialRunning && id !== 'cultivate'}
+            alert={needsAttention && shown !== 'cultivate' ? 'cultivate' : null}
+          />
         </div>
         {shown === 'cultivate' ? (
           <main class="mobile-cultivate">
@@ -223,19 +259,7 @@ export function App() {
           <LogPanel />
         </div>
         <section class="panel tabs">
-          <nav role="tablist">
-            {tabs.map((t) => (
-              <button
-                key={t.id}
-                role="tab"
-                aria-selected={activeTab === t.id}
-                class={activeTab === t.id ? 'active' : ''}
-                onClick={() => setTab(t.id)}
-              >
-                {t.label}
-              </button>
-            ))}
-          </nav>
+          <TabBar tabs={tabs} selected={activeTab} onSelect={setTab} />
           {tabContent}
         </section>
       </main>

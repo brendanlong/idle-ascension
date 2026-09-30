@@ -155,6 +155,7 @@ export function Conditions() {
   );
 }
 
+/** The desktop left column. The phone layout arranges the same parts itself (App.tsx). */
 export function CultivationPanel() {
   return (
     <section class="panel cultivation">
