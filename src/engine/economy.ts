@@ -1,5 +1,10 @@
 import { BUFFS_BY_ID } from '../content/buffs';
-import { GENERATORS, GENERATORS_BY_ID, GENERATOR_COST_GROWTH } from '../content/generators';
+import {
+  GENERATORS,
+  GENERATORS_BY_ID,
+  GENERATOR_COST_GROWTH,
+  type GeneratorDef,
+} from '../content/generators';
 import {
   MAX_TREASURE_LEVEL,
   OWNED_TREASURE_WEIGHT_FACTOR,
@@ -62,21 +67,34 @@ export function maxAffordable(state: GameState, mods: Modifiers, id: string): nu
   return Math.max(0, Math.floor(Math.log((state.qi * (r - 1)) / first + 1) / Math.log(r)));
 }
 
+export function isGeneratorUnlocked(state: GameState, def: GeneratorDef): boolean {
+  return !def.minRealm || state.stage >= firstStageOfRealm(def.minRealm);
+}
+
 export function buyGenerator(state: GameState, mods: Modifiers, id: string, count = 1): boolean {
-  if (count <= 0) return false;
+  if (count <= 0 || !isGeneratorUnlocked(state, GENERATORS_BY_ID.get(id)!)) return false;
   if (!spendQi(state, generatorCost(state, mods, id, count))) return false;
   state.generators[id] = (state.generators[id] ?? 0) + count;
   return true;
 }
 
-/** Generators are revealed once you've nearly been able to afford one, or own the previous. */
+/**
+ * Unlocked generators are revealed once you've nearly been able to afford
+ * one, or own the previous.
+ */
 export function isGeneratorVisible(state: GameState, index: number): boolean {
   const def = GENERATORS[index];
+  if (!isGeneratorUnlocked(state, def)) return false;
   if (index === 0 || (state.generators[def.id] ?? 0) > 0) return true;
   return (
     (state.generators[GENERATORS[index - 1].id] ?? 0) > 0 ||
     state.qiEarnedThisLoop >= def.baseCost * 0.5
   );
+}
+
+/** The first realm-locked generator, shown as a teaser of what's to come. */
+export function nextLockedGenerator(state: GameState): GeneratorDef | null {
+  return GENERATORS.find((g) => !isGeneratorUnlocked(state, g)) ?? null;
 }
 
 // --- Upgrades ---

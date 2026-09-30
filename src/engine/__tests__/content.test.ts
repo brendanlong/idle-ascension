@@ -44,6 +44,7 @@ describe('content integrity', () => {
 
   it('references only real generators, realms, perks and buffs', () => {
     for (const u of UPGRADES) expectValidEffects(u.effects);
+    for (const g of GENERATORS) if (g.minRealm) expect(REALMS_BY_ID.has(g.minRealm)).toBe(true);
     for (const t of TREASURES) {
       expectValidEffects(t.effects);
       expect(REALMS_BY_ID.has(t.minRealm)).toBe(true);

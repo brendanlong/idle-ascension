@@ -8,7 +8,7 @@ import { LogPanel } from './components/LogPanel';
 import { Modal, StoryModal } from './components/Modal';
 import { QiField } from './components/QiField';
 import { RegressionTab } from './components/RegressionTab';
-import { ResourcesTab } from './components/ResourcesTab';
+import { ResourcesTab, type BuyAmount } from './components/ResourcesTab';
 import { SettingsTab } from './components/SettingsTab';
 import { TechniquesTab } from './components/TechniquesTab';
 import { TreasuresTab } from './components/TreasuresTab';
@@ -54,6 +54,7 @@ export function App() {
   useGame();
   const [tab, setTab] = useState<TabId>('resources');
   const [regressionStory, setRegressionStory] = useState<string[] | null>(null);
+  const [buyAmount, setBuyAmount] = useState<BuyAmount>(1);
   const { state } = game;
   const tabs = visibleTabs();
   const activeTab = tabs.some((t) => t.id === tab) ? tab : 'resources';
@@ -135,11 +136,20 @@ export function App() {
               </button>
             ))}
           </nav>
-          {activeTab === 'resources' && <ResourcesTab />}
+          {activeTab === 'resources' && (
+            <ResourcesTab amount={buyAmount} onAmountChange={setBuyAmount} />
+          )}
           {activeTab === 'techniques' && <TechniquesTab />}
           {activeTab === 'cores' && <CoresTab />}
           {activeTab === 'treasures' && <TreasuresTab />}
-          {activeTab === 'regression' && <RegressionTab onRegressed={setRegressionStory} />}
+          {activeTab === 'regression' && (
+            <RegressionTab
+              onRegressed={(story) => {
+                setRegressionStory(story);
+                setBuyAmount(1);
+              }}
+            />
+          )}
           {activeTab === 'settings' && <SettingsTab />}
         </section>
       </main>

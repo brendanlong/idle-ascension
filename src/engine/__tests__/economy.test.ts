@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { buyGenerator, buyUpgrade, click, generatorCost, maxAffordable } from '../economy';
+import { GENERATORS } from '../../content/generators';
+import { firstStageOfRealm } from '../../content/realms';
+import {
+  buyGenerator,
+  buyUpgrade,
+  click,
+  generatorCost,
+  isGeneratorVisible,
+  maxAffordable,
+  nextLockedGenerator,
+} from '../economy';
 import { computeStats } from '../stats';
 import { newGame } from './helpers';
 
@@ -31,6 +41,19 @@ describe('generators', () => {
     expect(state.generators.cushion).toBe(1);
     expect(state.qi).toBeCloseTo(5);
     expect(buyGenerator(state, mods, 'cushion')).toBe(false);
+  });
+
+  it('locks realm-gated generators until their realm', () => {
+    const state = newGame({ qi: 1e30, qiEarnedThisLoop: 1e30 });
+    const { mods } = computeStats(state);
+    const index = GENERATORS.findIndex((g) => g.id === 'sect');
+    expect(isGeneratorVisible(state, index)).toBe(false);
+    expect(nextLockedGenerator(state)?.id).toBe('sect');
+    expect(buyGenerator(state, mods, 'sect')).toBe(false);
+    state.stage = firstStageOfRealm('spiritSevering');
+    expect(isGeneratorVisible(state, index)).toBe(true);
+    expect(buyGenerator(state, mods, 'sect')).toBe(true);
+    expect(nextLockedGenerator(state)?.id).toBe('smallWorld');
   });
 
   it('produces qi from generators', () => {
