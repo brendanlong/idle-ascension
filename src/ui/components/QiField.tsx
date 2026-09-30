@@ -269,7 +269,10 @@ export function QiField() {
   const tribDef = trib && REALMS[STAGES[trib.targetStage].realmIndex].tribulation;
   const activeTrial = state.trial.active;
   // The overlay takes over the pointer; don't keep absorbing motes at a stale spot.
-  if (tribElement || activeTrial) sim.pointer = null;
+  // While a trial runs, the overlay takes over: encounters and offers are hidden
+  // (their timers are paused in the engine) and motes aren't absorbed.
+  const trialRunning = Boolean(tribElement || activeTrial);
+  if (trialRunning) sim.pointer = null;
   const trialOffer = state.trial.offer;
   const trialOfferDef = trialOffer && TRIALS_BY_ELEMENT.get(trialOffer.element);
 
@@ -301,7 +304,7 @@ export function QiField() {
       </button>
       <div class="field-hint">Click the dantian · sweep your cursor through drifting qi</div>
 
-      {encounter && encounterDef && (
+      {encounter && encounterDef && !trialRunning && (
         <button
           class="encounter"
           style={{ left: `${encounter.x * 100}%`, top: `${encounter.y * 100}%` }}
@@ -313,7 +316,7 @@ export function QiField() {
         </button>
       )}
 
-      {trialOffer && trialOfferDef && !activeTrial && !trib && (
+      {trialOffer && trialOfferDef && !trialRunning && !trib && (
         <button
           class="encounter trial-offer"
           style={{ left: `${trialOffer.x * 100}%`, top: `${trialOffer.y * 100}%` }}

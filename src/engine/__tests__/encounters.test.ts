@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_TREASURE_LEVEL, TREASURES } from '../../content/treasures';
 import { onLog, type LogEntry } from '../events';
-import { claimEncounter, rewardOdds } from '../encounters';
+import { claimEncounter, rewardOdds, tickEncounters } from '../encounters';
 import { ENCOUNTERS_BY_ID } from '../../content/encounters';
 import { firstStageOfRealm } from '../../content/realms';
 import { computeStats } from '../stats';
@@ -70,5 +70,16 @@ describe('encounters', () => {
     claim(state, 'youngMaster', seqRng(0.1));
     expect(state.qi).toBeGreaterThan(0);
     expect(state.stats.encountersClaimed).toBe(1);
+  });
+
+  it('pauses an active encounter while a trial or tribulation is running', () => {
+    const state = newGame({ stage: firstStageOfRealm('foundation') });
+    state.encounter.active = { id: 'cave', x: 0.5, y: 0.5, remaining: 5 };
+    state.trial.active = 'fire';
+    tickEncounters(state, computeStats(state), 30, seqRng(0.5));
+    expect(state.encounter.active?.remaining).toBe(5);
+    state.trial.active = null;
+    tickEncounters(state, computeStats(state), 2, seqRng(0.5));
+    expect(state.encounter.active?.remaining).toBe(3);
   });
 });
