@@ -12,7 +12,8 @@
     "sim": "tsx scripts/sim.ts",
     "format": "prettier --write .",
     "social-preview": "tsx scripts/generate-social-preview.ts",
-    "icons": "tsx scripts/generate-icons.ts"
+    "icons": "tsx scripts/generate-icons.ts",
+    "screenshot": "vite build && tsx scripts/take-screenshot.ts"
   },
   "dependencies": {
     "preact": "^10.29.8"
