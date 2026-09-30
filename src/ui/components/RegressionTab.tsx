@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import { REGRESSION_STORY } from '../../content/lore';
-import { PERKS, PERKS_BY_ID, perkCost } from '../../content/perks';
+import { PERKS, perkCost } from '../../content/perks';
 import { describeEffects } from '../../engine/effects';
 import { perkEffects } from '../../engine/stats';
 import {
@@ -22,6 +22,11 @@ export function RegressionTab({ onRegressed }: { onRegressed: (story: string[]) 
   const pending = pendingMemories(state);
   const blocker = regressionBlocker(state);
   const nextStageMemories = memoriesForStage(state.stage + 1);
+  // Insights that build on ones not yet learned stay hidden until they can be learned.
+  const shown = PERKS.filter(
+    (p) => perkStatus(state, p.id) !== 'locked' || (state.prestige.perks[p.id] ?? 0) > 0,
+  );
+  const hidden = PERKS.length - shown.length;
 
   const doRegress = () => {
     setConfirming(false);
@@ -85,7 +90,7 @@ export function RegressionTab({ onRegressed }: { onRegressed: (story: string[]) 
 
       <h3>Insights of a Regressor</h3>
       <ul class="card-list">
-        {PERKS.map((p) => {
+        {shown.map((p) => {
           const level = state.prestige.perks[p.id] ?? 0;
           const status = perkStatus(state, p.id);
           return (
@@ -112,12 +117,7 @@ export function RegressionTab({ onRegressed }: { onRegressed: (story: string[]) 
                   {level > 0 ? 'Next level' : 'First level'}: {describeSpecialPerk(p, level + 1)}
                 </p>
               )}
-              {status === 'locked' && (
-                <p class="blocker">
-                  Requires {p.requires!.map((r) => PERKS_BY_ID.get(r)!.name).join(', ')}
-                </p>
-              )}
-              {status !== 'maxed' && status !== 'locked' && (
+              {status !== 'maxed' && (
                 <button
                   class="primary"
                   disabled={status !== 'available'}
@@ -130,6 +130,13 @@ export function RegressionTab({ onRegressed }: { onRegressed: (story: string[]) 
           );
         })}
       </ul>
+      {hidden > 0 && (
+        <p class="muted small">
+          {hidden === 1
+            ? '1 more insight will reveal itself as your understanding deepens…'
+            : `${hidden} more insights will reveal themselves as your understanding deepens…`}
+        </p>
+      )}
     </div>
   );
 }

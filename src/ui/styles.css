@@ -573,9 +573,6 @@ header.top h1 {
 .card.perk.maxed {
   border-color: #4d6b3a;
 }
-.card.perk.locked {
-  opacity: 0.6;
-}
 .card.treasure {
   border-left: 3px solid var(--rarity);
 }
