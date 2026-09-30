@@ -12,6 +12,7 @@ import { ResourcesTab, type BuyAmount } from './components/ResourcesTab';
 import { SettingsTab } from './components/SettingsTab';
 import { TechniquesTab } from './components/TechniquesTab';
 import { TreasuresTab } from './components/TreasuresTab';
+import { useDynamicFavicon } from './favicon';
 import { game, useGame } from './game';
 
 type TabId = 'resources' | 'techniques' | 'cores' | 'treasures' | 'regression' | 'settings';
@@ -52,6 +53,7 @@ function Header() {
 
 export function App() {
   useGame();
+  useDynamicFavicon(game.state);
   const [tab, setTab] = useState<TabId>('resources');
   const [regressionStory, setRegressionStory] = useState<string[] | null>(null);
   const [buyAmount, setBuyAmount] = useState<BuyAmount>(1);
