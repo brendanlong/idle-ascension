@@ -33,7 +33,7 @@ npm run typecheck
 npm run build
 npm run sim -- 1 72 45   # headless balance sim: clicks/sec, max hours, minutes stalled before regressing
 npm run format
-npm run social-preview   # re-render public/social-preview.png from scripts/social-preview.html
+npm run social-preview   # re-render public/social-preview.jpg from scripts/social-preview.html
 ```
 
 `social-preview` needs a Playwright browser the first time: `npx playwright install chromium`.
