@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks';
 import { INTRO_TEXT, VICTORY_TEXT } from '../content/lore';
 import { firstStageOfRealm } from '../content/realms';
 import { formatDuration } from '../engine/format';
+import { AboutTab } from './components/AboutTab';
 import { CoresTab } from './components/CoresTab';
 import { CultivationPanel } from './components/CultivationPanel';
 import { LogPanel } from './components/LogPanel';
@@ -15,7 +16,8 @@ import { TreasuresTab } from './components/TreasuresTab';
 import { useDynamicFavicon } from './favicon';
 import { game, useGame } from './game';
 
-type TabId = 'resources' | 'techniques' | 'cores' | 'treasures' | 'regression' | 'settings';
+type TabId =
+  'resources' | 'techniques' | 'cores' | 'treasures' | 'regression' | 'settings' | 'about';
 
 function visibleTabs(): { id: TabId; label: string }[] {
   const { state } = game;
@@ -32,7 +34,7 @@ function visibleTabs(): { id: TabId; label: string }[] {
   if (state.stats.bestStage >= firstStageOfRealm('foundation') || state.prestige.loops > 0) {
     tabs.push({ id: 'regression', label: 'Regression' });
   }
-  tabs.push({ id: 'settings', label: 'Settings' });
+  tabs.push({ id: 'settings', label: 'Settings' }, { id: 'about', label: 'About' });
   return tabs;
 }
 
@@ -153,6 +155,7 @@ export function App() {
             />
           )}
           {activeTab === 'settings' && <SettingsTab />}
+          {activeTab === 'about' && <AboutTab />}
         </section>
       </main>
       {modal}
