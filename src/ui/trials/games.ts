@@ -19,7 +19,8 @@ export interface TrialGame {
   /** `pointer` is null while the cursor is outside the field. */
   step(dt: number, pointer: Point | null): void;
   click?(p: Point): void;
-  draw(ctx: CanvasRenderingContext2D, time: number): void;
+  /** `pointer` is where the cursor is, for drawing radius hints. */
+  draw(ctx: CanvasRenderingContext2D, time: number, pointer: Point | null): void;
   score(): number;
   finished(): boolean;
 }
@@ -115,9 +116,11 @@ export class FlameSeals implements TrialGame {
 // --- Water: sweep through the flowing current ---
 
 export class FlowingCurrent implements TrialGame {
-  static readonly SPAWN_SECONDS = 9;
-  static readonly PER_SECOND = 3;
-  static readonly SPEED = 140;
+  static readonly SPAWN_SECONDS = 7;
+  static readonly PER_SECOND = 4.5;
+  static readonly SPEED = 240;
+  /** Seconds a caught or escaping orb takes to shrink away. */
+  static readonly FADE = 0.3;
   static readonly RADIUS = 34;
   /** Catching this fraction of the orbs counts as a perfect score. */
   static readonly PERFECT_FRACTION = 0.8;
@@ -125,6 +128,8 @@ export class FlowingCurrent implements TrialGame {
   readonly duration: number;
   elapsed = 0;
   orbs: (Point & { phase: number })[] = [];
+  /** Orbs that were caught or left the field, shrinking away (visual only). */
+  fading: (Point & { age: number; caught: boolean })[] = [];
   spawned = 0;
   collected = 0;
   private spawnTimer = 0;
@@ -138,7 +143,7 @@ export class FlowingCurrent implements TrialGame {
     this.height = height;
     this.duration = FlowingCurrent.SPAWN_SECONDS + (width + 30) / FlowingCurrent.SPEED;
     this.amplitude = height * (0.2 + rng() * 0.15);
-    this.frequency = 0.8 + rng() * 0.6;
+    this.frequency = 1.2 + rng() * 0.8;
   }
 
   private streamY(t: number): number {
@@ -153,23 +158,44 @@ export class FlowingCurrent implements TrialGame {
       this.spawned++;
       this.spawnTimer += 1 / FlowingCurrent.PER_SECOND;
     }
+    for (const f of this.fading) f.age += dt;
+    this.fading = this.fading.filter((f) => f.age < FlowingCurrent.FADE);
     this.orbs = this.orbs.filter((orb) => {
       orb.x += FlowingCurrent.SPEED * dt;
       orb.y = this.streamY(orb.phase + orb.x / 200);
       if (pointer && dist(orb, pointer) <= FlowingCurrent.RADIUS) {
         this.collected++;
+        this.fading.push({ x: orb.x, y: orb.y, age: 0, caught: true });
         return false;
       }
-      return orb.x < this.width + 20;
+      if (orb.x >= this.width - 10) {
+        this.fading.push({ x: orb.x, y: orb.y, age: 0, caught: false });
+        return false;
+      }
+      return true;
     });
   }
 
-  draw(ctx: CanvasRenderingContext2D, time: number): void {
+  draw(ctx: CanvasRenderingContext2D, time: number, pointer: Point | null): void {
+    if (pointer) {
+      ctx.strokeStyle = 'rgba(127, 200, 255, 0.35)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(pointer.x, pointer.y, FlowingCurrent.RADIUS, 0, Math.PI * 2);
+      ctx.stroke();
+    }
     glow(ctx, '#7fc8ff', 16);
+    ctx.fillStyle = '#4f8fd6';
     for (const o of this.orbs) {
-      ctx.fillStyle = '#4f8fd6';
       ctx.beginPath();
       ctx.arc(o.x, o.y, 9 + Math.sin(time * 5 + o.phase * 7) * 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    for (const f of this.fading) {
+      const t = 1 - f.age / FlowingCurrent.FADE;
+      ctx.fillStyle = f.caught ? '#bfe6ff' : 'rgba(79, 143, 214, 0.5)';
+      ctx.beginPath();
+      ctx.arc(f.x, f.y, Math.max(0.5, (f.caught ? 12 : 9) * t), 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.shadowBlur = 0;
@@ -208,8 +234,8 @@ export class ChaseSpirit implements TrialGame {
   private position(t: number): Point {
     const [a, b] = this.phases;
     return {
-      x: this.width / 2 + this.width * 0.35 * Math.sin(0.7 * t + a),
-      y: this.height / 2 + this.height * 0.3 * Math.sin(1.1 * t + b),
+      x: this.width / 2 + this.width * 0.35 * Math.sin(0.85 * t + a),
+      y: this.height / 2 + this.height * 0.3 * Math.sin(1.35 * t + b),
     };
   }
 
@@ -219,12 +245,15 @@ export class ChaseSpirit implements TrialGame {
     if (pointer && dist(pointer, this.spirit) <= ChaseSpirit.RADIUS) this.onTarget += dt;
   }
 
-  draw(ctx: CanvasRenderingContext2D, time: number): void {
+  draw(ctx: CanvasRenderingContext2D, time: number, pointer: Point | null): void {
     const { x, y } = this.spirit;
-    ctx.strokeStyle = 'rgba(95, 174, 90, 0.35)';
-    ctx.lineWidth = 2;
+    const inside = pointer !== null && dist(pointer, this.spirit) <= ChaseSpirit.RADIUS;
+    ctx.fillStyle = inside ? 'rgba(95, 174, 90, 0.22)' : 'rgba(95, 174, 90, 0.08)';
+    ctx.strokeStyle = inside ? 'rgba(184, 245, 160, 0.9)' : 'rgba(95, 174, 90, 0.6)';
+    ctx.lineWidth = inside ? 3 : 2;
     ctx.beginPath();
     ctx.arc(x, y, ChaseSpirit.RADIUS, 0, Math.PI * 2);
+    ctx.fill();
     ctx.stroke();
     glow(ctx, '#b8f5a0', 24);
     ctx.fillStyle = '#d9ffc8';
@@ -321,12 +350,14 @@ interface Blade {
 }
 
 export class RainOfBlades implements TrialGame {
-  static readonly SPAWN_EVERY = 1.1;
-  static readonly WARN = 1.0;
-  static readonly SPEED = 200;
-  static readonly HIT_RADIUS = 14;
+  static readonly SPAWN_EVERY = 0.4;
+  static readonly WARN = 0.8;
+  static readonly SPEED = 400;
+  static readonly HIT_RADIUS = 16;
   /** This many hits drops the score to zero. */
   static readonly MAX_HITS = 6;
+  /** Seconds ahead that leading blades aim. */
+  static readonly LEAD = 0.5;
   /** Seconds before staying outside the field starts to count. */
   static readonly GRACE = 1.5;
   readonly duration = 12;
@@ -336,6 +367,10 @@ export class RainOfBlades implements TrialGame {
   private spawnTimer = 0.6;
   private outside = 0;
   private seenPointer = false;
+  /** Smoothed cursor velocity, for blades that aim where you're heading. */
+  private velocity: Point = { x: 0, y: 0 };
+  private lastPointer: Point | null = null;
+  private spawned = 0;
   private readonly width: number;
   private readonly height: number;
   private readonly rng: Rng;
@@ -358,10 +393,21 @@ export class RainOfBlades implements TrialGame {
         this.hits++;
       }
     }
+    if (pointer && this.lastPointer && dt > 0) {
+      const k = Math.min(1, dt * 8);
+      this.velocity = {
+        x: this.velocity.x + ((pointer.x - this.lastPointer.x) / dt - this.velocity.x) * k,
+        y: this.velocity.y + ((pointer.y - this.lastPointer.y) / dt - this.velocity.y) * k,
+      };
+    }
+    this.lastPointer = pointer;
     this.spawnTimer -= dt;
     if (this.elapsed < this.duration - 1.5 && this.spawnTimer <= 0) {
       this.spawnTimer += RainOfBlades.SPAWN_EVERY;
-      this.spawn(pointer ?? { x: this.width / 2, y: this.height / 2 });
+      const at = pointer ?? { x: this.width / 2, y: this.height / 2 };
+      // Every other blade leads the cursor, so moving in a steady circle isn't enough.
+      const lead = this.spawned++ % 2 === 1 ? RainOfBlades.LEAD : 0;
+      this.spawn({ x: at.x + this.velocity.x * lead, y: at.y + this.velocity.y * lead });
     }
     for (const b of this.blades) {
       if (b.warn > 0) {
@@ -398,7 +444,14 @@ export class RainOfBlades implements TrialGame {
     this.blades.push({ from, dir, warn: RainOfBlades.WARN, pos: { ...from }, hit: false });
   }
 
-  draw(ctx: CanvasRenderingContext2D): void {
+  draw(ctx: CanvasRenderingContext2D, _time: number, pointer: Point | null): void {
+    if (pointer) {
+      ctx.strokeStyle = 'rgba(238, 242, 246, 0.6)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(pointer.x, pointer.y, RainOfBlades.HIT_RADIUS, 0, Math.PI * 2);
+      ctx.stroke();
+    }
     for (const b of this.blades) {
       if (b.warn > 0) {
         ctx.strokeStyle = `rgba(216, 221, 227, ${0.15 + 0.35 * (1 - b.warn / RainOfBlades.WARN)})`;
