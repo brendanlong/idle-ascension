@@ -37,6 +37,7 @@ class FieldSim {
   pointer: { x: number; y: number } | null = null;
   width = 0;
   height = 0;
+  orbRadius = 0;
   private spawnAccumulator = 0;
 
   step(dt: number, spawnPerSecond: number): number {
@@ -81,6 +82,61 @@ class FieldSim {
   }
 }
 
+const ORBIT_RADIUS_X = 115;
+const ORBIT_RADIUS_Y = 40;
+const CORE_RADIUS = 11;
+
+/**
+ * Cores orbit on a tilted ellipse. The canvas sits above the orb, so the back
+ * half of the orbit is clipped to outside the orb's circle to pass behind it.
+ */
+function drawOrbit(
+  ctx: CanvasRenderingContext2D,
+  sim: FieldSim,
+  time: number,
+  half: 'back' | 'front',
+): void {
+  const cx = sim.width / 2;
+  const cy = sim.height / 2;
+  const { cores } = game.state;
+  ctx.save();
+  if (half === 'back') {
+    ctx.beginPath();
+    ctx.rect(0, 0, sim.width, sim.height);
+    ctx.arc(cx, cy, sim.orbRadius, 0, Math.PI * 2);
+    ctx.clip('evenodd');
+  }
+
+  if (cores.length > 0) {
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(224, 182, 74, 0.25)';
+    ctx.lineWidth = 1;
+    const [start, end] = half === 'back' ? [Math.PI, Math.PI * 2] : [0, Math.PI];
+    ctx.ellipse(cx, cy, ORBIT_RADIUS_X, ORBIT_RADIUS_Y, 0, start, end);
+    ctx.stroke();
+  }
+
+  cores.forEach((core, i) => {
+    const angle = time * 0.6 + (i * Math.PI * 2) / cores.length;
+    // sin(angle) > 0 is the lower half of the ellipse: nearer the viewer.
+    const depth = Math.sin(angle);
+    if (depth >= 0 !== (half === 'front')) return;
+    const x = cx + Math.cos(angle) * ORBIT_RADIUS_X;
+    const y = cy + depth * ORBIT_RADIUS_Y;
+    ctx.globalAlpha = 0.75 + 0.25 * depth;
+    ctx.beginPath();
+    ctx.fillStyle = ELEMENTS_BY_ID.get(core.element)!.color;
+    ctx.strokeStyle = CORE_GRADES[core.grade].color;
+    ctx.lineWidth = 3;
+    ctx.shadowColor = ctx.fillStyle;
+    ctx.shadowBlur = 14;
+    ctx.arc(x, y, CORE_RADIUS * (1 + 0.2 * depth), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  });
+  ctx.restore();
+}
+
 function draw(ctx: CanvasRenderingContext2D, sim: FieldSim, time: number): void {
   const { width: w, height: h } = sim;
   const { state } = game;
@@ -112,22 +168,8 @@ function draw(ctx: CanvasRenderingContext2D, sim: FieldSim, time: number): void 
   }
   ctx.shadowBlur = 0;
 
-  // Cores orbit the dantian.
-  state.cores.forEach((core, i) => {
-    const angle = time * 0.6 + (i * Math.PI * 2) / state.cores.length;
-    const x = cx + Math.cos(angle) * 105;
-    const y = cy + Math.sin(angle) * 105 * 0.45;
-    ctx.beginPath();
-    ctx.fillStyle = ELEMENTS_BY_ID.get(core.element)!.color;
-    ctx.strokeStyle = CORE_GRADES[core.grade].color;
-    ctx.lineWidth = 3;
-    ctx.shadowColor = ctx.fillStyle;
-    ctx.shadowBlur = 14;
-    ctx.arc(x, y, 11, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-  });
-  ctx.shadowBlur = 0;
+  drawOrbit(ctx, sim, time, 'back');
+  drawOrbit(ctx, sim, time, 'front');
 
   if (sim.pointer) {
     ctx.beginPath();
@@ -151,6 +193,7 @@ function draw(ctx: CanvasRenderingContext2D, sim: FieldSim, time: number): void 
 export function QiField() {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const orbRef = useRef<HTMLButtonElement>(null);
   const [sim] = useState(() => new FieldSim());
   const { state } = game;
   const realm = REALMS[STAGES[state.stage].realmIndex];
@@ -164,6 +207,7 @@ export function QiField() {
       const dpr = window.devicePixelRatio || 1;
       sim.width = container.clientWidth;
       sim.height = container.clientHeight;
+      sim.orbRadius = orbRef.current!.offsetWidth / 2;
       canvas.width = sim.width * dpr;
       canvas.height = sim.height * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -222,6 +266,7 @@ export function QiField() {
     >
       <canvas ref={canvasRef} />
       <button
+        ref={orbRef}
         class="orb"
         style={{ '--realm-color': realm.color }}
         onClick={onOrbClick}
