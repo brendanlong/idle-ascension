@@ -55,6 +55,24 @@ let state: GameState = createInitialState(0);
 state.flags.introSeen = true;
 let time = 0;
 let lastProgress = 0;
+
+/** Per-realm activity in the current loop, printed for the final loop. */
+interface RealmActivity {
+  seconds: number;
+  generatorsBought: number;
+  techniques: number;
+  newGenerators: string[];
+}
+let realmActivity: Record<string, RealmActivity> = {};
+function activity(): RealmActivity {
+  const realm = REALMS[STAGES[state.stage].realmIndex].name;
+  return (realmActivity[realm] ??= {
+    seconds: 0,
+    generatorsBought: 0,
+    techniques: 0,
+    newGenerators: [],
+  });
+}
 const reachedRealm = new Set<number>();
 
 function spend(): void {
@@ -77,7 +95,10 @@ function spend(): void {
       }
     }
     for (const u of availableUpgrades(state)) {
-      if (u.cost <= state.qi && buyUpgrade(state, u.id)) bought = true;
+      if (u.cost <= state.qi && buyUpgrade(state, u.id)) {
+        bought = true;
+        activity().techniques++;
+      }
     }
     stats = computeStats(state);
     for (const element of CORE_ORDER) {
@@ -106,7 +127,11 @@ function spend(): void {
       if (!best || ratio > best.ratio) best = { id: g.id, ratio, cost };
     });
     const b = best as { id: string; cost: number } | null;
-    if (b && state.qi - b.cost >= reserve && buyGenerator(state, stats.mods, b.id)) bought = true;
+    if (b && state.qi - b.cost >= reserve && buyGenerator(state, stats.mods, b.id)) {
+      bought = true;
+      activity().generatorsBought++;
+      if (state.generators[b.id] === 1) activity().newGenerators.push(b.id);
+    }
   }
 }
 
@@ -124,6 +149,7 @@ while (time < maxHours * 3600) {
   if (state.encounter.active) claimEncounter(state, stats, rng);
   tick(state, 1, rng);
   time++;
+  activity().seconds++;
   spend();
 
   const realmIndex = STAGES[state.stage].realmIndex;
@@ -141,6 +167,7 @@ while (time < maxHours * 3600) {
   if (!regressionBlocker(state) && (stalled || pending >= Math.max(3, state.prestige.memories))) {
     report(`regress (+${pending} memories${stalled ? ', stalled' : ''})`);
     state = regress(state, 0)!;
+    realmActivity = {};
     lastProgress = time;
     let boughtPerk = true;
     while (boughtPerk) {
@@ -155,6 +182,12 @@ while (time < maxHours * 3600) {
 console.log(
   `\nFinal: ${stageName(state.stage)} after ${formatDuration(time)}, ${state.prestige.loops} regressions`,
 );
+console.log('Final loop by realm:');
+for (const [realm, r] of Object.entries(realmActivity)) {
+  console.log(
+    `  ${realm.padEnd(26)} ${formatDuration(r.seconds).padStart(8)}  bought ${String(r.generatorsBought).padStart(5)} resources, ${String(r.techniques).padStart(3)} techniques  ${r.newGenerators.join(', ')}`,
+  );
+}
 const treasureLevels = Object.values(state.treasures);
 console.log(
   `Treasures: ${treasureLevels.length}/${TREASURES.length} found, levels ${treasureLevels.reduce((a, b) => a + b, 0)}/${TREASURES.length * MAX_TREASURE_LEVEL}`,

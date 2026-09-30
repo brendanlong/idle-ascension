@@ -71,6 +71,22 @@ const palmUpgrades: UpgradeDef[] = [
     unlock: { type: 'clicks', count: 4_000 },
     effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.03 }],
   },
+  {
+    id: 'palm-6',
+    name: 'Palm That Covers the Sky',
+    description: 'You raise your hand and the sun goes dark.',
+    cost: 2e24,
+    unlock: { type: 'realm', realm: 'daoSeeking' },
+    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.03 }],
+  },
+  {
+    id: 'palm-7',
+    name: 'Finger That Ends Worlds',
+    description: 'Somewhere, a small world you never visited quietly ceases to exist.',
+    cost: 2e31,
+    unlock: { type: 'realm', realm: 'immortalAscension' },
+    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.05 }],
+  },
 ];
 
 const senseUpgrades: UpgradeDef[] = [
@@ -103,6 +119,17 @@ const senseUpgrades: UpgradeDef[] = [
     cost: 2e11,
     unlock: { type: 'realm', realm: 'nascentSoul' },
     effects: [{ type: 'mult', stat: 'moteValueMult', value: 5 }],
+  },
+  {
+    id: 'sense-4',
+    name: 'Eye of Heaven',
+    description: 'You see every mote of qi between here and the edge of the world.',
+    cost: 5e24,
+    unlock: { type: 'realm', realm: 'daoSeeking' },
+    effects: [
+      { type: 'mult', stat: 'moteValueMult', value: 10 },
+      { type: 'mult', stat: 'moteSpawnMult', value: 1.5 },
+    ],
   },
 ];
 
@@ -152,9 +179,25 @@ const scriptureUpgrades: UpgradeDef[] = [
     id: 'scripture-5',
     name: 'The Wordless Sutra',
     description: 'It has no words. You understand it completely.',
-    cost: 1e18,
+    cost: 5e23,
     unlock: { type: 'realm', realm: 'daoSeeking' },
     effects: [{ type: 'mult', stat: 'globalMult', value: 3 }],
+  },
+  {
+    id: 'scripture-6',
+    name: 'Canon of the Nine Heavens',
+    description: 'Written by the first immortal, for the last.',
+    cost: 3e29,
+    unlock: { type: 'realm', realm: 'immortalAscension' },
+    effects: [{ type: 'mult', stat: 'globalMult', value: 3 }],
+  },
+  {
+    id: 'scripture-7',
+    name: 'Record of the Heavenly Dao',
+    description: 'Not a book about the Dao. The Dao, written down.',
+    cost: 5e32,
+    unlock: { type: 'realm', realm: 'immortalAscension' },
+    effects: [{ type: 'mult', stat: 'globalMult', value: 4 }],
   },
 ];
 
@@ -174,6 +217,14 @@ const soulUpgrades: UpgradeDef[] = [
     cost: 1e15,
     unlock: { type: 'realm', realm: 'spiritSevering' },
     effects: [{ type: 'add', stat: 'autoClicksPerSecond', value: 5 }],
+  },
+  {
+    id: 'soul-3',
+    name: 'Ten Thousand Avatars',
+    description: 'Your avatars cultivate in ten thousand places at once.',
+    cost: 5e25,
+    unlock: { type: 'realm', realm: 'daoSeeking' },
+    effects: [{ type: 'add', stat: 'autoClicksPerSecond', value: 10 }],
   },
 ];
 

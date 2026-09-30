@@ -1,10 +1,12 @@
 import { useState } from 'preact/hooks';
 import { GENERATORS } from '../../content/generators';
+import { REALMS_BY_ID } from '../../content/realms';
 import {
   buyGenerator,
   generatorCost,
   isGeneratorVisible,
   maxAffordable,
+  nextLockedGenerator,
 } from '../../engine/economy';
 import { game } from '../game';
 
@@ -15,7 +17,8 @@ export function ResourcesTab() {
   const [amount, setAmount] = useState<BuyAmount>(1);
   const { state, stats } = game;
   const visible = GENERATORS.filter((_, i) => isGeneratorVisible(state, i));
-  const hiddenCount = GENERATORS.length - visible.length;
+  const locked = nextLockedGenerator(state);
+  const hiddenCount = GENERATORS.length - visible.length - (locked ? 1 : 0);
 
   return (
     <div class="tab-body">
@@ -58,6 +61,17 @@ export function ResourcesTab() {
           );
         })}
       </ul>
+      {locked && (
+        <div class="shop-item locked" aria-disabled="true">
+          <span class="shop-icon">{locked.icon}</span>
+          <span class="shop-main">
+            <span class="shop-name">{locked.name}</span>
+            <span class="shop-desc">
+              Requires {REALMS_BY_ID.get(locked.minRealm!)?.name ?? locked.minRealm}
+            </span>
+          </span>
+        </div>
+      )}
       {hiddenCount > 0 && (
         <p class="muted small">{hiddenCount} more cultivation resources remain undiscovered…</p>
       )}

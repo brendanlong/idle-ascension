@@ -5,6 +5,8 @@ export interface GeneratorDef {
   description: string;
   baseCost: number;
   baseQps: number;
+  /** Realm (by id) required before it can be bought. */
+  minRealm?: string;
   /** Names of the technique upgrades unlocked at each ownership milestone. */
   upgradeNames: readonly [string, string, string, string, string];
 }
@@ -160,6 +162,118 @@ export const GENERATORS: readonly GeneratorDef[] = [
       'Dao Heart',
       'Dao Domain',
       'One With the Dao',
+    ],
+  },
+  {
+    id: 'sect',
+    name: 'Your Own Sect',
+    icon: '🏯',
+    description: 'A mountain, a gate, and a thousand disciples who call you Patriarch.',
+    minRealm: 'spiritSevering',
+    baseCost: 2e16,
+    baseQps: 1e7,
+    upgradeNames: [
+      'Sect Charter',
+      'Scripture Pavilion',
+      'Protective Mountain Array',
+      'Branch Sects',
+      'The Sect That Rules the Continent',
+    ],
+  },
+  {
+    id: 'dragon',
+    name: 'Bound True Dragon',
+    icon: '🐉',
+    description: 'A true dragon, bound by oath. It exhales qi and inhales mountains.',
+    minRealm: 'spiritSevering',
+    baseCost: 3e17,
+    baseQps: 6.5e7,
+    upgradeNames: [
+      'Dragon Pearl',
+      'Dragon Blood Pact',
+      'Scales of Heaven',
+      'Dragon Transformation',
+      'Ancestor of Dragons',
+    ],
+  },
+  {
+    id: 'smallWorld',
+    name: 'Inner Small World',
+    icon: '🌍',
+    description: 'A world inside your body, with its own sun, rivers and spirit veins.',
+    minRealm: 'daoSeeking',
+    baseCost: 5e21,
+    baseQps: 4.3e8,
+    upgradeNames: [
+      'World Seed',
+      'Heaven and Earth Separate',
+      'Four Seasons Turn',
+      'Mortals Are Born',
+      'A World That Cultivates',
+    ],
+  },
+  {
+    id: 'starRiver',
+    name: 'Star River',
+    icon: '🌌',
+    description: 'You pluck stars from the sky and drink their light.',
+    minRealm: 'daoSeeking',
+    baseCost: 8e22,
+    baseQps: 2.9e9,
+    upgradeNames: [
+      'Star Map',
+      'Constellation Array',
+      'Swallowing the Sun',
+      'River of Stars Reversed',
+      'Master of the Firmament',
+    ],
+  },
+  {
+    id: 'faith',
+    name: 'Incense of Ten Thousand Worlds',
+    icon: '🛕',
+    description: 'Mortals in countless worlds burn incense to you. Their faith becomes qi.',
+    minRealm: 'immortalAscension',
+    baseCost: 3e26,
+    baseQps: 2.1e10,
+    upgradeNames: [
+      'Wayside Shrines',
+      'Golden Statues',
+      'Pilgrimage Routes',
+      'State Religion',
+      'Worshipped Across Eternity',
+    ],
+  },
+  {
+    id: 'court',
+    name: 'Seat in the Heavenly Court',
+    icon: '🏛️',
+    description: 'A throne among the immortals, and a share of heaven itself.',
+    minRealm: 'immortalAscension',
+    baseCost: 5e27,
+    baseQps: 1.5e11,
+    upgradeNames: [
+      'Jade Tablet of Office',
+      'Celestial Bureaucracy',
+      'Peach Banquet Invitation',
+      'Minister of Heaven',
+      'The Jade Emperor Consults You',
+    ],
+  },
+  {
+    id: 'primordial',
+    name: 'Shard of Primordial Chaos',
+    icon: '🌑',
+    description: 'A fragment of the nothing that came before heaven and earth.',
+    minRealm: 'immortalAscension',
+    baseCost: 8e28,
+    baseQps: 1.1e12,
+    upgradeNames: [
+      'Touching the Void',
+      'Chaos Qi',
+      'Before the First Dawn',
+      'Unmaking and Remaking',
+      'Pangu Stirs',
     ],
   },
 ];

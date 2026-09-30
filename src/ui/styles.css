@@ -469,6 +469,11 @@ header.top h1 {
   text-align: left;
   padding: 0.5rem 0.7rem;
 }
+.shop-item.locked {
+  opacity: 0.45;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+}
 .shop-icon {
   font-size: 1.7rem;
 }
