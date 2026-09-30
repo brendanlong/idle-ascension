@@ -6,7 +6,13 @@ import { PERKS_BY_ID, PERK_LEVEL_LIMIT } from '../content/perks';
 import { FINAL_STAGE } from '../content/realms';
 import { MAX_TREASURE_LEVEL, TREASURES_BY_ID } from '../content/treasures';
 import { UPGRADES_BY_ID } from '../content/upgrades';
-import { SAVE_VERSION, createInitialState, type GameState, type NumberFormat } from './state';
+import {
+  SAVE_VERSION,
+  createInitialState,
+  type GameState,
+  type NumberFormat,
+  type TrialAssist,
+} from './state';
 
 type RawSave = Record<string, unknown>;
 
@@ -144,6 +150,8 @@ function sanitize(state: GameState): GameState {
 
   const formats: NumberFormat[] = ['short', 'myriad', 'scientific'];
   if (!formats.includes(state.settings.numberFormat)) state.settings.numberFormat = 'short';
+  const assists: TrialAssist[] = ['off', 'easier', 'skip'];
+  if (!assists.includes(state.settings.trialAssist)) state.settings.trialAssist = 'off';
   return state;
 }
 

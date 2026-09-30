@@ -64,3 +64,5 @@ export const TRIAL_AFFINITY_MULT = 1.5;
 export const TRIAL_BUFF_SCORE = 0.75;
 export const TRIAL_TREASURE_SCORE = 0.95;
 export const TRIAL_TREASURE_CHANCE = 0.25;
+/** Score given to an optional trial when trial assistance is set to skip them. */
+export const TRIAL_SKIP_SCORE = 0.5;

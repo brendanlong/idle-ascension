@@ -43,6 +43,12 @@ export interface TribulationState {
 
 export type NumberFormat = 'short' | 'myriad' | 'scientific';
 
+/**
+ * Accessibility help for the real-time trials: `easier` slows them and
+ * lowers pass marks; `skip` resolves them without playing.
+ */
+export type TrialAssist = 'off' | 'easier' | 'skip';
+
 export interface GameState {
   saveVersion: number;
   qi: number;
@@ -84,6 +90,7 @@ export interface GameState {
   };
   settings: {
     numberFormat: NumberFormat;
+    trialAssist: TrialAssist;
   };
   /** Wall-clock ms of the last tick, used for offline progress. */
   lastTick: number;
@@ -122,7 +129,7 @@ export function createInitialState(now = Date.now()): GameState {
       bestStage: 0,
     },
     flags: { introSeen: false, ascended: false, victorySeen: false },
-    settings: { numberFormat: 'short' },
+    settings: { numberFormat: 'short', trialAssist: 'off' },
     lastTick: now,
   };
 }

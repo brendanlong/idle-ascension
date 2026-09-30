@@ -13,7 +13,7 @@ import type { Modifiers } from './effects';
 import { log } from './events';
 import { defaultRng, type Rng } from './rng';
 import { validScore } from './trials';
-import type { GameState } from './state';
+import type { GameState, TrialAssist } from './state';
 
 /** Fraction of the breakthrough cost returned when a tribulation fails. */
 const FAILURE_REFUND = 0.7;
@@ -42,12 +42,26 @@ export function breakthroughBlocker(state: GameState): string | null {
 
 export type BreakthroughResult = 'advanced' | 'tribulation' | 'blocked';
 
-export function tribulationPassScore(def: TribulationDef, mods: Modifiers): number {
-  return Math.max(MIN_PASS_SCORE, def.passScore - mods.tribulationLeniency);
+/** "Easier" trial assistance lowers pass marks by this much and slows trials by this factor. */
+export const ASSIST_PASS_EASE = 0.15;
+export const ASSIST_SPEED = 0.6;
+
+export function tribulationPassScore(
+  def: TribulationDef,
+  mods: Modifiers,
+  assist: TrialAssist = 'off',
+): number {
+  const pass = Math.max(MIN_PASS_SCORE, def.passScore - mods.tribulationLeniency);
+  return assist === 'easier' ? pass - ASSIST_PASS_EASE : pass;
 }
 
-export function tribulationSpeed(mods: Modifiers): number {
-  return Math.max(MIN_TRIAL_SPEED, 1 / mods.tribulationSlowMult);
+export function tribulationSpeed(mods: Modifiers, assist: TrialAssist = 'off'): number {
+  return trialSpeed(assist) * Math.max(MIN_TRIAL_SPEED, 1 / mods.tribulationSlowMult);
+}
+
+/** Speed multiplier for any trial from the assistance setting alone. */
+export function trialSpeed(assist: TrialAssist): number {
+  return assist === 'easier' ? ASSIST_SPEED : 1;
 }
 
 /** `count` different elements in random order. */
@@ -74,11 +88,18 @@ export function attemptBreakthrough(
       targetStage: next.index,
       trials: randomElements(rng, trib.trials),
       scores: [],
-      passScore: tribulationPassScore(trib, mods),
-      speed: tribulationSpeed(mods),
+      passScore: tribulationPassScore(trib, mods, state.settings.trialAssist),
+      speed: tribulationSpeed(mods, state.settings.trialAssist),
       started: false,
     };
     log(`Dark clouds gather overhead. The ${trib.name} descends!`, 'bad');
+    if (state.settings.trialAssist === 'skip') {
+      // Trial assistance: pass without playing. (Resolved directly rather than
+      // by recording pass-mark scores, whose float average can land just under.)
+      const t = state.tribulation;
+      t.scores = t.trials.map(() => t.passScore);
+      finishTribulation(state, true);
+    }
     return 'tribulation';
   }
   advanceTo(state, next.index);
@@ -128,7 +149,10 @@ export function recordTribulationTrial(state: GameState, score: number): void {
     );
     return;
   }
-  finishTribulation(state, tribulationAverage(t.scores) >= t.passScore);
+  // Compare the whole percentages the player sees, so "65%, needed 65%" passes
+  // even when the float average lands a hair under.
+  const passed = Math.round(tribulationAverage(t.scores) * 100) >= Math.round(t.passScore * 100);
+  finishTribulation(state, passed);
 }
 
 /**
