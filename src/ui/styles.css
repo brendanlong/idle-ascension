@@ -516,6 +516,14 @@ header.top h1 {
 .card.perk.locked {
   opacity: 0.6;
 }
+.card.treasure {
+  border-left: 3px solid var(--rarity);
+}
+.card.treasure .rarity {
+  color: var(--rarity);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
 .card.treasure.unknown {
   opacity: 0.5;
 }

@@ -4,7 +4,7 @@ import { ENCOUNTERS_BY_ID } from '../content/encounters';
 import { GENERATORS_BY_ID } from '../content/generators';
 import { PERKS_BY_ID } from '../content/perks';
 import { FINAL_STAGE } from '../content/realms';
-import { TREASURES_BY_ID } from '../content/treasures';
+import { MAX_TREASURE_LEVEL, TREASURES_BY_ID } from '../content/treasures';
 import { UPGRADES_BY_ID } from '../content/upgrades';
 import { SAVE_VERSION, createInitialState, type GameState, type NumberFormat } from './state';
 
@@ -15,7 +15,17 @@ type RawSave = Record<string, unknown>;
  * shape of GameState in a way that defaults can't fill in, bump SAVE_VERSION
  * and add a migration here.
  */
-const migrations: Record<number, (save: RawSave) => RawSave> = {};
+const migrations: Record<number, (save: RawSave) => RawSave> = {
+  // v2: treasures went from owned flags to levels.
+  1: (save) => {
+    if (isPlainObject(save.treasures)) {
+      save.treasures = Object.fromEntries(
+        Object.entries(save.treasures).map(([id, owned]) => [id, owned === true ? 1 : owned]),
+      );
+    }
+    return save;
+  },
+};
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -69,7 +79,13 @@ function sanitize(state: GameState): GameState {
   }
   state.generators = generators;
   state.upgrades = knownIds(state.upgrades, UPGRADES_BY_ID);
-  state.treasures = knownIds(state.treasures, TREASURES_BY_ID);
+  const treasures: Record<string, number> = {};
+  for (const [id, level] of Object.entries(state.treasures)) {
+    if (TREASURES_BY_ID.has(id) && isFiniteNumber(level) && level >= 1) {
+      treasures[id] = clampInt(level, 1, MAX_TREASURE_LEVEL);
+    }
+  }
+  state.treasures = treasures;
 
   const perks: Record<string, number> = {};
   for (const [id, level] of Object.entries(state.prestige.perks)) {

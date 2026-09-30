@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TREASURES } from '../../content/treasures';
+import { MAX_TREASURE_LEVEL, TREASURES } from '../../content/treasures';
 import { onLog, type LogEntry } from '../events';
 import { claimEncounter, rewardOdds } from '../encounters';
 import { ENCOUNTERS_BY_ID } from '../../content/encounters';
@@ -26,9 +26,9 @@ describe('encounters', () => {
     expect(b).toBe(`${a.split(' ')[0]}!`);
   });
 
-  it('falls back to other rewards once every treasure is owned', () => {
+  it('falls back to other rewards once every treasure is fully refined', () => {
     const state = newGame({ stage: firstStageOfRealm('godhood') });
-    for (const t of TREASURES) state.treasures[t.id] = true;
+    for (const t of TREASURES) state.treasures[t.id] = MAX_TREASURE_LEVEL;
     // 0.99 would pick treasure (the heaviest, last entry) if it were still available.
     const logs = claim(state, 'beggar', seqRng(0.99));
     expect(logs.some((l) => l.tone === 'epic')).toBe(false);

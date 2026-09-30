@@ -142,3 +142,14 @@ export function describeEffect(effect: Effect, generatorName?: (id: string) => s
       return `×${trimNumber(effect.value)} ${generatorName?.(effect.generator) ?? effect.generator} output`;
   }
 }
+
+/**
+ * An effect at a given level, for things that grow linearly (treasures):
+ * bonus multipliers grow their bonus (×1.5 → ×2 → ×2.5), additions add up,
+ * and reductions (multipliers below 1) compound so they never reach zero.
+ */
+export function scaleEffect(effect: Effect, level: number): Effect {
+  if (effect.type === 'add') return { ...effect, value: effect.value * level };
+  const value = effect.value < 1 ? effect.value ** level : 1 + (effect.value - 1) * level;
+  return { ...effect, value };
+}
