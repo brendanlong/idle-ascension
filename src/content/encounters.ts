@@ -1,19 +1,46 @@
-export type EncounterOutcome =
-  /** Gain min(bank × bankFraction, qi/s × qpsSeconds) qi. */
-  | { type: 'windfall'; bankFraction: number; qpsSeconds: number }
-  | { type: 'buff'; buff: string }
-  /** Grant a random unfound treasure, or fall back if none are available. */
-  | { type: 'treasure'; fallback: EncounterOutcome };
+/**
+ * Fortuitous encounters. Claiming one picks a reward kind from the encounter's
+ * weighted table, then builds its log text from a random intro plus a random
+ * outcome line for that reward. Text can use {placeholders} from NAME_TABLES
+ * (see names.ts), and treasure lines can use {treasure}.
+ *
+ * Across all encounters, one-time qi windfalls should be the most common
+ * reward, then timed buffs, then permanent treasures (content.test.ts checks
+ * this).
+ */
+
+export interface WindfallReward {
+  weight: number;
+  /** Seconds of qi/s granted, rolled uniformly in this range... */
+  qpsSeconds: readonly [number, number];
+  /** ...but capped at this fraction of banked qi, so it can't be farmed by saving up. */
+  bankFraction: number;
+  texts: readonly string[];
+}
+
+export interface BuffOption {
+  buff: string;
+  weight: number;
+  texts: readonly string[];
+}
+
+export interface EncounterRewards {
+  windfall?: WindfallReward;
+  buff?: { weight: number; options: readonly BuffOption[] };
+  treasure?: { weight: number; texts: readonly string[] };
+}
+
+export type RewardKind = keyof EncounterRewards;
 
 export interface EncounterDef {
   id: string;
   name: string;
   icon: string;
+  /** How often this encounter appears relative to others. */
   weight: number;
   minRealm?: string;
-  /** One is chosen at random and shown in the log. */
-  flavor: readonly string[];
-  outcome: EncounterOutcome;
+  intros: readonly string[];
+  rewards: EncounterRewards;
 }
 
 export const ENCOUNTER_LIFETIME = 13;
@@ -26,45 +53,267 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
     name: 'Hidden Cave Dwelling',
     icon: '🕳️',
     weight: 10,
-    flavor: [
-      'You fall off a cliff and land in a hidden cave. Inside: a skeleton, and its spirit stones.',
-      'Behind a waterfall you find the abandoned abode of some forgotten cultivator.',
+    intros: [
+      'You slip on a mossy ledge and tumble into a hidden cave.',
+      'Behind a waterfall on {place}, you find the sealed abode of a forgotten cultivator.',
+      'A wounded {beast} flees into a crack in the mountain. You follow.',
+      'An old map in a secondhand book leads you to a cave nobody else has noticed.',
     ],
-    outcome: { type: 'windfall', bankFraction: 0.15, qpsSeconds: 900 },
+    rewards: {
+      windfall: {
+        weight: 55,
+        qpsSeconds: [600, 1500],
+        bankFraction: 0.15,
+        texts: [
+          'Inside, a skeleton still clutches a pouch of spirit stones. It will not be needing them.',
+          'The walls are veined with raw spirit crystal. You absorb every last drop.',
+          'A spirit spring bubbles in the dark. You drink until you can drink no more.',
+        ],
+      },
+      buff: {
+        weight: 15,
+        options: [
+          {
+            buff: 'epiphany',
+            weight: 2,
+            texts: [
+              'Sword marks cover the walls. Tracing them with your eyes, something clicks.',
+              'Carved above the bed: a single character. You stare at it until you understand.',
+            ],
+          },
+          {
+            buff: 'qiTide',
+            weight: 1,
+            texts: ['A gathering array still hums beneath the dust. Qi floods toward you.'],
+          },
+        ],
+      },
+      treasure: {
+        weight: 30,
+        texts: [
+          'On a stone altar rests the {treasure}. It seems to have been waiting for you.',
+          'The skeleton\'s last will reads: "To whoever finds this: take the {treasure}."',
+          'Beneath a loose floor tile, wrapped in rotted silk: the {treasure}.',
+        ],
+      },
+    },
   },
   {
     id: 'youngMaster',
     name: 'Arrogant Young Master',
     icon: '🤨',
-    weight: 8,
-    flavor: [
-      '"Do you know who my father is?" You slap him. The crowd gasps. His storage ring is yours.',
-      '"You dare look at me, trash?" One palm later, he is embedded in a wall. You take his ring.',
-      '"My grandfather is an Elder of the—" You don\'t let him finish. His ring is surprisingly full.',
+    weight: 9,
+    intros: [
+      '"Do you know who my {relative} is?" demands Young Master {surname} of the {sect}.',
+      'Young Master {surname} of the {sect} blocks the road. "Kneel, trash."',
+      '"You dare look at me?" Young Master {surname} sneers. His {relative} is a {elderTitle}, apparently.',
+      'Young Master {surname} wants your seat at the teahouse. He brought six bodyguards.',
     ],
-    outcome: { type: 'windfall', bankFraction: 0.1, qpsSeconds: 600 },
+    rewards: {
+      windfall: {
+        weight: 80,
+        qpsSeconds: [300, 900],
+        bankFraction: 0.1,
+        texts: [
+          'One slap later, he is embedded in a wall. His storage ring is surprisingly full.',
+          'You do not let him finish. The crowd gasps. His storage ring is yours.',
+          'His bodyguards flee first. He flees second, leaving his spirit stones third.',
+          'You defeat him with one finger. He pays "compensation" to avoid a second.',
+        ],
+      },
+      buff: {
+        weight: 12,
+        options: [
+          {
+            buff: 'meridianSurge',
+            weight: 1,
+            texts: [
+              'The fight gets your blood up. Your meridians sing.',
+              'Slapping him was so satisfying that your palms are still tingling with power.',
+            ],
+          },
+        ],
+      },
+      treasure: {
+        weight: 8,
+        texts: [
+          'In his haste to flee he drops the {treasure}. Finders keepers.',
+          'His {relative} arrives, sees what happened, and hands you the {treasure} as an apology.',
+        ],
+      },
+    },
   },
   {
-    id: 'epiphany',
+    id: 'herb',
+    name: 'Wild Spirit Herb',
+    icon: '🌱',
+    weight: 8,
+    intros: [
+      'A faint fragrance drifts from a crack in the rocks.',
+      'A {beast} is guarding something in a clearing. You wait for it to nap.',
+      'You notice a flower that blooms only once every hundred years. Today is the day.',
+    ],
+    rewards: {
+      windfall: {
+        weight: 70,
+        qpsSeconds: [300, 900],
+        bankFraction: 0.1,
+        texts: [
+          'You eat it raw. Probably not how alchemists would do it, but it works.',
+          'A hundred-year spirit ginseng! You refine it on the spot.',
+        ],
+      },
+      buff: {
+        weight: 25,
+        options: [
+          {
+            buff: 'qiTide',
+            weight: 2,
+            texts: ['The herb releases a cloud of spores. Qi motes swirl thickly around you.'],
+          },
+          {
+            buff: 'epiphany',
+            weight: 1,
+            texts: ['Chewing the bitter leaf, your mind turns uncannily clear.'],
+          },
+        ],
+      },
+      treasure: {
+        weight: 5,
+        texts: ['Tangled in its roots is the {treasure}. Someone buried it here long ago.'],
+      },
+    },
+  },
+  {
+    id: 'leaf',
     name: 'Falling Leaf',
     icon: '🍂',
     weight: 7,
-    flavor: [
-      'A leaf falls. You watch it for three days and understand something profound.',
-      'The rain on the lake shows you the shape of the Dao.',
+    intros: [
+      'A leaf falls.',
+      'Rain dimples the surface of the lake.',
+      'You watch an old woman sweep the same courtyard, over and over.',
+      'A spider rebuilds its web after the wind tears it.',
     ],
-    outcome: { type: 'buff', buff: 'epiphany' },
+    rewards: {
+      windfall: {
+        weight: 15,
+        qpsSeconds: [200, 600],
+        bankFraction: 0.08,
+        texts: ['Your qi settles and condenses, a little denser than before.'],
+      },
+      buff: {
+        weight: 80,
+        options: [
+          {
+            buff: 'epiphany',
+            weight: 3,
+            texts: [
+              'You watch it for three days and understand something profound.',
+              'In it you see the shape of the Dao.',
+            ],
+          },
+          {
+            buff: 'qiTide',
+            weight: 1,
+            texts: ['You finally understand how qi flows. It begins to flow toward you.'],
+          },
+        ],
+      },
+      treasure: {
+        weight: 5,
+        texts: ['When you come out of your trance, the {treasure} is lying in your lap. Odd.'],
+      },
+    },
   },
   {
     id: 'beggar',
     name: 'Mysterious Old Beggar',
     icon: '🧓',
     weight: 5,
-    flavor: [
-      'You share your last bun with a filthy old beggar. He laughs and presses something into your hands.',
-      'An old beggar trips you, then insists you take this "worthless junk" as an apology.',
+    intros: [
+      'You share your last steamed bun with a filthy old beggar.',
+      'An old beggar trips you, then cackles.',
+      'A drunk old man in rags insists you look like his long-lost disciple.',
     ],
-    outcome: { type: 'treasure', fallback: { type: 'buff', buff: 'meridianSurge' } },
+    rewards: {
+      windfall: {
+        weight: 25,
+        qpsSeconds: [400, 1000],
+        bankFraction: 0.12,
+        texts: [
+          'He presses a pouch into your hands. It is heavier than it looks.',
+          'He taps your forehead. Blocked meridians burst open, spilling qi.',
+        ],
+      },
+      buff: {
+        weight: 30,
+        options: [
+          {
+            buff: 'meridianSurge',
+            weight: 2,
+            texts: [
+              'He slaps you across the back. Every meridian in your body lights up.',
+              'He teaches you one palm strike, then vanishes. Your hands are burning.',
+            ],
+          },
+          {
+            buff: 'epiphany',
+            weight: 1,
+            texts: ['He mutters a single line of scripture. It echoes in your head for hours.'],
+          },
+        ],
+      },
+      treasure: {
+        weight: 45,
+        texts: [
+          'He insists you take the {treasure}. "Worthless junk," he says, winking.',
+          'When you look back, he is gone. The {treasure} sits where he was.',
+          '"Took you long enough," he grumbles, and hands you the {treasure}.',
+        ],
+      },
+    },
+  },
+  {
+    id: 'tournament',
+    name: 'Sect Tournament',
+    icon: '🏯',
+    weight: 5,
+    minRealm: 'foundation',
+    intros: [
+      'The {sect} is holding its grand tournament. Nobody expects much from you.',
+      'The {sect} challenges your clan to a friendly exchange of pointers.',
+    ],
+    rewards: {
+      windfall: {
+        weight: 60,
+        qpsSeconds: [600, 1200],
+        bankFraction: 0.15,
+        texts: [
+          'You win every match without drawing your sword. The prize pool is yours.',
+          'You make a {elderTitle} stand up from their seat. The prize is generous.',
+        ],
+      },
+      buff: {
+        weight: 30,
+        options: [
+          {
+            buff: 'meridianSurge',
+            weight: 1,
+            texts: ['Fighting a genius of the {sect} pushes you past your limits.'],
+          },
+          {
+            buff: 'epiphany',
+            weight: 1,
+            texts: ["Watching the final match, you see the flaw in your opponent's technique."],
+          },
+        ],
+      },
+      treasure: {
+        weight: 10,
+        texts: ['First prize: the {treasure}. The runner-up weeps openly.'],
+      },
+    },
   },
   {
     id: 'auction',
@@ -72,10 +321,37 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
     icon: '🏮',
     weight: 3,
     minRealm: 'foundation',
-    flavor: ['Everyone ignores the rusty lot. You bid one spirit stone. The auctioneer weeps.'],
-    outcome: {
-      type: 'treasure',
-      fallback: { type: 'windfall', bankFraction: 0.2, qpsSeconds: 1200 },
+    intros: [
+      'The grand auction in the capital is underway.',
+      'A shady underground auction is selling "items of uncertain provenance."',
+    ],
+    rewards: {
+      windfall: {
+        weight: 40,
+        qpsSeconds: [900, 1800],
+        bankFraction: 0.2,
+        texts: [
+          'Young Master {surname} outbids you out of spite. For junk. You laugh all the way home.',
+          'You sell a pill you refined last week. Three sects start a bidding war.',
+        ],
+      },
+      buff: {
+        weight: 10,
+        options: [
+          {
+            buff: 'heavensFavor',
+            weight: 1,
+            texts: ['You buy a lucky charm for one spirit stone. It turns out to actually work.'],
+          },
+        ],
+      },
+      treasure: {
+        weight: 50,
+        texts: [
+          'Everyone ignores a rusty lot. You bid one spirit stone. It is the {treasure}.',
+          'You recognize the {treasure} from a past life. The auctioneer does not.',
+        ],
+      },
     },
   },
   {
@@ -84,8 +360,41 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
     icon: '🌈',
     weight: 2,
     minRealm: 'coreFormation',
-    flavor: ['Purple clouds gather over your cave. Heaven itself seems to smile on you.'],
-    outcome: { type: 'buff', buff: 'heavensFavor' },
+    intros: [
+      'Purple clouds gather over your cave.',
+      'A rainbow arcs over {place} and ends exactly where you are sitting.',
+      'Cranes circle your home nine times, then fly west.',
+    ],
+    rewards: {
+      windfall: {
+        weight: 15,
+        qpsSeconds: [900, 1800],
+        bankFraction: 0.2,
+        texts: ['Heavenly qi pours down like rain.'],
+      },
+      buff: {
+        weight: 80,
+        options: [
+          {
+            buff: 'heavensFavor',
+            weight: 3,
+            texts: [
+              'Heaven itself seems to smile on you.',
+              'The world feels briefly, perfectly aligned.',
+            ],
+          },
+          {
+            buff: 'epiphany',
+            weight: 1,
+            texts: ['In the patterns of light, you glimpse the workings of heaven.'],
+          },
+        ],
+      },
+      treasure: {
+        weight: 5,
+        texts: ['Where the light touches the ground, the {treasure} rises from the earth.'],
+      },
+    },
   },
 ];
 
