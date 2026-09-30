@@ -8,22 +8,22 @@ export interface FaviconDot {
   rim: string;
 }
 
-const ORBIT_RADIUS = 26;
 const DOT_RADIUS = 4.5;
 const OUTLINE = '#1a1512';
 
 /**
- * The dantian in the realm's colour with a dark border, orbited by one small
+ * The dantian in the realm's colour with a dark border, studded with one small
  * dot per core (element colour, grade-coloured rim). No background, so it
  * sits on light or dark tab bars; the dark outlines keep it legible on both.
  */
 export function faviconSvg(realmColor: string, dots: readonly FaviconDot[]): string {
-  const orbRadius = dots.length > 0 ? 19 : 27;
+  const orbRadius = dots.length > 0 ? 24 : 27;
   const circles = dots.map((dot, i) => {
     // Start at the top and go clockwise.
     const angle = -Math.PI / 2 + (i * 2 * Math.PI) / dots.length;
-    const x = (32 + Math.cos(angle) * ORBIT_RADIUS).toFixed(1);
-    const y = (32 + Math.sin(angle) * ORBIT_RADIUS).toFixed(1);
+    // Centred on the orb's border, so each core overlaps it halfway.
+    const x = (32 + Math.cos(angle) * orbRadius).toFixed(1);
+    const y = (32 + Math.sin(angle) * orbRadius).toFixed(1);
     return (
       `<circle cx="${x}" cy="${y}" r="${DOT_RADIUS + 1.5}" fill="${OUTLINE}"/>` +
       `<circle cx="${x}" cy="${y}" r="${DOT_RADIUS}" fill="${dot.color}" stroke="${dot.rim}" stroke-width="1.5"/>`
