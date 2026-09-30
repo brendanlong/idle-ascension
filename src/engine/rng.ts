@@ -12,6 +12,7 @@ export function pick<T>(rng: Rng, items: readonly T[]): T {
 
 export function weightedPick<T extends { weight: number }>(rng: Rng, items: readonly T[]): T {
   const total = items.reduce((sum, i) => sum + i.weight, 0);
+  if (!(total > 0)) throw new Error('weightedPick needs at least one positive weight');
   let roll = rng() * total;
   for (const item of items) {
     roll -= item.weight;

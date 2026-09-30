@@ -22,6 +22,15 @@ export const BUFFS: readonly BuffDef[] = [
     effects: [{ type: 'mult', stat: 'clickMult', value: 33 }],
   },
   {
+    id: 'qiTide',
+    name: 'Qi Tide',
+    duration: 45,
+    effects: [
+      { type: 'mult', stat: 'moteSpawnMult', value: 4 },
+      { type: 'mult', stat: 'moteValueMult', value: 3 },
+    ],
+  },
+  {
     id: 'heavensFavor',
     name: "Heaven's Favor",
     duration: 300,

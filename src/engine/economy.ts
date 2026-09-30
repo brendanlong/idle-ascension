@@ -105,12 +105,12 @@ export function findableTreasures(state: GameState): string[] {
   ).map((t) => t.id);
 }
 
-/** Grants a random findable treasure. Returns its id, or null if none remain. */
-export function grantRandomTreasure(state: GameState, rng: Rng): string | null {
+export function pickRandomTreasure(state: GameState, rng: Rng): string | null {
   const options = findableTreasures(state);
-  if (options.length === 0) return null;
-  const id = pick(rng, options);
+  return options.length === 0 ? null : pick(rng, options);
+}
+
+export function grantTreasure(state: GameState, id: string): void {
   state.treasures[id] = true;
   log(`Obtained treasure: ${TREASURES_BY_ID.get(id)!.name}!`, 'epic');
-  return id;
 }
