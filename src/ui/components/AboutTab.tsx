@@ -37,7 +37,8 @@ export function AboutTab() {
       <h3>Privacy</h3>
       <p>
         There are no accounts, ads or cookies. Your save lives only in this browser's local storage;
-        use Settings → Export to back it up or move it to another device.
+        use Settings → Export to back it up or move it to another device. On iPhone and iPad, the
+        game added to your home screen keeps a separate save from the one in Safari.
       </p>
       <p>
         To see how many people visit, the site uses{' '}
