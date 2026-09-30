@@ -12,7 +12,7 @@ import {
 import { generatorName } from '../content/generators';
 import { firstStageOfRealm } from '../content/realms';
 import { TREASURES_BY_ID } from '../content/treasures';
-import { addBuff, findableTreasures, gainQi, grantTreasure, pickRandomTreasure } from './economy';
+import { addBuff, gainQi, grantTreasure, pickRandomTreasure } from './economy';
 import { describeEffect } from './effects';
 import { log } from './events';
 import { formatNumber } from './format';
@@ -51,14 +51,13 @@ export function spawnEncounter(state: GameState, rng: Rng): void {
   state.encounter.nextIn = randomBetween(rng, ENCOUNTER_INTERVAL_MIN, ENCOUNTER_INTERVAL_MAX);
 }
 
-/** Reward kinds this encounter can give right now, with their weights. */
+/** Reward kinds this encounter can give, with their weights. */
 export function rewardOdds(
-  state: GameState,
   def: EncounterDef,
+  treasureAvailable: boolean,
 ): { kind: RewardKind; weight: number }[] {
-  const canFindTreasure = findableTreasures(state).length > 0;
   return (['windfall', 'buff', 'treasure'] as const)
-    .filter((kind) => def.rewards[kind] && (kind !== 'treasure' || canFindTreasure))
+    .filter((kind) => def.rewards[kind] && (kind !== 'treasure' || treasureAvailable))
     .map((kind) => ({ kind, weight: def.rewards[kind]!.weight }));
 }
 
@@ -84,7 +83,8 @@ export function claimEncounter(state: GameState, stats: Stats, rng: Rng): boolea
   const story = (text: string) => log(`${intro} ${fillTemplate(text, vars, rng)}`, 'lore');
   const fmt = (n: number) => formatNumber(n, state.settings.numberFormat);
 
-  const { kind } = weightedPick(rng, rewardOdds(state, def));
+  const treasureId = pickRandomTreasure(state, rng);
+  const { kind } = weightedPick(rng, rewardOdds(def, treasureId !== null));
   switch (kind) {
     case 'windfall': {
       const reward = def.rewards.windfall!;
@@ -104,10 +104,9 @@ export function claimEncounter(state: GameState, stats: Stats, rng: Rng): boolea
       break;
     }
     case 'treasure': {
-      const id = pickRandomTreasure(state, rng)!;
-      vars.treasure = TREASURES_BY_ID.get(id)!.name;
+      vars.treasure = TREASURES_BY_ID.get(treasureId!)!.name;
       story(pick(rng, def.rewards.treasure!.texts));
-      grantTreasure(state, id);
+      grantTreasure(state, treasureId!);
       break;
     }
   }

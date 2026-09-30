@@ -55,7 +55,7 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
     weight: 10,
     intros: [
       'You slip on a mossy ledge and tumble into a hidden cave.',
-      'Behind a waterfall on {place}, you find the sealed abode of a forgotten cultivator.',
+      'Behind a waterfall near {place}, you find the sealed abode of a forgotten cultivator.',
       'A wounded {beast} flees into a crack in the mountain. You follow.',
       'An old map in a secondhand book leads you to a cave nobody else has noticed.',
     ],
@@ -77,8 +77,8 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
             buff: 'epiphany',
             weight: 2,
             texts: [
-              'Sword marks cover the walls. Tracing them with your eyes, something clicks.',
-              'Carved above the bed: a single character. You stare at it until you understand.',
+              'Sword marks cover the walls. As you trace them with your eyes, something clicks.',
+              'Carved into the wall: a single character. You stare at it until you understand.',
             ],
           },
           {
@@ -92,8 +92,8 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
         weight: 30,
         texts: [
           'On a stone altar rests the {treasure}. It seems to have been waiting for you.',
-          'The skeleton\'s last will reads: "To whoever finds this: take the {treasure}."',
-          'Beneath a loose floor tile, wrapped in rotted silk: the {treasure}.',
+          'A skeleton clutches its last will: "To whoever finds this: take the {treasure}."',
+          'Deeper in, behind a collapsed wall, you find the {treasure}.',
         ],
       },
     },
@@ -116,7 +116,7 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
         bankFraction: 0.1,
         texts: [
           'One slap later, he is embedded in a wall. His storage ring is surprisingly full.',
-          'You do not let him finish. The crowd gasps. His storage ring is yours.',
+          'Before he can say another word, you strike. The crowd gasps. His storage ring is yours.',
           'His bodyguards flee first. He flees second, leaving his spirit stones third.',
           'You defeat him with one finger. He pays "compensation" to avoid a second.',
         ],
@@ -149,9 +149,9 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
     icon: '🌱',
     weight: 8,
     intros: [
-      'A faint fragrance drifts from a crack in the rocks.',
-      'A {beast} is guarding something in a clearing. You wait for it to nap.',
-      'You notice a flower that blooms only once every hundred years. Today is the day.',
+      'Following a faint fragrance, you find a spirit herb growing from a crack in the rocks.',
+      'A wild {beast} is guarding a spirit herb in a clearing. You wait for it to nap, then pluck the herb.',
+      'You find a spirit flower that blooms only once every hundred years. Today is the day.',
     ],
     rewards: {
       windfall: {
@@ -159,8 +159,8 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
         qpsSeconds: [300, 900],
         bankFraction: 0.1,
         texts: [
-          'You eat it raw. Probably not how alchemists would do it, but it works.',
-          'A hundred-year spirit ginseng! You refine it on the spot.',
+          'You eat the herb raw. Probably not how alchemists would do it, but it works.',
+          'A hundred-year spirit herb! You refine it on the spot.',
         ],
       },
       buff: {
@@ -168,24 +168,24 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
         options: [
           {
             buff: 'qiTide',
-            weight: 2,
-            texts: ['The herb releases a cloud of spores. Qi motes swirl thickly around you.'],
+            weight: 1,
+            texts: ['The herb releases a cloud of pollen. Qi motes swirl thickly around you.'],
           },
           {
             buff: 'epiphany',
             weight: 1,
-            texts: ['Chewing the bitter leaf, your mind turns uncannily clear.'],
+            texts: ['As you chew the bitter herb, your mind turns uncannily clear.'],
           },
         ],
       },
       treasure: {
         weight: 5,
-        texts: ['Tangled in its roots is the {treasure}. Someone buried it here long ago.'],
+        texts: ['Digging up the herb, you find the {treasure} beneath its roots.'],
       },
     },
   },
   {
-    id: 'leaf',
+    id: 'epiphany',
     name: 'Falling Leaf',
     icon: '🍂',
     weight: 7,
@@ -209,8 +209,8 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
             buff: 'epiphany',
             weight: 3,
             texts: [
-              'You watch it for three days and understand something profound.',
-              'In it you see the shape of the Dao.',
+              'You watch for three days and understand something profound.',
+              'In that moment, you see the shape of the Dao.',
             ],
           },
           {
@@ -267,7 +267,7 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
       treasure: {
         weight: 45,
         texts: [
-          'He insists you take the {treasure}. "Worthless junk," he says, winking.',
+          'He presses the {treasure} on you. "Worthless junk," he says, winking.',
           'When you look back, he is gone. The {treasure} sits where he was.',
           '"Took you long enough," he grumbles, and hands you the {treasure}.',
         ],
@@ -282,7 +282,7 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
     minRealm: 'foundation',
     intros: [
       'The {sect} is holding its grand tournament. Nobody expects much from you.',
-      'The {sect} challenges your clan to a friendly exchange of pointers.',
+      'The {sect} opens its tournament to outsiders. You sign up on a whim.',
     ],
     rewards: {
       windfall: {
@@ -331,7 +331,7 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
         qpsSeconds: [900, 1800],
         bankFraction: 0.2,
         texts: [
-          'Young Master {surname} outbids you out of spite. For junk. You laugh all the way home.',
+          'Young Master {surname} outbids everyone out of spite, for junk you consigned. You laugh all the way home.',
           'You sell a pill you refined last week. Three sects start a bidding war.',
         ],
       },
@@ -348,7 +348,7 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
       treasure: {
         weight: 50,
         texts: [
-          'Everyone ignores a rusty lot. You bid one spirit stone. It is the {treasure}.',
+          'Everyone ignores a dusty lot. You bid one spirit stone. It turns out to be the {treasure}.',
           'You recognize the {treasure} from a past life. The auctioneer does not.',
         ],
       },
@@ -386,13 +386,13 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
           {
             buff: 'epiphany',
             weight: 1,
-            texts: ['In the patterns of light, you glimpse the workings of heaven.'],
+            texts: ['In the omen, you glimpse the workings of heaven.'],
           },
         ],
       },
       treasure: {
         weight: 5,
-        texts: ['Where the light touches the ground, the {treasure} rises from the earth.'],
+        texts: ['Where the omen fades, the {treasure} rises from the earth.'],
       },
     },
   },

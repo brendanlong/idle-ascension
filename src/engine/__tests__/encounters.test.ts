@@ -26,11 +26,16 @@ describe('encounters', () => {
     expect(b).toBe(`${a.split(' ')[0]}!`);
   });
 
-  it('never offers treasure once every findable treasure is owned', () => {
+  it('falls back to other rewards once every treasure is owned', () => {
     const state = newGame({ stage: firstStageOfRealm('godhood') });
     for (const t of TREASURES) state.treasures[t.id] = true;
-    const kinds = rewardOdds(state, ENCOUNTERS_BY_ID.get('beggar')!).map((o) => o.kind);
-    expect(kinds).not.toContain('treasure');
+    // 0.99 would pick treasure (the heaviest, last entry) if it were still available.
+    const logs = claim(state, 'beggar', seqRng(0.99));
+    expect(logs.some((l) => l.tone === 'epic')).toBe(false);
+    expect(state.buffs.length + state.qi).toBeGreaterThan(0);
+    expect(rewardOdds(ENCOUNTERS_BY_ID.get('beggar')!, false).map((o) => o.kind)).not.toContain(
+      'treasure',
+    );
   });
 
   it('can grant a treasure, naming it in the story', () => {

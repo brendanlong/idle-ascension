@@ -42,13 +42,36 @@ describe('content integrity', () => {
     }
   });
 
-  it('gives every encounter a fallback for when all treasures are found', () => {
-    for (const e of ENCOUNTERS) expect(e.rewards.windfall ?? e.rewards.buff).toBeDefined();
+  it('gives every encounter text, positive weights, and a non-treasure reward', () => {
+    for (const e of ENCOUNTERS) {
+      const { windfall, buff, treasure } = e.rewards;
+      expect(e.weight, e.id).toBeGreaterThan(0);
+      expect(e.intros.length, e.id).toBeGreaterThan(0);
+      // Treasures run out (and are gated by realm), so something else must always be possible.
+      expect(windfall || buff, e.id).toBeTruthy();
+      for (const reward of [windfall, buff, treasure]) {
+        if (reward) expect(reward.weight, e.id).toBeGreaterThan(0);
+      }
+      if (windfall) expect(windfall.texts.length, e.id).toBeGreaterThan(0);
+      if (treasure) expect(treasure.texts.length, e.id).toBeGreaterThan(0);
+      if (buff) {
+        expect(buff.options.length, e.id).toBeGreaterThan(0);
+        for (const o of buff.options) {
+          expect(o.weight, e.id).toBeGreaterThan(0);
+          expect(o.texts.length, e.id).toBeGreaterThan(0);
+        }
+      }
+    }
   });
 
   it('only uses encounter placeholders that exist', () => {
     const check = (texts: readonly string[], extra: string[] = []) => {
       for (const t of texts) {
+        // "a {beast}" breaks for vowel-initial entries ("a iron-backed tortoise").
+        for (const [, key] of t.matchAll(/\ba \{(\w+)\}/gi)) {
+          const vowelStart = (NAME_TABLES[key] ?? []).filter((w) => /^[aeiou]/i.test(w));
+          expect(vowelStart, `"a {${key}}" in "${t}"`).toEqual([]);
+        }
         for (const key of placeholders(t)) {
           expect(key in NAME_TABLES || extra.includes(key), `{${key}} in "${t}"`).toBe(true);
         }
