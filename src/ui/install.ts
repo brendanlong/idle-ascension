@@ -4,5 +4,5 @@
  */
 export function protectInstalledSave(): void {
   if (!matchMedia('(display-mode: standalone)').matches) return;
-  void navigator.storage?.persist?.();
+  navigator.storage?.persist?.().catch(() => {});
 }

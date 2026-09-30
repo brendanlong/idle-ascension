@@ -23,10 +23,16 @@ export default defineConfig({
   plugins: [
     preact(),
     VitePWA({
-      // A new version installs in the background and takes over the next time
-      // the game is opened, rather than reloading mid-session.
-      registerType: 'prompt',
-      workbox: { globPatterns: ['**/*.{js,css,html,svg,png}'] },
+      // A new version takes over in the background as soon as it's downloaded.
+      // The running page already has everything it needs loaded, so it keeps
+      // going undisturbed, and the next reload or launch gets the update.
+      registerType: 'autoUpdate',
+      includeManifestIcons: false,
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png}'],
+        // Opening a file directly (e.g. the social preview image) shouldn't serve the game.
+        navigateFallbackDenylist: [/\.[a-z0-9]+$/i],
+      },
       manifest: {
         id: './',
         name: 'Idle Ascension',

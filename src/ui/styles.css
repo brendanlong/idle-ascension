@@ -471,7 +471,7 @@ header.top h1 {
 /* --- Tabs --- */
 
 .tabs {
-  max-height: calc(100vh - 110px);
+  max-height: calc(100vh - 110px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   padding: 0;
