@@ -640,6 +640,14 @@ header.top h1 {
   margin-bottom: 0.4rem;
 }
 
+.about p {
+  line-height: 1.55;
+}
+.about a,
+.modal a {
+  color: var(--gold);
+}
+
 /* --- Modal --- */
 
 .modal-backdrop {
