@@ -88,7 +88,7 @@ export function TrialOverlay({
         return;
       }
       ctx.clearRect(0, 0, width, height);
-      if (current !== 'intro') game.draw(ctx, now / 1000);
+      if (current !== 'intro') game.draw(ctx, now / 1000, pointer.current);
       frame = requestAnimationFrame(loop);
     };
     frame = requestAnimationFrame(loop);
