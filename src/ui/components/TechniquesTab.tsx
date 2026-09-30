@@ -1,6 +1,5 @@
-import { generatorName } from '../../content/generators';
 import { UPGRADES } from '../../content/upgrades';
-import { describeEffect } from '../../engine/effects';
+import { describeEffects } from '../../engine/effects';
 import {
   affordableUpgrades,
   availableUpgrades,
@@ -38,9 +37,7 @@ export function TechniquesTab() {
               <span class="cost">{game.fmt(u.cost)} qi</span>
             </div>
             <p class="flavor">{u.description}</p>
-            <p class="effect">
-              {u.effects.map((e) => describeEffect(e, generatorName)).join(', ')}
-            </p>
+            <p class="effect">{describeEffects(u.effects)}</p>
             <button
               class="primary"
               disabled={state.qi < u.cost}
@@ -57,10 +54,7 @@ export function TechniquesTab() {
           <ul>
             {mastered.map((u) => (
               <li key={u.id}>
-                <strong>{u.name}</strong>{' '}
-                <span class="muted">
-                  {u.effects.map((e) => describeEffect(e, generatorName)).join(', ')}
-                </span>
+                <strong>{u.name}</strong> <span class="muted">{describeEffects(u.effects)}</span>
               </li>
             ))}
           </ul>

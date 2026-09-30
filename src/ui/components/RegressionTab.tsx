@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import { REGRESSION_STORY } from '../../content/lore';
 import { PERKS, PERKS_BY_ID, perkCost } from '../../content/perks';
-import { describeEffect, type Effect } from '../../engine/effects';
+import { describeEffects } from '../../engine/effects';
 import { perkEffects } from '../../engine/stats';
 import {
   availableMemories,
@@ -15,8 +15,6 @@ import {
 } from '../../engine/prestige';
 import { composeStory } from '../../engine/text';
 import { game } from '../game';
-
-const describeEffects = (effects: Effect[]) => effects.map((e) => describeEffect(e)).join(', ');
 
 export function RegressionTab({ onRegressed }: { onRegressed: (story: string[]) => void }) {
   const [confirming, setConfirming] = useState(false);

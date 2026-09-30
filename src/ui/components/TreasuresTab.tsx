@@ -1,12 +1,8 @@
-import { generatorName } from '../../content/generators';
 import { REALMS_BY_ID } from '../../content/realms';
 import { MAX_TREASURE_LEVEL, RARITIES, TREASURES } from '../../content/treasures';
-import { describeEffect } from '../../engine/effects';
+import { describeEffects } from '../../engine/effects';
 import { treasureEffects } from '../../engine/stats';
 import { game } from '../game';
-
-const describe = (effects: ReturnType<typeof treasureEffects>) =>
-  effects.map((e) => describeEffect(e, generatorName)).join(', ');
 
 export function TreasuresTab() {
   const { state } = game;
@@ -48,9 +44,11 @@ export function TreasuresTab() {
                 </span>
               </div>
               <p class="flavor">{t.description}</p>
-              <p class="effect">{describe(treasureEffects(t, level))}</p>
+              <p class="effect">{describeEffects(treasureEffects(t, level))}</p>
               {level < MAX_TREASURE_LEVEL && (
-                <p class="muted small">Next level: {describe(treasureEffects(t, level + 1))}</p>
+                <p class="muted small">
+                  Next level: {describeEffects(treasureEffects(t, level + 1))}
+                </p>
               )}
             </li>
           );
