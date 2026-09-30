@@ -2,8 +2,26 @@ import { useState } from 'preact/hooks';
 import { stageName } from '../../content/realms';
 import { formatDuration } from '../../engine/format';
 import { exportSave, importSave } from '../../engine/save';
-import { createInitialState, type NumberFormat } from '../../engine/state';
+import { createInitialState, type NumberFormat, type TrialAssist } from '../../engine/state';
 import { game } from '../game';
+
+const TRIAL_ASSISTS: { id: TrialAssist; label: string; help: string }[] = [
+  {
+    id: 'off',
+    label: 'Off',
+    help: 'Trials and tribulations are real-time mouse or touch challenges.',
+  },
+  {
+    id: 'easier',
+    label: 'Slower and easier',
+    help: 'Trials run at 60% speed, and tribulation pass marks are 15 points lower.',
+  },
+  {
+    id: 'skip',
+    label: 'Skip trials',
+    help: 'Tribulations pass automatically, and optional trials give their reward for a 50% score without being played.',
+  },
+];
 
 const NUMBER_FORMATS: { id: NumberFormat; label: string }[] = [
   { id: 'short', label: '1.5M, 2.3B' },
@@ -55,6 +73,26 @@ export function SettingsTab() {
           </option>
         ))}
       </select>
+
+      <h3>Trial assistance</h3>
+      <select
+        aria-describedby="trial-assist-help"
+        value={state.settings.trialAssist}
+        onChange={(e) =>
+          game.act((st) => {
+            st.settings.trialAssist = (e.target as HTMLSelectElement).value as TrialAssist;
+          })
+        }
+      >
+        {TRIAL_ASSISTS.map((a) => (
+          <option key={a.id} value={a.id}>
+            {a.label}
+          </option>
+        ))}
+      </select>
+      <p id="trial-assist-help" class="muted small">
+        {TRIAL_ASSISTS.find((a) => a.id === state.settings.trialAssist)!.help}
+      </p>
 
       <h3>Statistics</h3>
       <dl class="stat-list">

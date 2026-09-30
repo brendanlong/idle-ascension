@@ -76,4 +76,28 @@ describe('breakthroughs', () => {
     mods.tribulationSlowMult = 10;
     expect(tribulationSpeed(mods)).toBe(0.5);
   });
+
+  it('trial assistance: easier lowers the pass mark and slows trials', () => {
+    const def = REALMS.find((r) => r.id === 'coreFormation')!.tribulation!;
+    const mods = computeStats(newGame()).mods;
+    expect(tribulationPassScore(def, mods, 'easier')).toBeCloseTo(0.35);
+    expect(tribulationSpeed(mods, 'easier')).toBeCloseTo(0.6);
+  });
+
+  it('trial assistance: skip passes tribulations without playing', () => {
+    const target = firstStageOfRealm('immortalAscension');
+    const state = newGame({ qi: STAGES[target].cost, stage: target - 1 });
+    state.settings.trialAssist = 'skip';
+    attemptBreakthrough(state, computeStats(state).mods, seqRng(0.5));
+    expect(state.tribulation).toBeNull();
+    expect(state.stage).toBe(target);
+    expect(state.stats.tribulationsSurvived).toBe(1);
+  });
+
+  it('passes when the displayed average equals the displayed pass mark', () => {
+    const { state, target } = startTribulation('immortalAscension');
+    // 0.7 three times averages to 0.69999… in floating point.
+    for (let i = 0; i < 3; i++) recordTribulationTrial(state, 0.7);
+    expect(state.stage).toBe(target);
+  });
 });

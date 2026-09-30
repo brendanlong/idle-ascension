@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { CORE_GRADES, ELEMENTS_BY_ID } from '../../content/cores';
 import { ENCOUNTERS_BY_ID } from '../../content/encounters';
 import { REALMS, STAGES } from '../../content/realms';
-import { TRIALS_BY_ELEMENT } from '../../content/trials';
+import { TRIALS_BY_ELEMENT, TRIAL_SKIP_SCORE } from '../../content/trials';
 import {
   beginTribulationTrial,
+  trialSpeed,
   currentTribulationTrial,
   recordTribulationTrial,
 } from '../../engine/breakthrough';
@@ -326,7 +327,15 @@ export function QiField() {
         <button
           class="encounter trial-offer"
           style={{ left: `${trialOffer.x * 100}%`, top: `${trialOffer.y * 100}%` }}
-          onClick={() => game.act((s) => acceptTrial(s))}
+          onClick={() =>
+            game.act((s, stats) => {
+              const element = acceptTrial(s);
+              // Trial assistance can resolve optional trials without playing them.
+              if (element && s.settings.trialAssist === 'skip') {
+                completeTrial(s, stats, element, TRIAL_SKIP_SCORE, Math.random);
+              }
+            })
+          }
           title="An elemental trial. Optional; the better you do, the bigger the reward."
         >
           <span class="encounter-icon">{trialOfferDef.icon}</span>
@@ -351,6 +360,7 @@ export function QiField() {
             element={activeTrial}
             title={`${ELEMENTS_BY_ID.get(activeTrial)!.name} Trial`}
             pointer={lastPointer}
+            speed={trialSpeed(state.settings.trialAssist)}
             onDone={(score) =>
               game.act((s, stats) => completeTrial(s, stats, activeTrial, score, Math.random))
             }

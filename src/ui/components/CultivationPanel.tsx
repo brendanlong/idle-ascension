@@ -59,14 +59,20 @@ export function BreakthroughBox() {
         {tribulation ? `⚡ Face the ${tribulation.name}` : 'Break Through'}
       </button>
       {blocker && blocker !== 'Not enough qi.' && <div class="blocker">{blocker}</div>}
-      {tribulation && (
+      {tribulation && state.settings.trialAssist === 'skip' && (
+        <div class="muted small">Trial assistance will carry you through the tribulation.</div>
+      )}
+      {tribulation && state.settings.trialAssist !== 'skip' && (
         <div class="muted small">
           You'll face{' '}
           {tribulation.trials === 1
             ? 'an elemental trial'
             : `${tribulation.trials} elemental trials`}{' '}
-          and need an average of {Math.round(tribulationPassScore(tribulation, stats.mods) * 100)}%
-          to pass.
+          and need an average of{' '}
+          {Math.round(
+            tribulationPassScore(tribulation, stats.mods, state.settings.trialAssist) * 100,
+          )}
+          % to pass.
         </div>
       )}
       {unlocks.length > 0 && (
