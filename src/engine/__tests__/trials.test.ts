@@ -7,6 +7,7 @@ import {
   forfeitInterruptedTrials,
 } from '../breakthrough';
 import { TRIAL_OFFER_LIFETIME } from '../../content/trials';
+import { onLog } from '../events';
 import { computeStats } from '../stats';
 import { acceptTrial, completeTrial, tickTrials } from '../trials';
 import { newGame, seqRng } from './helpers';
@@ -84,6 +85,12 @@ describe('elemental trials', () => {
     expect(reward(1).qi).toBeGreaterThan(reward(0.2).qi);
     expect(reward(0.5).buff).toBeNull();
     expect(reward(0.8).buffs).toContain('meridianSurge');
+    const state = newGame({ stage: firstStageOfRealm('foundation') });
+    const logs: string[] = [];
+    const off = onLog((e) => logs.push(e.text));
+    completeTrial(state, computeStats(state), 'wood', 0.9, seqRng(0.99));
+    off();
+    expect(logs).toContain('Sudden Epiphany: ×7 all qi gain for 77s');
     expect(reward(0.8, true).qi).toBeGreaterThan(reward(0.8).qi);
   });
 });
