@@ -1,0 +1,247 @@
+<!doctype html>
+<!--
+  Source for public/social-preview.png (the Open Graph / Twitter card image).
+  Regenerate with `npm run social-preview` after editing.
+
+  A stylized scene built from the game's own visual motifs: the dantian orb,
+  the five element cores in orbit, drifting qi motes and tribulation
+  lightning. Colours match src/ui/styles.css and src/content/cores.ts.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      :root {
+        --bg: #120f0d;
+        --gold: #e0b64a;
+        --gold-light: #f6e7b0;
+        --text: #eadfca;
+        --muted: #a39580;
+        --lightning: #b9a8ff;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        background: var(--bg);
+        font-family: 'Noto Serif', 'Noto Serif CJK SC', Georgia, serif;
+      }
+
+      .frame {
+        position: relative;
+        width: 1200px;
+        height: 630px;
+        background:
+          radial-gradient(circle at 860px 330px, rgba(224, 182, 74, 0.32) 0%, transparent 42%),
+          radial-gradient(ellipse at 50% -10%, #2e2219 0%, transparent 60%), var(--bg);
+        overflow: hidden;
+      }
+
+      .mountains {
+        position: absolute;
+        inset: 0;
+      }
+
+      /* ---- Title block ---- */
+      .title {
+        position: absolute;
+        left: 72px;
+        top: 105px;
+        width: 540px;
+      }
+      .glyphs {
+        font-family: 'Noto Serif CJK SC', serif;
+        font-weight: 700;
+        font-size: 64px;
+        letter-spacing: 12px;
+        color: var(--gold);
+        opacity: 0.85;
+        text-shadow: 0 0 24px rgba(224, 182, 74, 0.45);
+      }
+      h1 {
+        margin-top: 6px;
+        font-size: 88px;
+        line-height: 1;
+        font-weight: 700;
+        color: var(--gold-light);
+        text-shadow:
+          0 0 30px rgba(224, 182, 74, 0.35),
+          0 2px 0 #3b2d1a;
+      }
+      .tagline {
+        margin-top: 28px;
+        font-size: 32px;
+        font-style: italic;
+        color: var(--text);
+      }
+      .subline {
+        margin-top: 18px;
+        font-size: 24px;
+        color: var(--muted);
+        letter-spacing: 0.5px;
+      }
+
+      /* ---- Orb scene ---- */
+      .scene {
+        position: absolute;
+        left: 860px;
+        top: 330px;
+      }
+      .orbit {
+        position: absolute;
+        left: -230px;
+        top: -95px;
+        width: 460px;
+        height: 190px;
+        border: 1.5px solid rgba(224, 182, 74, 0.28);
+        border-radius: 50%;
+      }
+      .orb {
+        position: absolute;
+        left: -105px;
+        top: -105px;
+        width: 210px;
+        height: 210px;
+        border-radius: 50%;
+        border: 3px solid var(--gold);
+        background: radial-gradient(circle at 40% 35%, #fff8e0 0%, var(--gold) 38%, #1a120a 100%);
+        box-shadow:
+          0 0 90px rgba(224, 182, 74, 0.9),
+          0 0 180px rgba(224, 182, 74, 0.35),
+          inset 0 0 40px rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .orb span {
+        font-family: 'Noto Serif CJK SC', serif;
+        font-size: 92px;
+        color: rgba(30, 20, 10, 0.72);
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+      }
+      .core {
+        position: absolute;
+        width: 58px;
+        height: 58px;
+        margin: -29px 0 0 -29px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Noto Serif CJK SC', serif;
+        font-weight: 700;
+        font-size: 28px;
+        color: #1a120a;
+        background: radial-gradient(circle at 40% 35%, #fff 0%, var(--el) 48%, #111 100%);
+        border: 4px solid var(--grade);
+        box-shadow: 0 0 26px var(--el);
+      }
+      /* Cores behind the orb (earlier in the DOM) are dimmer and smaller, for depth. */
+      .core.back {
+        transform: scale(0.8);
+        filter: brightness(0.7);
+      }
+
+      .mote {
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #aaf0dc;
+        box-shadow:
+          0 0 10px #9ff5da,
+          0 0 20px #9ff5da;
+      }
+      .mote.small {
+        width: 5px;
+        height: 5px;
+        opacity: 0.7;
+      }
+
+      .bolt {
+        position: absolute;
+        left: 0;
+        top: 0;
+        filter: drop-shadow(0 0 10px var(--lightning)) drop-shadow(0 0 24px var(--lightning));
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <!-- Ink-wash mountain ridges -->
+      <svg class="mountains" width="1200" height="630" viewBox="0 0 1200 630">
+        <path
+          d="M0 470 L90 400 L160 440 L260 350 L340 420 L430 380 L520 450 L600 400 L700 460 L800 390 L900 440 L1000 370 L1100 430 L1200 390 L1200 630 L0 630 Z"
+          fill="#1c1612"
+        />
+        <path
+          d="M0 540 L120 480 L210 520 L330 460 L450 530 L560 490 L680 545 L790 500 L900 550 L1030 490 L1130 530 L1200 505 L1200 630 L0 630 Z"
+          fill="#15110e"
+        />
+        <path
+          d="M0 600 L150 560 L300 590 L470 555 L640 600 L820 565 L990 600 L1200 570 L1200 630 L0 630 Z"
+          fill="#0e0b09"
+        />
+      </svg>
+
+      <!-- Tribulation lightning striking toward the orb -->
+      <svg class="bolt" width="1200" height="630" viewBox="0 0 1200 630">
+        <path
+          d="M1010 0 L985 70 L1005 78 L965 150 L988 156 L952 220"
+          fill="none"
+          stroke="#e9e2ff"
+          stroke-width="5"
+          stroke-linejoin="round"
+          stroke-linecap="round"
+        />
+        <path
+          d="M985 70 L960 95 M965 150 L940 170"
+          fill="none"
+          stroke="#c9bcff"
+          stroke-width="3"
+          stroke-linecap="round"
+        />
+      </svg>
+
+      <div class="title">
+        <div class="glyphs">飞升</div>
+        <h1>Idle Ascension</h1>
+        <p class="tagline">From trash of the clan to god.</p>
+        <p class="subline">A free idle cultivation game</p>
+      </div>
+
+      <div class="scene">
+        <div class="orbit"></div>
+        <!-- Five cores on the orbit ellipse (rx 230, ry 95). Grades from CORE_GRADES. -->
+        <div class="core back" style="left: -150px; top: -72px; --el: #5fae5a; --grade: #b0773e">
+          木
+        </div>
+        <div class="core back" style="left: 150px; top: -72px; --el: #d8dde3; --grade: #f0c24b">
+          金
+        </div>
+        <div class="orb"><span>气</span></div>
+        <div class="core" style="left: -228px; top: 12px; --el: #e0603a; --grade: #f0c24b">火</div>
+        <div class="core" style="left: 0px; top: 95px; --el: #c9a45a; --grade: #63c29a">土</div>
+        <div class="core" style="left: 225px; top: 18px; --el: #4f8fd6; --grade: #9fb8ff">水</div>
+      </div>
+
+      <!-- Drifting qi motes -->
+      <div class="mote" style="left: 640px; top: 150px"></div>
+      <div class="mote small" style="left: 700px; top: 520px"></div>
+      <div class="mote" style="left: 1110px; top: 200px"></div>
+      <div class="mote small" style="left: 1150px; top: 470px"></div>
+      <div class="mote small" style="left: 760px; top: 90px"></div>
+      <div class="mote" style="left: 1060px; top: 560px"></div>
+      <div class="mote small" style="left: 590px; top: 400px"></div>
+      <div class="mote small" style="left: 1170px; top: 110px"></div>
+    </div>
+  </body>
+</html>

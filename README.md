@@ -1,5 +1,9 @@
 # Idle Ascension 飞升
 
+**[Play it at idle-ascension.brendanlong.com](https://idle-ascension.brendanlong.com/)**
+
+By [Brendan Long](https://www.brendanlong.com/pages/about-me.html)
+
 A prototype cookie-clicker-style idle game steeped in wuxia / xianxia cultivation tropes. You start as
 the "trash" of the Lin clan and cultivate your way from Mortal to Godhood.
 
@@ -29,7 +33,10 @@ npm run typecheck
 npm run build
 npm run sim -- 1 72 45   # headless balance sim: clicks/sec, max hours, minutes stalled before regressing
 npm run format
+npm run social-preview   # re-render public/social-preview.png from scripts/social-preview.html
 ```
+
+`social-preview` needs a Playwright browser the first time: `npx playwright install chromium`.
 
 ### Deployment
 
