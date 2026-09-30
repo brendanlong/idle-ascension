@@ -78,8 +78,10 @@ export const TREASURES: readonly TreasureDef[] = [
     description: 'Woven from the hair of a lightning-struck ox. Smells faintly of ozone.',
     rarity: 'common',
     minRealm: 'foundation',
-    fixedEffects: [{ type: 'add', stat: 'tribulationAllowedHits', value: 1 }],
-    effects: [{ type: 'mult', stat: 'tribulationBoltTimeMult', value: 1.1 }],
+    effects: [
+      { type: 'add', stat: 'tribulationLeniency', value: 0.05 },
+      { type: 'mult', stat: 'tribulationSlowMult', value: 1.1 },
+    ],
   },
   {
     id: 'mouse',
@@ -120,7 +122,7 @@ export const TREASURES: readonly TreasureDef[] = [
     description: 'Even broken, it hums with killing intent that cows the heavens.',
     rarity: 'rare',
     minRealm: 'coreFormation',
-    fixedEffects: [{ type: 'mult', stat: 'tribulationBoltTimeMult', value: 1.25 }],
+    fixedEffects: [{ type: 'mult', stat: 'tribulationSlowMult', value: 1.25 }],
     effects: [{ type: 'mult', stat: 'globalMult', value: 2 }],
   },
   // --- Nascent Soul ---
@@ -141,7 +143,7 @@ export const TREASURES: readonly TreasureDef[] = [
     description: 'One chime and your heart grows still, even under a sky full of lightning.',
     rarity: 'common',
     minRealm: 'spiritSevering',
-    effects: [{ type: 'mult', stat: 'tribulationBoltTimeMult', value: 1.2 }],
+    effects: [{ type: 'mult', stat: 'tribulationSlowMult', value: 1.2 }],
   },
   {
     id: 'gourd',

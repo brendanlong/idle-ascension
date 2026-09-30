@@ -257,18 +257,6 @@ header.top h1 {
   /* Above the orb so orbiting cores and floating numbers stay visible. */
   z-index: 1;
 }
-.qi-field.tribulation {
-  animation: rumble 0.35s infinite;
-}
-@keyframes rumble {
-  0%,
-  100% {
-    transform: translate(0, 0);
-  }
-  50% {
-    transform: translate(1px, -1px);
-  }
-}
 
 .orb {
   position: absolute;
@@ -349,36 +337,86 @@ header.top h1 {
   }
 }
 
-.trib-status {
+.encounter.trial-offer {
+  border-color: #b9a8ff;
+  box-shadow: 0 0 18px rgba(185, 168, 255, 0.6);
+}
+.encounter.trial-offer .encounter-name {
+  color: #d9d0ff;
+}
+
+.trial-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: rgba(8, 6, 12, 0.82);
+  cursor: crosshair;
+  touch-action: none;
+}
+.trial-overlay canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.trial-header {
   position: absolute;
   top: 0.6rem;
-  width: 100%;
+  left: 0;
+  right: 0;
   text-align: center;
-  color: var(--lightning);
-  font-weight: 600;
   pointer-events: none;
-  z-index: 3;
 }
-.bolt {
+.trial-title {
+  font-weight: 600;
+  color: var(--gold-light, #f6e7b0);
+}
+.trial-subtitle {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.trial-bar {
+  margin: 0.4rem auto 0;
+  width: 40%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.trial-bar-fill {
+  height: 100%;
+  background: var(--gold);
+}
+.trial-center {
   position: absolute;
-  transform: translate(-50%, -50%);
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  font-size: 1.8rem;
-  border: none;
-  background: conic-gradient(var(--lightning) var(--progress), rgba(185, 168, 255, 0.15) 0);
-  box-shadow: 0 0 24px var(--lightning);
-  z-index: 3;
-  animation: flicker 0.2s infinite alternate;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  text-align: center;
+  pointer-events: none;
+  color: var(--text);
 }
-@keyframes flicker {
-  from {
-    filter: brightness(1);
-  }
-  to {
-    filter: brightness(1.4);
-  }
+.trial-name {
+  font-size: 1.8rem;
+  color: var(--gold);
+}
+.element-fire .trial-bar-fill {
+  background: #e0603a;
+}
+.element-water .trial-bar-fill {
+  background: #4f8fd6;
+}
+.element-wood .trial-bar-fill {
+  background: #5fae5a;
+}
+.element-earth .trial-bar-fill {
+  background: #c9a45a;
+}
+.element-metal .trial-bar-fill {
+  background: #d8dde3;
 }
 
 /* --- Log --- */

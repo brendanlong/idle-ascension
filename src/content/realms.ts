@@ -3,9 +3,10 @@ import type { Effect } from '../engine/effects';
 
 export interface TribulationDef {
   name: string;
-  bolts: number;
-  /** Seconds between lightning bolts. */
-  interval: number;
+  /** How many elemental trials (random elements) make up the tribulation. */
+  trials: number;
+  /** Average trial score needed to pass, before leniency. */
+  passScore: number;
 }
 
 export interface RealmDef {
@@ -82,7 +83,7 @@ export const REALMS: readonly RealmDef[] = [
     firstStageCost: 40_000_000,
     stageCostGrowth: 4,
     stageMultiplier: 1.6,
-    tribulation: { name: 'Minor Thunder Tribulation', bolts: 5, interval: 1.1 },
+    tribulation: { name: 'Minor Thunder Tribulation', trials: 1, passScore: 0.5 },
     effects: [{ type: 'add', stat: 'coreSlots', value: 1 }],
     coreGradeCap: 2,
     unlocks: ['Regression becomes possible'],
@@ -96,7 +97,7 @@ export const REALMS: readonly RealmDef[] = [
     firstStageCost: 2e10,
     stageCostGrowth: 8,
     stageMultiplier: 1.7,
-    tribulation: { name: 'Crimson Thunder Tribulation', bolts: 7, interval: 1 },
+    tribulation: { name: 'Crimson Thunder Tribulation', trials: 1, passScore: 0.55 },
     effects: [
       { type: 'add', stat: 'autoClicksPerSecond', value: 1 },
       { type: 'add', stat: 'coreSlots', value: 1 },
@@ -113,7 +114,7 @@ export const REALMS: readonly RealmDef[] = [
     firstStageCost: 1e15,
     stageCostGrowth: 12,
     stageMultiplier: 1.8,
-    tribulation: { name: 'Heart Demon Tribulation', bolts: 9, interval: 0.9 },
+    tribulation: { name: 'Heart Demon Tribulation', trials: 2, passScore: 0.6 },
     effects: [{ type: 'add', stat: 'coreSlots', value: 1 }],
     coreGradeCap: 4,
   },
@@ -126,7 +127,7 @@ export const REALMS: readonly RealmDef[] = [
     firstStageCost: 2e21,
     stageCostGrowth: 50,
     stageMultiplier: 2,
-    tribulation: { name: 'Nine Heavens Thunder Tribulation', bolts: 11, interval: 0.85 },
+    tribulation: { name: 'Nine Heavens Thunder Tribulation', trials: 2, passScore: 0.65 },
     effects: [{ type: 'add', stat: 'coreSlots', value: 1 }],
     coreGradeCap: 5,
   },
@@ -139,7 +140,7 @@ export const REALMS: readonly RealmDef[] = [
     firstStageCost: 1e30,
     stageCostGrowth: 60,
     stageMultiplier: 2.2,
-    tribulation: { name: 'Immortal Severing Tribulation', bolts: 13, interval: 0.8 },
+    tribulation: { name: 'Immortal Severing Tribulation', trials: 3, passScore: 0.7 },
     coreGradeCap: 6,
   },
   {
@@ -151,7 +152,7 @@ export const REALMS: readonly RealmDef[] = [
     firstStageCost: 1e38,
     stageCostGrowth: 1,
     stageMultiplier: 3,
-    tribulation: { name: 'Nine-Nine Heavenly Tribulation', bolts: 18, interval: 0.7 },
+    tribulation: { name: 'Nine-Nine Heavenly Tribulation', trials: 3, passScore: 0.75 },
     coreGradeCap: 7,
   },
 ];

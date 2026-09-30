@@ -31,28 +31,13 @@ describe('time', () => {
     return { state, target };
   }
 
-  it('freezes a tribulation while paused', () => {
-    const { state } = midTribulation();
-    advanceClock(state, 30_000, seqRng(0.5), { pauseTribulation: true });
-    expect(state.tribulation?.boltsToSpawn).toBe(state.tribulation?.totalBolts);
-    expect(state.tribulation?.hits).toBe(0);
-  });
-
-  it('simulates live gaps in small steps so bolts land one by one', () => {
-    const { state } = midTribulation();
-    advanceClock(state, 5_000, seqRng(0.5));
-    // A single 5s step would spawn and land bolts in the same tick.
-    expect(state.tribulation?.hits).toBeGreaterThan(0);
-    expect(state.tribulation?.bolts.length).toBeGreaterThan(0);
-  });
-
   it('keeps a paused tribulation through seclusion, still granting offline qi', () => {
     const { state, target } = midTribulation();
     state.generators.herb = 10;
     const report = advanceClock(state, 3600_000, seqRng(0.5), { pauseTribulation: true })!;
     expect(report.qi).toBeGreaterThan(0);
     expect(state.tribulation?.targetStage).toBe(target);
-    expect(state.tribulation?.hits).toBe(0);
+    expect(state.tribulation?.scores).toEqual([]);
   });
 
   it('fails a tribulation abandoned by going offline', () => {

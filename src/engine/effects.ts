@@ -16,8 +16,10 @@ export interface Modifiers {
   moteValueMult: number;
   moteSpawnMult: number;
   encounterRateMult: number;
-  tribulationAllowedHits: number;
-  tribulationBoltTimeMult: number;
+  /** Subtracted from a tribulation's pass mark. */
+  tribulationLeniency: number;
+  /** Tribulation trials run this many times slower. */
+  tribulationSlowMult: number;
   autoClicksPerSecond: number;
   offlineCapHours: number;
   offlineEfficiency: number;
@@ -34,13 +36,13 @@ export type MultStat =
   | 'moteValueMult'
   | 'moteSpawnMult'
   | 'encounterRateMult'
-  | 'tribulationBoltTimeMult'
+  | 'tribulationSlowMult'
   | 'coreCostMult';
 
 export type AddStat =
   | 'clickFlat'
   | 'clickQpsFraction'
-  | 'tribulationAllowedHits'
+  | 'tribulationLeniency'
   | 'autoClicksPerSecond'
   | 'offlineCapHours'
   | 'offlineEfficiency'
@@ -64,8 +66,8 @@ export function baseModifiers(): Modifiers {
     moteValueMult: 1,
     moteSpawnMult: 1,
     encounterRateMult: 1,
-    tribulationAllowedHits: 1,
-    tribulationBoltTimeMult: 1,
+    tribulationLeniency: 0,
+    tribulationSlowMult: 1,
     autoClicksPerSecond: 0,
     offlineCapHours: 4,
     offlineEfficiency: 0.5,
@@ -102,11 +104,11 @@ const STAT_LABELS: Record<MultStat | AddStat, string> = {
   moteValueMult: 'qi mote value',
   moteSpawnMult: 'qi mote frequency',
   encounterRateMult: 'fortuitous encounter frequency',
-  tribulationBoltTimeMult: 'time to disperse lightning',
+  tribulationSlowMult: 'tribulation slowdown',
   coreCostMult: 'core costs',
   clickFlat: 'base click power',
   clickQpsFraction: 'of qi/s added to each click',
-  tribulationAllowedHits: 'lightning strikes you can endure',
+  tribulationLeniency: 'tribulation pass marks',
   autoClicksPerSecond: 'automatic clicks per second',
   offlineCapHours: 'hours of closed-door cultivation (offline cap)',
   offlineEfficiency: 'closed-door cultivation efficiency',
@@ -130,6 +132,9 @@ export function describeEffect(effect: Effect, generatorName?: (id: string) => s
     case 'mult':
       return `×${trimNumber(effect.value)} ${STAT_LABELS[effect.stat]}`;
     case 'add': {
+      if (effect.stat === 'tribulationLeniency') {
+        return `−${trimNumber(effect.value * 100)} points on tribulation pass marks`;
+      }
       const sign = effect.value >= 0 ? '+' : '';
       const amount = PERCENT_ADD_STATS.has(effect.stat)
         ? `${trimNumber(effect.value * 100)}%`
@@ -145,11 +150,7 @@ export function describeEffect(effect: Effect, generatorName?: (id: string) => s
 export const LEVEL_BONUS_GROWTH = 0.5;
 
 /** Stats that only make sense as whole numbers; diminishing perks round these down. */
-const INTEGER_STATS: ReadonlySet<AddStat> = new Set([
-  'tribulationAllowedHits',
-  'coreSlots',
-  'startingStage',
-]);
+const INTEGER_STATS: ReadonlySet<AddStat> = new Set(['coreSlots', 'startingStage']);
 
 /**
  * The effect with its bonus multiplied by `strength`: ×1.5 at strength 2 is

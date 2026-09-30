@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
+import { forfeitInterruptedTrials } from '../engine/breakthrough';
 import { onLog, type LogEntry } from '../engine/events';
 import { formatNumber } from '../engine/format';
 import { NewerSaveError, deserialize, serialize } from '../engine/save';
@@ -54,6 +55,7 @@ class GameController {
     if (!saved) return;
     try {
       this.state = deserialize(saved);
+      forfeitInterruptedTrials(this.state);
     } catch (e) {
       console.error('Failed to load save', e);
       if (e instanceof NewerSaveError) {
@@ -91,6 +93,7 @@ class GameController {
 
   replaceState(state: GameState): void {
     state.lastTick = Date.now();
+    forfeitInterruptedTrials(state);
     this.state = state;
     this.save();
     this.refresh();

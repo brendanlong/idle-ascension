@@ -2,9 +2,16 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { CORE_GRADES, ELEMENTS_BY_ID } from '../../content/cores';
 import { ENCOUNTERS_BY_ID } from '../../content/encounters';
 import { REALMS, STAGES } from '../../content/realms';
-import { disperseBolt } from '../../engine/breakthrough';
+import { TRIALS_BY_ELEMENT } from '../../content/trials';
+import {
+  beginTribulationTrial,
+  currentTribulationTrial,
+  recordTribulationTrial,
+} from '../../engine/breakthrough';
 import { absorbMotes, click } from '../../engine/economy';
 import { claimEncounter } from '../../engine/encounters';
+import { acceptTrial, completeTrial } from '../../engine/trials';
+import { TrialOverlay } from '../trials/TrialOverlay';
 import { game } from '../game';
 
 interface Mote {
@@ -195,6 +202,8 @@ export function QiField() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const orbRef = useRef<HTMLButtonElement>(null);
   const [sim] = useState(() => new FieldSim());
+  /** Last cursor position over the field, handed to trials so they know where it starts. */
+  const lastPointer = useRef<{ x: number; y: number } | null>(null);
   const { state } = game;
   const realm = REALMS[STAGES[state.stage].realmIndex];
 
@@ -256,13 +265,26 @@ export function QiField() {
   const encounter = state.encounter.active;
   const encounterDef = encounter && ENCOUNTERS_BY_ID.get(encounter.id);
   const trib = state.tribulation;
+  const tribElement = currentTribulationTrial(state);
+  const tribDef = trib && REALMS[STAGES[trib.targetStage].realmIndex].tribulation;
+  const activeTrial = state.trial.active;
+  // The overlay takes over the pointer; don't keep absorbing motes at a stale spot.
+  if (tribElement || activeTrial) sim.pointer = null;
+  const trialOffer = state.trial.offer;
+  const trialOfferDef = trialOffer && TRIALS_BY_ELEMENT.get(trialOffer.element);
 
   return (
     <div
-      class={`qi-field${trib ? ' tribulation' : ''}`}
+      class="qi-field"
       ref={containerRef}
-      onPointerMove={(e) => (sim.pointer = localPoint(e))}
-      onPointerLeave={() => (sim.pointer = null)}
+      onPointerMove={(e) => {
+        sim.pointer = localPoint(e);
+        lastPointer.current = sim.pointer;
+      }}
+      onPointerLeave={() => {
+        sim.pointer = null;
+        lastPointer.current = null;
+      }}
     >
       <canvas ref={canvasRef} />
       <button
@@ -291,29 +313,40 @@ export function QiField() {
         </button>
       )}
 
-      {trib && (
-        <>
-          <div class="trib-status">
-            ⚡ Disperse the lightning! Struck {trib.hits} / {trib.allowedHits} endurable · Bolts
-            left {trib.boltsToSpawn + trib.bolts.length}
-          </div>
-          {trib.bolts.map((b) => (
-            <button
-              key={b.id}
-              class="bolt"
-              style={{
-                left: `${b.x * 100}%`,
-                top: `${b.y * 100}%`,
-                '--progress': `${(b.remaining / b.duration) * 100}%`,
-              }}
-              onPointerDown={() => game.act((s) => disperseBolt(s, b.id))}
-              onClick={() => game.act((s) => disperseBolt(s, b.id))}
-              aria-label="Disperse lightning"
-            >
-              ⚡
-            </button>
-          ))}
-        </>
+      {trialOffer && trialOfferDef && !activeTrial && !trib && (
+        <button
+          class="encounter trial-offer"
+          style={{ left: `${trialOffer.x * 100}%`, top: `${trialOffer.y * 100}%` }}
+          onClick={() => game.act((s) => acceptTrial(s))}
+          title="An elemental trial. Optional; the better you do, the bigger the reward."
+        >
+          <span class="encounter-icon">{trialOfferDef.icon}</span>
+          <span class="encounter-name">{ELEMENTS_BY_ID.get(trialOffer.element)!.name} Trial</span>
+        </button>
+      )}
+
+      {tribElement && trib && tribDef ? (
+        <TrialOverlay
+          key={`${trib.targetStage}-${trib.scores.length}`}
+          element={tribElement}
+          pointer={lastPointer}
+          onStart={() => game.act((s) => beginTribulationTrial(s))}
+          title={`${tribDef.name} · Trial ${trib.scores.length + 1} of ${trib.trials.length}`}
+          subtitle={`Average ${Math.round(trib.passScore * 100)}% or better to pass`}
+          speed={trib.speed}
+          onDone={(score) => game.act((s) => recordTribulationTrial(s, score))}
+        />
+      ) : (
+        activeTrial && (
+          <TrialOverlay
+            element={activeTrial}
+            title={`${ELEMENTS_BY_ID.get(activeTrial)!.name} Trial`}
+            pointer={lastPointer}
+            onDone={(score) =>
+              game.act((s, stats) => completeTrial(s, stats, activeTrial, score, Math.random))
+            }
+          />
+        )
       )}
     </div>
   );

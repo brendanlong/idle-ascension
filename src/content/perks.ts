@@ -67,14 +67,14 @@ export const PERKS: readonly PerkDef[] = [
   {
     id: 'lightning',
     name: 'Memory of Lightning',
-    description: 'You have died to these tribulations before. You know where the bolts will fall.',
+    description: 'You have died to these tribulations before. You know what the heavens will test.',
     maxLevel: Infinity,
     baseCost: 5,
     costGrowth: 4,
     scaling: 'diminishing',
     effects: [
-      { type: 'add', stat: 'tribulationAllowedHits', value: 1 },
-      { type: 'mult', stat: 'tribulationBoltTimeMult', value: 1.2 },
+      { type: 'add', stat: 'tribulationLeniency', value: 0.05 },
+      { type: 'mult', stat: 'tribulationSlowMult', value: 1.2 },
     ],
   },
   {

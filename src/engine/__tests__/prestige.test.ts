@@ -11,6 +11,7 @@ import {
   regressionBlocker,
   stashGenerators,
 } from '../prestige';
+import { diminishingEffect } from '../effects';
 import { perkEffects } from '../stats';
 import { newGame } from './helpers';
 
@@ -84,8 +85,9 @@ describe('regression', () => {
   it('scales diminishing perks logarithmically, rounding whole-number stats down', () => {
     const rate = (level: number) => perkEffects(PERKS_BY_ID.get('foresight')!, level)[0].value;
     expect([1, 3, 7, 15].map(rate)).toEqual([1.5, 2, 2.5, 3]);
-    const hits = (level: number) => perkEffects(PERKS_BY_ID.get('lightning')!, level)[0].value;
-    expect([1, 2, 3, 6, 7].map(hits)).toEqual([1, 1, 2, 2, 3]);
+    const slots = (level: number) =>
+      diminishingEffect({ type: 'add', stat: 'coreSlots', value: 1 }, level).value;
+    expect([1, 2, 3, 6, 7].map(slots)).toEqual([1, 1, 2, 2, 3]);
   });
 
   it('compounds ordinary perks', () => {

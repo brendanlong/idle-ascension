@@ -35,9 +35,9 @@ export const ELEMENTS: readonly ElementDef[] = [
     name: 'Earth',
     glyph: '土',
     color: '#c9a45a',
-    description: 'Stability. Endure more lightning; better closed-door cultivation.',
+    description: 'Stability. Easier tribulations; better closed-door cultivation.',
     effects: (g) => [
-      { type: 'add', stat: 'tribulationAllowedHits', value: 1 + Math.floor(g / 3) },
+      { type: 'add', stat: 'tribulationLeniency', value: 0.05 + 0.02 * g },
       { type: 'add', stat: 'offlineEfficiency', value: 0.1 + 0.05 * g },
     ],
   },
