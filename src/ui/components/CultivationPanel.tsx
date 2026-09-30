@@ -21,7 +21,7 @@ function realmUnlocks(realm: RealmDef): string[] {
   ];
 }
 
-function BreakthroughBox() {
+export function BreakthroughBox() {
   const { state, stats } = game;
   const next = nextStage(state);
   if (!next) {
@@ -80,65 +80,90 @@ function BreakthroughBox() {
   );
 }
 
-export function CultivationPanel() {
-  const { state, stats } = game;
+export function RealmSummary({ compact = false }: { compact?: boolean }) {
+  const { state } = game;
   const stage = STAGES[state.stage];
   const realm = REALMS[stage.realmIndex];
-
+  const stageName = realm.stageNames[stage.stageInRealm];
+  if (compact) {
+    return (
+      <h2 class="realm-compact" style={{ color: realm.color }}>
+        {realm.name}
+        {stageName && <span class="stage"> · {stageName}</span>}
+      </h2>
+    );
+  }
   return (
-    <section class="panel cultivation">
+    <>
       <h2 style={{ color: realm.color }}>{realm.name}</h2>
-      {realm.stageNames[stage.stageInRealm] && (
-        <div class="stage">{realm.stageNames[stage.stageInRealm]}</div>
-      )}
+      {stageName && <div class="stage">{stageName}</div>}
       <p class="realm-desc">{realm.description}</p>
+    </>
+  );
+}
 
-      <BreakthroughBox />
-
-      <h3>Cultivation</h3>
-      <dl class="stat-list">
-        <dt>Realm bonus</dt>
-        <dd>×{game.fmt(stats.realmMult)}</dd>
-        {state.prestige.memories > 0 && (
-          <>
-            <dt>Memories</dt>
-            <dd>×{game.fmt(stats.memoryMult)}</dd>
-          </>
-        )}
-        {stats.cycleMult > 1 && (
-          <>
-            <dt>Generating cycle</dt>
-            <dd>×{game.fmt(stats.cycleMult)}</dd>
-          </>
-        )}
-        <dt>Per click</dt>
-        <dd>{game.fmt(stats.clickPower)}</dd>
-        <dt>Per qi mote</dt>
-        <dd>{game.fmt(stats.moteValue)}</dd>
-        {stats.autoClickQps > 0 && (
-          <>
-            <dt>Nascent Soul</dt>
-            <dd>{game.fmt(stats.autoClickQps)}/s</dd>
-          </>
-        )}
-      </dl>
-
-      {state.buffs.length > 0 && (
+export function CultivationStats() {
+  const { state, stats } = game;
+  return (
+    <dl class="stat-list">
+      <dt>Realm bonus</dt>
+      <dd>×{game.fmt(stats.realmMult)}</dd>
+      {state.prestige.memories > 0 && (
         <>
-          <h3>Conditions</h3>
-          <ul class="buffs">
-            {state.buffs.map((b) => {
-              const def = BUFFS_BY_ID.get(b.id)!;
-              return (
-                <li key={b.id} class={def.harmful ? 'harmful' : 'helpful'}>
-                  {def.name} <span class="muted">{Math.ceil(b.remaining)}s</span>
-                  <div class="buff-effects">{describeEffects(def.effects)}</div>
-                </li>
-              );
-            })}
-          </ul>
+          <dt>Memories</dt>
+          <dd>×{game.fmt(stats.memoryMult)}</dd>
         </>
       )}
+      {stats.cycleMult > 1 && (
+        <>
+          <dt>Generating cycle</dt>
+          <dd>×{game.fmt(stats.cycleMult)}</dd>
+        </>
+      )}
+      <dt>Per click</dt>
+      <dd>{game.fmt(stats.clickPower)}</dd>
+      <dt>Per qi mote</dt>
+      <dd>{game.fmt(stats.moteValue)}</dd>
+      {stats.autoClickQps > 0 && (
+        <>
+          <dt>Nascent Soul</dt>
+          <dd>{game.fmt(stats.autoClickQps)}/s</dd>
+        </>
+      )}
+    </dl>
+  );
+}
+
+export function Conditions() {
+  const { state } = game;
+  if (state.buffs.length === 0) return null;
+  return (
+    <>
+      <h3>Conditions</h3>
+      <ul class="buffs">
+        {state.buffs.map((b) => {
+          const def = BUFFS_BY_ID.get(b.id)!;
+          return (
+            <li key={b.id} class={def.harmful ? 'harmful' : 'helpful'}>
+              {def.name} <span class="muted">{Math.ceil(b.remaining)}s</span>
+              <div class="buff-effects">{describeEffects(def.effects)}</div>
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
+}
+
+/** The desktop left column. The phone layout arranges the same parts itself (App.tsx). */
+export function CultivationPanel() {
+  return (
+    <section class="panel cultivation">
+      <RealmSummary />
+      <BreakthroughBox />
+      <h3>Cultivation</h3>
+      <CultivationStats />
+      <Conditions />
     </section>
   );
 }
