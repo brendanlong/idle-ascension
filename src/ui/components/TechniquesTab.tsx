@@ -1,18 +1,34 @@
 import { generatorName } from '../../content/generators';
 import { UPGRADES } from '../../content/upgrades';
 import { describeEffect } from '../../engine/effects';
-import { availableUpgrades, buyUpgrade } from '../../engine/economy';
+import {
+  affordableUpgrades,
+  availableUpgrades,
+  buyAllUpgrades,
+  buyUpgrade,
+} from '../../engine/economy';
 import { game } from '../game';
 
 export function TechniquesTab() {
   const { state } = game;
   const available = availableUpgrades(state);
+  const affordable = affordableUpgrades(state);
+  const affordableCost = affordable.reduce((sum, u) => sum + u.cost, 0);
   const mastered = UPGRADES.filter((u) => state.upgrades[u.id]);
 
   return (
     <div class="tab-body">
-      {available.length === 0 && (
+      {available.length === 0 ? (
         <p class="muted">No techniques available yet. Keep cultivating.</p>
+      ) : (
+        <button
+          class="primary buy-all"
+          disabled={affordable.length === 0}
+          onClick={() => game.act((s) => buyAllUpgrades(s))}
+        >
+          Buy all
+          {affordable.length > 0 && ` (${affordable.length} for ${game.fmt(affordableCost)} qi)`}
+        </button>
       )}
       <ul class="card-list">
         {available.map((u) => (
