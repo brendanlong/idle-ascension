@@ -163,10 +163,7 @@ export function App() {
     modal = (
       <StoryModal
         title="Ascension"
-        paragraphs={[
-          ...VICTORY_TEXT,
-          'Thank you for playing this prototype! (Isekai: coming soon.)',
-        ]}
+        paragraphs={[...VICTORY_TEXT, 'Thank you for playing Idle Ascension.']}
         closeLabel="Bask in godhood"
         onClose={() => game.act((s) => (s.flags.victorySeen = true))}
       />

@@ -19,6 +19,20 @@ export function AboutTab() {
         </a>
         , where you can also report bugs or suggest ideas.
       </p>
+      <p class="muted small">
+        Version{' '}
+        {__COMMIT_SHA__ === 'unknown' ? (
+          'unknown'
+        ) : (
+          <a
+            href={`https://github.com/brendanlong/idle-ascension/commit/${__COMMIT_SHA__}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {__COMMIT_SHA__}
+          </a>
+        )}
+      </p>
 
       <h3>Privacy</h3>
       <p>
