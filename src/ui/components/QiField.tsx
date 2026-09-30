@@ -31,7 +31,7 @@ interface FloatText {
   color: string;
 }
 
-const MAX_MOTES = 40;
+const MAX_MOTES = 60;
 const ABSORB_RADIUS = 46;
 const FLOAT_LIFETIME = 1.1;
 /** Absorbed motes are credited in batches to avoid re-rendering every animation frame. */
