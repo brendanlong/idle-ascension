@@ -20,8 +20,10 @@ export function RegressionTab({ onRegressed }: { onRegressed: () => void }) {
   const nextStageMemories = memoriesForStage(state.stage + 1);
 
   const doRegress = () => {
-    game.replaceState(regress(game.state));
     setConfirming(false);
+    const next = regress(game.state);
+    if (!next) return;
+    game.replaceState(next);
     onRegressed();
   };
 

@@ -1,6 +1,5 @@
 import {
   CORE_FORM_BASE_COST,
-  CORE_GRADE_CAP_BY_REALM,
   CORE_FORM_COST_GROWTH,
   CORE_GRADES,
   CORE_REFINE_COST_GROWTH,
@@ -45,8 +44,7 @@ export function formCore(state: GameState, mods: Modifiers, element: ElementId):
 }
 
 export function maxCoreGrade(state: GameState): number {
-  const realmId = REALMS[STAGES[state.stage].realmIndex].id;
-  return CORE_GRADE_CAP_BY_REALM[realmId] ?? 0;
+  return REALMS[STAGES[state.stage].realmIndex].coreGradeCap ?? 0;
 }
 
 export function canRefineCore(state: GameState, coreIndex: number): boolean {

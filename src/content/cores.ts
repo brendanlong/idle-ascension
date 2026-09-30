@@ -89,25 +89,8 @@ export const CORE_GRADES: readonly CoreGradeDef[] = [
   { name: 'Primordial', mult: 7, color: '#f4f0ff' },
 ];
 
-/** Highest core grade allowed in each realm from Core Formation onward. */
-export const CORE_GRADE_CAP_BY_REALM: Readonly<Record<string, number>> = {
-  coreFormation: 2,
-  nascentSoul: 3,
-  spiritSevering: 4,
-  daoSeeking: 5,
-  immortalAscension: 6,
-  godhood: 7,
-};
-
 /** Qi cost to form the Nth core (0-based). */
 export const CORE_FORM_BASE_COST = 1e8;
 export const CORE_FORM_COST_GROWTH = 1000;
 /** Refining to the next grade costs this multiple of the previous grade. */
 export const CORE_REFINE_COST_GROWTH = 12;
-
-export const CORE_SLOT_REALMS: readonly string[] = [
-  'coreFormation',
-  'nascentSoul',
-  'spiritSevering',
-  'daoSeeking',
-];

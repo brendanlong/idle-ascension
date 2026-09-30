@@ -51,9 +51,9 @@ scripts/sim.ts   Greedy bot for balance testing.
 
 ### Adding things
 
-- **New bonus type**: add a field to `Modifiers` in `engine/effects.ts` (plus its label), then read it in `stats.ts` or wherever it applies. Upgrades, treasures, perks, cores and buffs can all grant it immediately.
+- **New bonus type**: add a field to `Modifiers` in `engine/effects.ts` (plus its label), then read it in `stats.ts` or wherever it applies. Realms, upgrades, treasures, perks, cores and buffs can all grant it immediately.
 - **New upgrade / treasure / encounter / perk**: add an entry to the relevant `content/` file. `content.test.ts` checks ids and cross-references.
-- **Changing the save shape**: new fields with defaults are filled in automatically on load. For anything else, bump `SAVE_VERSION` and add a migration in `engine/save.ts`.
+- **Changing the save shape**: new fields in `GameState` (including nested objects) are filled from `createInitialState()` on load, and `sanitize()` drops references to content that no longer exists. Fields added to array items (cores, buffs, bolts) or nullable objects are _not_ default-filled: bump `SAVE_VERSION` and add a migration in `engine/save.ts`.
 - **Rebalancing**: run `npm run sim` before and after.
 
 ## Design notes

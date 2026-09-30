@@ -1,8 +1,20 @@
 import { BUFFS_BY_ID } from '../../content/buffs';
-import { REALMS, STAGES, stageName } from '../../content/realms';
+import { CORE_GRADES } from '../../content/cores';
+import { REALMS, STAGES, stageName, type RealmDef } from '../../content/realms';
 import { attemptBreakthrough, breakthroughBlocker, nextStage } from '../../engine/breakthrough';
+import { describeEffect } from '../../engine/effects';
 import { formatDuration } from '../../engine/format';
 import { game } from '../game';
+
+function realmUnlocks(realm: RealmDef): string[] {
+  return [
+    ...(realm.effects ?? []).map((e) => describeEffect(e)),
+    ...(realm.coreGradeCap !== undefined
+      ? [`Refine cores up to ${CORE_GRADES[realm.coreGradeCap].name}`]
+      : []),
+    ...(realm.unlocks ?? []),
+  ];
+}
 
 function BreakthroughBox() {
   const { state, stats } = game;
@@ -14,6 +26,7 @@ function BreakthroughBox() {
   const blocker = breakthroughBlocker(state);
   const progress = Math.min(1, state.qi / next.cost);
   const tribulation = next.isMajor ? nextRealm.tribulation : undefined;
+  const unlocks = next.isMajor ? realmUnlocks(nextRealm) : [];
   const eta = stats.qps > 0 && state.qi < next.cost ? (next.cost - state.qi) / stats.qps : 0;
 
   return (
@@ -47,9 +60,9 @@ function BreakthroughBox() {
           {stats.mods.tribulationAllowedHits}.
         </div>
       )}
-      {next.isMajor && nextRealm.unlocks && (
+      {unlocks.length > 0 && (
         <ul class="unlocks">
-          {nextRealm.unlocks.map((u) => (
+          {unlocks.map((u) => (
             <li key={u}>{u}</li>
           ))}
         </ul>

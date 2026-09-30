@@ -1,11 +1,5 @@
 import { BUFFS_BY_ID } from '../content/buffs';
-import {
-  CORE_GRADES,
-  CORE_SLOT_REALMS,
-  ELEMENTS,
-  ELEMENTS_BY_ID,
-  GENERATING_CYCLE_BONUS,
-} from '../content/cores';
+import { CORE_GRADES, ELEMENTS, ELEMENTS_BY_ID, GENERATING_CYCLE_BONUS } from '../content/cores';
 import { GENERATORS } from '../content/generators';
 import { PERKS } from '../content/perks';
 import { REALMS, STAGES, firstStageOfRealm } from '../content/realms';
@@ -40,8 +34,7 @@ export function realmMultiplier(stage: number): number {
 }
 
 export function unlockedCoreSlots(state: GameState, mods: Modifiers): number {
-  const fromRealms = CORE_SLOT_REALMS.filter((r) => state.stage >= firstStageOfRealm(r)).length;
-  return fromRealms === 0 ? 0 : fromRealms + mods.coreSlots;
+  return state.stage >= firstStageOfRealm('coreFormation') ? mods.coreSlots : 0;
 }
 
 /** Number of adjacent pairs in the generating cycle among the given elements. */
@@ -72,7 +65,8 @@ export function computeModifiers(state: GameState, includeBuffs = true): Modifie
       if (def) applyEffects(mods, def.effects);
     }
   }
-  if (state.stage >= firstStageOfRealm('nascentSoul')) mods.autoClicksPerSecond += 1;
+  const currentRealm = STAGES[state.stage].realmIndex;
+  for (let r = 0; r <= currentRealm; r++) applyEffects(mods, REALMS[r].effects ?? []);
   return mods;
 }
 

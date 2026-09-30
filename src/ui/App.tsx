@@ -59,7 +59,13 @@ export function App() {
   const activeTab = tabs.some((t) => t.id === tab) ? tab : 'resources';
 
   let modal = null;
-  if (!state.flags.introSeen) {
+  if (game.haltReason) {
+    modal = (
+      <Modal title="Cultivation Paused" onClose={() => location.reload()} closeLabel="Reload">
+        <p>{game.haltReason}</p>
+      </Modal>
+    );
+  } else if (!state.flags.introSeen) {
     modal = (
       <StoryModal
         title="The Trash of the Lin Clan"

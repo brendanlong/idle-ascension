@@ -1,4 +1,5 @@
 import type { Condition } from '../engine/conditions';
+import type { Effect } from '../engine/effects';
 
 export interface TribulationDef {
   name: string;
@@ -21,7 +22,11 @@ export interface RealmDef {
   stageMultiplier: number;
   tribulation?: TribulationDef;
   requirement?: Condition;
-  /** Short descriptions of what reaching this realm unlocks (for display). */
+  /** Applied once while at or beyond this realm. */
+  effects?: readonly Effect[];
+  /** Highest core grade (index into CORE_GRADES) refinable in this realm. */
+  coreGradeCap?: number;
+  /** Descriptions of unlocks that aren't Effects (for display). */
   unlocks?: readonly string[];
 }
 
@@ -78,7 +83,9 @@ export const REALMS: readonly RealmDef[] = [
     stageCostGrowth: 4,
     stageMultiplier: 1.6,
     tribulation: { name: 'Minor Thunder Tribulation', bolts: 5, interval: 1.1 },
-    unlocks: ['Form your first Core', 'Regression becomes possible'],
+    effects: [{ type: 'add', stat: 'coreSlots', value: 1 }],
+    coreGradeCap: 2,
+    unlocks: ['Regression becomes possible'],
   },
   {
     id: 'nascentSoul',
@@ -90,7 +97,12 @@ export const REALMS: readonly RealmDef[] = [
     stageCostGrowth: 8,
     stageMultiplier: 1.7,
     tribulation: { name: 'Crimson Thunder Tribulation', bolts: 7, interval: 1 },
-    unlocks: ['Your Nascent Soul cultivates automatically', '+1 core slot'],
+    effects: [
+      { type: 'add', stat: 'autoClicksPerSecond', value: 1 },
+      { type: 'add', stat: 'coreSlots', value: 1 },
+    ],
+    coreGradeCap: 3,
+    unlocks: ['Your Nascent Soul cultivates automatically'],
   },
   {
     id: 'spiritSevering',
@@ -102,7 +114,8 @@ export const REALMS: readonly RealmDef[] = [
     stageCostGrowth: 12,
     stageMultiplier: 1.8,
     tribulation: { name: 'Heart Demon Tribulation', bolts: 9, interval: 0.9 },
-    unlocks: ['+1 core slot'],
+    effects: [{ type: 'add', stat: 'coreSlots', value: 1 }],
+    coreGradeCap: 4,
   },
   {
     id: 'daoSeeking',
@@ -114,7 +127,8 @@ export const REALMS: readonly RealmDef[] = [
     stageCostGrowth: 15,
     stageMultiplier: 2,
     tribulation: { name: 'Nine Heavens Thunder Tribulation', bolts: 11, interval: 0.85 },
-    unlocks: ['+1 core slot'],
+    effects: [{ type: 'add', stat: 'coreSlots', value: 1 }],
+    coreGradeCap: 5,
   },
   {
     id: 'immortalAscension',
@@ -126,6 +140,7 @@ export const REALMS: readonly RealmDef[] = [
     stageCostGrowth: 15,
     stageMultiplier: 2.2,
     tribulation: { name: 'Immortal Severing Tribulation', bolts: 13, interval: 0.8 },
+    coreGradeCap: 6,
   },
   {
     id: 'godhood',
@@ -137,6 +152,7 @@ export const REALMS: readonly RealmDef[] = [
     stageCostGrowth: 1,
     stageMultiplier: 3,
     tribulation: { name: 'Nine-Nine Heavenly Tribulation', bolts: 18, interval: 0.7 },
+    coreGradeCap: 7,
   },
 ];
 

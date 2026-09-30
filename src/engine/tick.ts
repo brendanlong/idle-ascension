@@ -1,6 +1,5 @@
 import { OLD_MASTER_QUIPS } from '../content/lore';
-import { STAGES } from '../content/realms';
-import { tickTribulation } from './breakthrough';
+import { abandonTribulation, tickTribulation } from './breakthrough';
 import { gainQi } from './economy';
 import { tickEncounters } from './encounters';
 import { log } from './events';
@@ -11,8 +10,20 @@ import { computeStats } from './stats';
 /** Gaps longer than this are treated as offline time rather than simulated live. */
 export const OFFLINE_THRESHOLD_SECONDS = 60;
 const QUIP_INTERVAL_SECONDS = 240;
+/** Live gaps are simulated in steps no longer than this, so bolts and buffs resolve in order. */
+const MAX_STEP_SECONDS = 0.25;
 
-export function tick(state: GameState, dt: number, rng: Rng = defaultRng): void {
+export interface TickOptions {
+  /** Freeze the tribulation (e.g. while the tab is hidden and the player can't respond). */
+  pauseTribulation?: boolean;
+}
+
+export function tick(
+  state: GameState,
+  dt: number,
+  rng: Rng = defaultRng,
+  options: TickOptions = {},
+): void {
   const stats = computeStats(state);
   gainQi(state, stats.qps * dt);
   state.stats.playTime += dt;
@@ -22,7 +33,7 @@ export function tick(state: GameState, dt: number, rng: Rng = defaultRng): void 
   state.buffs = state.buffs.filter((b) => b.remaining > 0);
 
   tickEncounters(state, stats, dt, rng);
-  tickTribulation(state, stats.mods, dt, rng);
+  if (!options.pauseTribulation) tickTribulation(state, stats.mods, dt, rng);
 
   if (state.treasures.ring && rng() < dt / QUIP_INTERVAL_SECONDS) {
     log(`The Old Master: ${pick(rng, OLD_MASTER_QUIPS)}`, 'lore');
@@ -45,11 +56,7 @@ export function applyOfflineProgress(state: GameState, seconds: number): Offline
   state.stats.loopTime += seconds;
   state.buffs = state.buffs.filter((b) => (b.remaining -= seconds) > 0);
   state.encounter.active = null;
-  if (state.tribulation) {
-    // Abandoning a tribulation midway is treated as never having started it.
-    state.qi += STAGES[state.tribulation.targetStage].cost;
-    state.tribulation = null;
-  }
+  abandonTribulation(state);
   return { seconds, cappedSeconds, qi };
 }
 
@@ -58,10 +65,13 @@ export function advanceClock(
   state: GameState,
   now: number,
   rng: Rng = defaultRng,
+  options: TickOptions = {},
 ): OfflineReport | null {
   const seconds = Math.max(0, (now - state.lastTick) / 1000);
   state.lastTick = now;
   if (seconds > OFFLINE_THRESHOLD_SECONDS) return applyOfflineProgress(state, seconds);
-  tick(state, seconds, rng);
+  for (let remaining = seconds; remaining > 0; remaining -= MAX_STEP_SECONDS) {
+    tick(state, Math.min(remaining, MAX_STEP_SECONDS), rng, options);
+  }
   return null;
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { onLog, type LogEntry } from '../engine/events';
 import { formatNumber } from '../engine/format';
-import { deserialize, serialize } from '../engine/save';
+import { NewerSaveError, deserialize, serialize } from '../engine/save';
 import { createInitialState, type GameState } from '../engine/state';
 import { computeStats, type Stats } from '../engine/stats';
 import { advanceClock, type OfflineReport } from '../engine/tick';
@@ -17,6 +17,8 @@ class GameController {
   stats: Stats = computeStats(this.state);
   log: LogEntry[] = [];
   offlineReport: OfflineReport | null = null;
+  /** Set when this tab must stop running, e.g. because another tab took over the save. */
+  haltReason: string | null = null;
   private listeners = new Set<() => void>();
   private started = false;
 
@@ -27,6 +29,13 @@ class GameController {
       this.log = [entry, ...this.log].slice(0, MAX_LOG);
     });
     this.load();
+    // Saving right away claims the save slot, so any older tab notices and stops.
+    this.save();
+    window.addEventListener('storage', (e) => {
+      if (e.key === STORAGE_KEY) {
+        this.halt('The game was opened in another tab. Reload to continue playing here.');
+      }
+    });
     setInterval(() => this.update(), TICK_MS);
     setInterval(() => this.save(), AUTOSAVE_MS);
     window.addEventListener('beforeunload', () => this.save());
@@ -41,18 +50,31 @@ class GameController {
     try {
       this.state = deserialize(saved);
     } catch (e) {
-      console.error('Failed to load save; starting fresh', e);
+      console.error('Failed to load save', e);
+      if (e instanceof NewerSaveError) {
+        this.halt('Your save is from a newer version of the game. Reload once the update arrives.');
+        return;
+      }
       localStorage.setItem(`${STORAGE_KEY}-corrupt-${Date.now()}`, saved);
     }
     this.update();
   }
 
+  private halt(reason: string): void {
+    this.haltReason = reason;
+    this.refresh();
+  }
+
   save(): void {
+    if (this.haltReason) return;
     localStorage.setItem(STORAGE_KEY, serialize(this.state));
   }
 
   private update(): void {
-    const report = advanceClock(this.state, Date.now());
+    if (this.haltReason) return;
+    const report = advanceClock(this.state, Date.now(), Math.random, {
+      pauseTribulation: document.hidden,
+    });
     if (report && report.qi > 0) this.offlineReport = report;
     this.refresh();
   }

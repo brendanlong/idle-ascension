@@ -17,6 +17,10 @@ describe('regression', () => {
     expect(regressionBlocker(newGame({ stage: CORE_FORMATION }))).toBeNull();
   });
 
+  it('refuses to regress when blocked', () => {
+    expect(regress(newGame({ stage: CORE_FORMATION - 1 }), 0)).toBeNull();
+  });
+
   it('awards more memories for deeper cultivation', () => {
     const shallow = pendingMemories(newGame({ stage: CORE_FORMATION }));
     const deep = pendingMemories(newGame({ stage: CORE_FORMATION + 4 }));
@@ -33,7 +37,7 @@ describe('regression', () => {
     state.stats.totalClicks = 99;
     const gained = pendingMemories(state);
 
-    const next = regress(state, 0);
+    const next = regress(state, 0)!;
     expect(next.stage).toBe(0);
     expect(next.qi).toBe(0);
     expect(next.generators.herb).toBe(0);
@@ -49,7 +53,7 @@ describe('regression', () => {
     const state = newGame({ stage: CORE_FORMATION });
     state.treasures.ring = true;
     state.prestige.perks = { soulbound: 1, stash: 1, daoHeart: 1 };
-    const next = regress(state, 0);
+    const next = regress(state, 0)!;
     expect(next.treasures.ring).toBe(true);
     expect(next.generators.cushion).toBe(10);
     expect(next.stage).toBe(3);

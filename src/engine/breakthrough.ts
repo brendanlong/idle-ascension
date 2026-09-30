@@ -104,6 +104,13 @@ export function disperseBolt(state: GameState, boltId: number): boolean {
   return t.bolts.length < before;
 }
 
+/** Walking away mid-tribulation counts as being overwhelmed by it. */
+export function abandonTribulation(state: GameState): void {
+  if (!state.tribulation) return;
+  state.tribulation.hits = Infinity;
+  finishTribulation(state);
+}
+
 function finishTribulation(state: GameState): void {
   const t = state.tribulation!;
   state.tribulation = null;

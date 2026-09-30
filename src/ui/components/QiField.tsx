@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { CORE_GRADES, ELEMENTS_BY_ID } from '../../content/cores';
 import { ENCOUNTERS_BY_ID } from '../../content/encounters';
 import { REALMS, STAGES } from '../../content/realms';
@@ -27,6 +27,8 @@ interface FloatText {
 const MAX_MOTES = 40;
 const ABSORB_RADIUS = 46;
 const FLOAT_LIFETIME = 1.1;
+/** Absorbed motes are credited in batches to avoid re-rendering every animation frame. */
+const MOTE_FLUSH_MS = 150;
 
 /** Visual-only simulation: motes live here, but the qi they grant goes through the engine. */
 class FieldSim {
@@ -149,7 +151,7 @@ function draw(ctx: CanvasRenderingContext2D, sim: FieldSim, time: number): void 
 export function QiField() {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const simRef = useRef(new FieldSim());
+  const [sim] = useState(() => new FieldSim());
   const { state } = game;
   const realm = REALMS[STAGES[state.stage].realmIndex];
 
@@ -157,7 +159,6 @@ export function QiField() {
     const canvas = canvasRef.current!;
     const container = containerRef.current!;
     const ctx = canvas.getContext('2d')!;
-    const sim = simRef.current;
 
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
@@ -172,14 +173,19 @@ export function QiField() {
     observer.observe(container);
 
     let last = performance.now();
+    let lastFlush = last;
+    let pendingMotes = 0;
     let frame = 0;
     const loop = (now: number) => {
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
-      const absorbed = sim.step(dt, game.stats.moteSpawnPerSecond);
-      if (absorbed > 0 && sim.pointer) {
-        const gained = game.act((s, stats) => absorbMotes(s, stats, absorbed));
+      pendingMotes += sim.step(dt, game.stats.moteSpawnPerSecond);
+      if (pendingMotes > 0 && sim.pointer && now - lastFlush >= MOTE_FLUSH_MS) {
+        const count = pendingMotes;
+        const gained = game.act((s, stats) => absorbMotes(s, stats, count));
         sim.addFloat(sim.pointer.x, sim.pointer.y - 10, `+${game.fmt(gained)}`, '#9ff5da');
+        pendingMotes = 0;
+        lastFlush = now;
       }
       draw(ctx, sim, now / 1000);
       frame = requestAnimationFrame(loop);
@@ -199,11 +205,8 @@ export function QiField() {
   const onOrbClick = (e: MouseEvent) => {
     const gained = game.act((s, stats) => click(s, stats));
     // Keyboard activation reports (0, 0); float from the orb's center instead.
-    const p =
-      e.detail === 0
-        ? { x: simRef.current.width / 2, y: simRef.current.height / 2 - 40 }
-        : localPoint(e);
-    simRef.current.addFloat(p.x, p.y, `+${game.fmt(gained)}`);
+    const p = e.detail === 0 ? { x: sim.width / 2, y: sim.height / 2 - 40 } : localPoint(e);
+    sim.addFloat(p.x, p.y, `+${game.fmt(gained)}`);
   };
 
   const encounter = state.encounter.active;
@@ -214,14 +217,16 @@ export function QiField() {
     <div
       class={`qi-field${trib ? ' tribulation' : ''}`}
       ref={containerRef}
-      onPointerMove={(e) => (simRef.current.pointer = localPoint(e))}
-      onPointerLeave={() => (simRef.current.pointer = null)}
+      onPointerMove={(e) => (sim.pointer = localPoint(e))}
+      onPointerLeave={() => (sim.pointer = null)}
     >
       <canvas ref={canvasRef} />
       <button
         class="orb"
         style={{ '--realm-color': realm.color }}
         onClick={onOrbClick}
+        // Holding Enter would otherwise auto-repeat clicks.
+        onKeyDown={(e) => e.repeat && e.preventDefault()}
         aria-label="Cultivate"
         title="Click to cultivate. Sweep your cursor through drifting qi motes to absorb them."
       >

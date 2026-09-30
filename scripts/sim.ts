@@ -138,7 +138,7 @@ while (time < maxHours * 3600) {
   const stalled = time - lastProgress > STALL_SECONDS;
   if (!regressionBlocker(state) && (stalled || pending >= Math.max(3, state.prestige.memories))) {
     report(`regress (+${pending} memories${stalled ? ', stalled' : ''})`);
-    state = regress(state, 0);
+    state = regress(state, 0)!;
     lastProgress = time;
     let boughtPerk = true;
     while (boughtPerk) {

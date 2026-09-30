@@ -29,7 +29,9 @@ export function regressionBlocker(state: GameState): string | null {
   return null;
 }
 
-export function regress(state: GameState, now = Date.now()): GameState {
+/** Returns the next loop's starting state, or null if regression isn't allowed right now. */
+export function regress(state: GameState, now = Date.now()): GameState | null {
+  if (regressionBlocker(state)) return null;
   const gained = pendingMemories(state);
   const fresh = createInitialState(now);
   const prestige = {
