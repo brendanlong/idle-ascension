@@ -18,6 +18,17 @@ export function SettingsTab() {
   const [resetArmed, setResetArmed] = useState(false);
   const s = state.stats;
 
+  const doExport = async () => {
+    const text = exportSave(game.state);
+    setSaveText(text);
+    try {
+      await navigator.clipboard.writeText(text);
+      setMessage('Save copied to your clipboard.');
+    } catch {
+      setMessage("Couldn't copy automatically. Copy the text below instead.");
+    }
+  };
+
   const doImport = () => {
     try {
       game.replaceState(importSave(saveText));
@@ -72,7 +83,7 @@ export function SettingsTab() {
       <h3>Save</h3>
       <div class="save-buttons">
         <button onClick={() => (game.save(), setMessage('Saved.'))}>Save now</button>
-        <button onClick={() => setSaveText(exportSave(game.state))}>Export</button>
+        <button onClick={doExport}>Export</button>
         <button onClick={doImport} disabled={!saveText.trim()}>
           Import
         </button>
