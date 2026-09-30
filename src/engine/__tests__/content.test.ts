@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BUFFS_BY_ID } from '../../content/buffs';
 import { ENCOUNTERS } from '../../content/encounters';
+import { REGRESSION_STORY } from '../../content/lore';
 import { NAME_TABLES } from '../../content/names';
 import { GENERATORS, GENERATORS_BY_ID } from '../../content/generators';
 import { PERKS, PERKS_BY_ID } from '../../content/perks';
@@ -18,6 +19,19 @@ function expectUniqueIds(items: readonly { id: string }[]) {
 function expectValidEffects(effects: readonly Effect[]) {
   for (const e of effects) {
     if (e.type === 'generatorMult') expect(GENERATORS_BY_ID.has(e.generator)).toBe(true);
+  }
+}
+
+function checkTemplates(texts: readonly string[], extra: string[] = []) {
+  for (const t of texts) {
+    // "a {beast}" breaks for vowel-initial entries ("a iron-backed tortoise").
+    for (const [, key] of t.matchAll(/\ba \{(\w+)\}/gi)) {
+      const vowelStart = (NAME_TABLES[key] ?? []).filter((w) => /^[aeiou]/i.test(w));
+      expect(vowelStart, `"a {${key}}" in "${t}"`).toEqual([]);
+    }
+    for (const key of placeholders(t)) {
+      expect(key in NAME_TABLES || extra.includes(key), `{${key}} in "${t}"`).toBe(true);
+    }
   }
 }
 
@@ -65,26 +79,18 @@ describe('content integrity', () => {
   });
 
   it('only uses encounter placeholders that exist', () => {
-    const check = (texts: readonly string[], extra: string[] = []) => {
-      for (const t of texts) {
-        // "a {beast}" breaks for vowel-initial entries ("a iron-backed tortoise").
-        for (const [, key] of t.matchAll(/\ba \{(\w+)\}/gi)) {
-          const vowelStart = (NAME_TABLES[key] ?? []).filter((w) => /^[aeiou]/i.test(w));
-          expect(vowelStart, `"a {${key}}" in "${t}"`).toEqual([]);
-        }
-        for (const key of placeholders(t)) {
-          expect(key in NAME_TABLES || extra.includes(key), `{${key}} in "${t}"`).toBe(true);
-        }
-      }
-    };
     for (const e of ENCOUNTERS) {
-      check(e.intros);
-      check(e.rewards.windfall?.texts ?? []);
-      for (const o of e.rewards.buff?.options ?? []) check(o.texts);
-      check(e.rewards.treasure?.texts ?? [], ['treasure']);
+      checkTemplates(e.intros);
+      checkTemplates(e.rewards.windfall?.texts ?? []);
+      for (const o of e.rewards.buff?.options ?? []) checkTemplates(o.texts);
+      checkTemplates(e.rewards.treasure?.texts ?? [], ['treasure']);
       // {treasure} supplies its own article ("the X" or "another X").
       for (const t of e.rewards.treasure?.texts ?? []) expect(t).not.toMatch(/\bthe \{treasure\}/i);
     }
+  });
+
+  it('only uses valid placeholders in the regression story', () => {
+    for (const part of REGRESSION_STORY) checkTemplates(part);
   });
 
   it('makes windfalls the most common encounter reward, then buffs, then treasures', () => {

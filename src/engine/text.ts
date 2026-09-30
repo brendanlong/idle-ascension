@@ -22,3 +22,9 @@ export function fillTemplate(template: string, vars: Record<string, string>, rng
     return vars[key];
   });
 }
+
+/** Picks one random option from each part and fills them with shared placeholders. */
+export function composeStory(parts: readonly (readonly string[])[], rng: Rng): string[] {
+  const vars: Record<string, string> = {};
+  return parts.map((options) => fillTemplate(pick(rng, options), vars, rng));
+}

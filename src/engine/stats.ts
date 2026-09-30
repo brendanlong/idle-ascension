@@ -1,11 +1,19 @@
 import { BUFFS_BY_ID } from '../content/buffs';
 import { CORE_GRADES, ELEMENTS, ELEMENTS_BY_ID, GENERATING_CYCLE_BONUS } from '../content/cores';
 import { GENERATORS } from '../content/generators';
-import { PERKS } from '../content/perks';
+import { PERKS, type PerkDef } from '../content/perks';
 import { REALMS, STAGES, firstStageOfRealm } from '../content/realms';
 import { TREASURES_BY_ID, type TreasureDef } from '../content/treasures';
 import { UPGRADES_BY_ID } from '../content/upgrades';
-import { applyEffects, baseModifiers, scaleEffect, type Effect, type Modifiers } from './effects';
+import {
+  applyEffects,
+  baseModifiers,
+  compoundEffect,
+  diminishingEffect,
+  scaleEffect,
+  type Effect,
+  type Modifiers,
+} from './effects';
 import type { GameState } from './state';
 
 export interface Stats {
@@ -44,6 +52,12 @@ export function generatingPairs(elements: ReadonlySet<string>): number {
   ).length;
 }
 
+export function perkEffects(perk: PerkDef, level: number): Effect[] {
+  if (level <= 0) return [];
+  const scale = perk.scaling === 'diminishing' ? diminishingEffect : compoundEffect;
+  return perk.effects.map((e) => scale(e, level));
+}
+
 export function treasureEffects(treasure: TreasureDef, level: number): Effect[] {
   return [...(treasure.fixedEffects ?? []), ...treasure.effects.map((e) => scaleEffect(e, level))];
 }
@@ -58,7 +72,8 @@ export function computeModifiers(state: GameState, includeBuffs = true): Modifie
     const t = TREASURES_BY_ID.get(id);
     if (t) applyEffects(mods, treasureEffects(t, level));
   }
-  for (const perk of PERKS) applyEffects(mods, perk.effects, state.prestige.perks[perk.id] ?? 0);
+  for (const perk of PERKS)
+    applyEffects(mods, perkEffects(perk, state.prestige.perks[perk.id] ?? 0));
   for (const core of state.cores) {
     const element = ELEMENTS_BY_ID.get(core.element);
     if (element) applyEffects(mods, element.effects(core.grade));

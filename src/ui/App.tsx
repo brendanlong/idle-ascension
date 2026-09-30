@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { INTRO_TEXT, REGRESSION_TEXT, VICTORY_TEXT } from '../content/lore';
+import { INTRO_TEXT, VICTORY_TEXT } from '../content/lore';
 import { firstStageOfRealm } from '../content/realms';
 import { formatDuration } from '../engine/format';
 import { CoresTab } from './components/CoresTab';
@@ -53,7 +53,7 @@ function Header() {
 export function App() {
   useGame();
   const [tab, setTab] = useState<TabId>('resources');
-  const [showRegressionStory, setShowRegressionStory] = useState(false);
+  const [regressionStory, setRegressionStory] = useState<string[] | null>(null);
   const { state } = game;
   const tabs = visibleTabs();
   const activeTab = tabs.some((t) => t.id === tab) ? tab : 'resources';
@@ -74,13 +74,13 @@ export function App() {
         onClose={() => game.act((s) => (s.flags.introSeen = true))}
       />
     );
-  } else if (showRegressionStory) {
+  } else if (regressionStory) {
     modal = (
       <StoryModal
         title="Return"
-        paragraphs={REGRESSION_TEXT}
+        paragraphs={regressionStory}
         closeLabel="Begin again"
-        onClose={() => setShowRegressionStory(false)}
+        onClose={() => setRegressionStory(null)}
       />
     );
   } else if (state.flags.ascended && !state.flags.victorySeen) {
@@ -139,9 +139,7 @@ export function App() {
           {activeTab === 'techniques' && <TechniquesTab />}
           {activeTab === 'cores' && <CoresTab />}
           {activeTab === 'treasures' && <TreasuresTab />}
-          {activeTab === 'regression' && (
-            <RegressionTab onRegressed={() => setShowRegressionStory(true)} />
-          )}
+          {activeTab === 'regression' && <RegressionTab onRegressed={setRegressionStory} />}
           {activeTab === 'settings' && <SettingsTab />}
         </section>
       </main>

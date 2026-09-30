@@ -76,25 +76,23 @@ export function baseModifiers(): Modifiers {
   };
 }
 
-/** Applies an effect `times` times (used for leveled perks). */
-export function applyEffect(mods: Modifiers, effect: Effect, times = 1): void {
-  if (times <= 0) return;
+export function applyEffect(mods: Modifiers, effect: Effect): void {
   switch (effect.type) {
     case 'mult':
-      mods[effect.stat] *= effect.value ** times;
+      mods[effect.stat] *= effect.value;
       break;
     case 'add':
-      mods[effect.stat] += effect.value * times;
+      mods[effect.stat] += effect.value;
       break;
     case 'generatorMult':
       mods.generatorMult[effect.generator] =
-        (mods.generatorMult[effect.generator] ?? 1) * effect.value ** times;
+        (mods.generatorMult[effect.generator] ?? 1) * effect.value;
       break;
   }
 }
 
-export function applyEffects(mods: Modifiers, effects: readonly Effect[], times = 1): void {
-  for (const e of effects) applyEffect(mods, e, times);
+export function applyEffects(mods: Modifiers, effects: readonly Effect[]): void {
+  for (const e of effects) applyEffect(mods, e);
 }
 
 const STAT_LABELS: Record<MultStat | AddStat, string> = {
@@ -146,17 +144,47 @@ export function describeEffect(effect: Effect, generatorName?: (id: string) => s
 /** Each level past the first adds this fraction of the level-1 bonus. */
 export const LEVEL_BONUS_GROWTH = 0.5;
 
+/** Stats that only make sense as whole numbers; diminishing perks round these down. */
+const INTEGER_STATS: ReadonlySet<AddStat> = new Set([
+  'tribulationAllowedHits',
+  'coreSlots',
+  'startingStage',
+]);
+
 /**
- * An effect at a given level (treasures). The bonus part grows linearly:
- * ×1.5 → ×1.75 → ×2, and +1 → +1.5 → +2. Reductions mirror that by scaling
- * the reciprocal, so ×0.5 → ×0.4 → ×0.33 and never reaches zero.
+ * The effect with its bonus multiplied by `strength`: ×1.5 at strength 2 is
+ * ×2, and +1 is +2. Reductions scale their reciprocal (×0.5 → ×0.33) so they
+ * never reach zero.
  */
-export function scaleEffect(effect: Effect, level: number): Effect {
-  const strength = 1 + (level - 1) * LEVEL_BONUS_GROWTH;
+export function effectAtStrength(effect: Effect, strength: number): Effect {
   if (effect.type === 'add') return { ...effect, value: effect.value * strength };
   const value =
     effect.value < 1
       ? 1 / (1 + (1 / effect.value - 1) * strength)
       : 1 + (effect.value - 1) * strength;
   return { ...effect, value };
+}
+
+/** Treasure scaling: each level adds LEVEL_BONUS_GROWTH of the level-1 bonus. */
+export function scaleEffect(effect: Effect, level: number): Effect {
+  return effectAtStrength(effect, 1 + (level - 1) * LEVEL_BONUS_GROWTH);
+}
+
+/** Compound scaling: multipliers multiply each level (×2, ×4, ×8), additions add up. */
+export function compoundEffect(effect: Effect, level: number): Effect {
+  return { ...effect, value: effect.type === 'add' ? effect.value * level : effect.value ** level };
+}
+
+/**
+ * Logarithmic scaling, for effects that would break the game if they kept
+ * growing at a flat rate: level 1 is the base bonus, and each doubling of the
+ * level adds it again (levels 1, 3, 7, 15 give 1×, 2×, 3×, 4× the bonus).
+ * Whole-number stats round down.
+ */
+export function diminishingEffect(effect: Effect, level: number): Effect {
+  const scaled = effectAtStrength(effect, Math.log2(1 + level));
+  if (scaled.type === 'add' && INTEGER_STATS.has(scaled.stat)) {
+    return { ...scaled, value: Math.floor(scaled.value) };
+  }
+  return scaled;
 }

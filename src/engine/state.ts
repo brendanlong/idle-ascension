@@ -1,7 +1,7 @@
 import type { ElementId } from '../content/cores';
 import { GENERATORS } from '../content/generators';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 export interface CoreState {
   element: ElementId;

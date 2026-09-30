@@ -171,3 +171,12 @@ export const GENERATORS_BY_ID: ReadonlyMap<string, GeneratorDef> = new Map(
 export function generatorName(id: string): string {
   return GENERATORS_BY_ID.get(id)?.name ?? id;
 }
+
+/** "10 Meditation Cushions", "1 Pill Furnace", "3 Fragments of the Heavenly Dao". */
+export function generatorCount(id: string, count: number): string {
+  const name = generatorName(id);
+  if (count === 1) return `1 ${name}`;
+  const [head, ...rest] = name.split(' of ');
+  const plural = /(ch|sh|s|x)$/.test(head) ? `${head}es` : `${head}s`;
+  return `${count} ${[plural, ...rest].join(' of ')}`;
+}

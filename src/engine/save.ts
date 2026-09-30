@@ -2,7 +2,7 @@ import { BUFFS_BY_ID } from '../content/buffs';
 import { CORE_GRADES, ELEMENTS_BY_ID, type ElementId } from '../content/cores';
 import { ENCOUNTERS_BY_ID } from '../content/encounters';
 import { GENERATORS_BY_ID } from '../content/generators';
-import { PERKS_BY_ID } from '../content/perks';
+import { PERKS_BY_ID, PERK_LEVEL_LIMIT } from '../content/perks';
 import { FINAL_STAGE } from '../content/realms';
 import { MAX_TREASURE_LEVEL, TREASURES_BY_ID } from '../content/treasures';
 import { UPGRADES_BY_ID } from '../content/upgrades';
@@ -13,19 +13,11 @@ type RawSave = Record<string, unknown>;
 /**
  * migrations[n] upgrades a save from version n to n + 1. When changing the
  * shape of GameState in a way that defaults can't fill in, bump SAVE_VERSION
- * and add a migration here.
+ * and add a migration here. The game hasn't been released yet, so for now
+ * it's fine to skip migrations and let sanitize() drop whatever no longer
+ * fits. Never lower SAVE_VERSION: newer saves are refused, not overwritten.
  */
-const migrations: Record<number, (save: RawSave) => RawSave> = {
-  // v2: treasures went from owned flags to levels.
-  1: (save) => {
-    if (isPlainObject(save.treasures)) {
-      save.treasures = Object.fromEntries(
-        Object.entries(save.treasures).map(([id, owned]) => [id, owned === true ? 1 : owned]),
-      );
-    }
-    return save;
-  },
-};
+const migrations: Record<number, (save: RawSave) => RawSave> = {};
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -90,7 +82,9 @@ function sanitize(state: GameState): GameState {
   const perks: Record<string, number> = {};
   for (const [id, level] of Object.entries(state.prestige.perks)) {
     const def = PERKS_BY_ID.get(id);
-    if (def && isFiniteNumber(level) && level > 0) perks[id] = clampInt(level, 0, def.maxLevel);
+    if (def && isFiniteNumber(level) && level > 0) {
+      perks[id] = clampInt(level, 0, Math.min(def.maxLevel, PERK_LEVEL_LIMIT));
+    }
   }
   state.prestige.perks = perks;
 

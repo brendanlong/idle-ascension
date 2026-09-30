@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CORE_GRADES } from '../../content/cores';
+import { PERK_LEVEL_LIMIT } from '../../content/perks';
 import { MAX_TREASURE_LEVEL } from '../../content/treasures';
 import { STAGES } from '../../content/realms';
 import { deserialize, exportSave, importSave, serialize } from '../save';
@@ -54,7 +55,7 @@ describe('save/load', () => {
       tribulation: { targetStage: 'x' },
     });
     raw.generators.removedGenerator = 5;
-    raw.prestige.perks = { meridians: 99, removed: 1 };
+    raw.prestige.perks = { stash: 99, removed: 1 };
     raw.encounter.active = { id: 'nope', x: 0.5, y: 0.5, remaining: 5 };
     const loaded = deserialize(JSON.stringify(raw));
     expect(loaded.stage).toBe(STAGES.length - 1);
@@ -64,15 +65,16 @@ describe('save/load', () => {
     expect(loaded.buffs.map((b) => b.id)).toEqual(['epiphany']);
     expect(loaded.tribulation).toBeNull();
     expect(loaded.generators).not.toHaveProperty('removedGenerator');
-    expect(loaded.prestige.perks).toEqual({ meridians: 5 });
+    expect(loaded.prestige.perks).toEqual({ stash: 6 });
     expect(loaded.encounter.active).toBeNull();
   });
 
-  it('migrates v1 owned-treasure flags to levels', () => {
+  it('limits absurd perk levels from edited saves', () => {
     const raw = JSON.parse(serialize(newGame()));
-    raw.saveVersion = 1;
-    raw.treasures = { ring: true, pendant: true };
-    expect(deserialize(JSON.stringify(raw)).treasures).toEqual({ ring: 1, pendant: 1 });
+    raw.prestige.perks = { meridians: 1e12, soulbound: 1e12 };
+    const loaded = deserialize(JSON.stringify(raw));
+    expect(loaded.prestige.perks.meridians).toBe(PERK_LEVEL_LIMIT);
+    expect(loaded.prestige.perks.soulbound).toBe(MAX_TREASURE_LEVEL);
   });
 
   it('rejects saves from the future', () => {
