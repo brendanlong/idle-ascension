@@ -22,20 +22,15 @@ export function AboutTab() {
 
       <h3>Privacy</h3>
       <p>
-        There are no accounts, ads or cookies, and the game never sends your save or anything about
-        how you play. Your save lives only in this browser's local storage; use Settings → Export to
-        back it up or move it to another device.
+        There are no accounts, ads or cookies. Your save lives only in this browser's local storage;
+        use Settings → Export to back it up or move it to another device.
       </p>
       <p>
         To see how many people visit, the site uses{' '}
         <a href="https://www.goatcounter.com/" target="_blank" rel="noreferrer">
           GoatCounter
         </a>
-        , an open-source, privacy-friendly analytics service. It doesn't use cookies or store your
-        IP address. It counts page views along with the referring site, and details derived from
-        your browser: browser and operating system, screen size, language, and approximate location
-        (country, or state/province in some countries). These are kept as aggregate counts, not a
-        profile of you. Tracker blockers usually block it, which is fine. See{' '}
+        , an open-source, privacy-friendly analytics service. See{' '}
         <a href="https://www.goatcounter.com/help/privacy" target="_blank" rel="noreferrer">
           GoatCounter's privacy policy
         </a>
