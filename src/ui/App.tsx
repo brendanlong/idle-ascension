@@ -4,7 +4,13 @@ import { firstStageOfRealm } from '../content/realms';
 import { formatDuration } from '../engine/format';
 import { AboutTab } from './components/AboutTab';
 import { CoresTab } from './components/CoresTab';
-import { CultivationPanel } from './components/CultivationPanel';
+import {
+  BreakthroughBox,
+  Conditions,
+  CultivationPanel,
+  CultivationStats,
+  RealmSummary,
+} from './components/CultivationPanel';
 import { LogPanel } from './components/LogPanel';
 import { Modal, StoryModal } from './components/Modal';
 import { QiField } from './components/QiField';
@@ -15,9 +21,21 @@ import { TechniquesTab } from './components/TechniquesTab';
 import { TreasuresTab } from './components/TreasuresTab';
 import { useDynamicFavicon } from './favicon';
 import { game, useGame } from './game';
+import { useMediaQuery } from './useMediaQuery';
+import { currentTribulationTrial } from '../engine/breakthrough';
+
+/** Below this width, the game switches to a tabbed single-column layout. */
+const MOBILE_QUERY = '(max-width: 760px)';
 
 type TabId =
-  'resources' | 'techniques' | 'cores' | 'treasures' | 'regression' | 'settings' | 'about';
+  | 'cultivate'
+  | 'resources'
+  | 'techniques'
+  | 'cores'
+  | 'treasures'
+  | 'regression'
+  | 'settings'
+  | 'about';
 
 function visibleTabs(): { id: TabId; label: string }[] {
   const { state } = game;
@@ -56,12 +74,18 @@ function Header() {
 export function App() {
   useGame();
   useDynamicFavicon(game.state);
-  const [tab, setTab] = useState<TabId>('resources');
+  const mobile = useMediaQuery(MOBILE_QUERY);
+  const [tab, setTab] = useState<TabId>('cultivate');
   const [regressionStory, setRegressionStory] = useState<string[] | null>(null);
   const [buyAmount, setBuyAmount] = useState<BuyAmount>(1);
   const { state } = game;
   const tabs = visibleTabs();
-  const activeTab = tabs.some((t) => t.id === tab) ? tab : 'resources';
+  const mobileTabs: { id: TabId; label: string }[] = [
+    { id: 'cultivate', label: '气 Cultivate' },
+    ...tabs,
+  ];
+  const available = mobile ? mobileTabs : tabs;
+  const activeTab = available.some((t) => t.id === tab) ? tab : available[0].id;
 
   let modal = null;
   if (game.haltReason) {
@@ -117,6 +141,78 @@ export function App() {
     );
   }
 
+  const tabContent = (
+    <>
+      {activeTab === 'resources' && (
+        <ResourcesTab amount={buyAmount} onAmountChange={setBuyAmount} />
+      )}
+      {activeTab === 'techniques' && <TechniquesTab />}
+      {activeTab === 'cores' && <CoresTab />}
+      {activeTab === 'treasures' && <TreasuresTab />}
+      {activeTab === 'regression' && (
+        <RegressionTab
+          onRegressed={(story) => {
+            setRegressionStory(story);
+            setBuyAmount(1);
+          }}
+        />
+      )}
+      {activeTab === 'settings' && <SettingsTab />}
+      {activeTab === 'about' && <AboutTab />}
+    </>
+  );
+
+  if (mobile) {
+    // A running trial lives in the qi field; leaving the tab would restart it.
+    const trialRunning = Boolean(currentTribulationTrial(state) || state.trial.active);
+    const shown = trialRunning ? 'cultivate' : activeTab;
+    const needsAttention = Boolean(state.encounter.active || state.trial.offer);
+    return (
+      <div class="app mobile">
+        <div class="mobile-top">
+          <Header />
+          <nav role="tablist" class="mobile-tabs">
+            {mobileTabs.map((t) => (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={shown === t.id}
+                class={shown === t.id ? 'active' : ''}
+                disabled={trialRunning && t.id !== 'cultivate'}
+                onClick={() => setTab(t.id)}
+              >
+                {t.label}
+                {t.id === 'cultivate' && needsAttention && shown !== 'cultivate' && (
+                  <span class="tab-alert" aria-label="Something is happening" />
+                )}
+              </button>
+            ))}
+          </nav>
+        </div>
+        {shown === 'cultivate' ? (
+          <main class="mobile-cultivate">
+            <section class="panel cultivation">
+              <RealmSummary compact />
+              <BreakthroughBox />
+            </section>
+            <QiField />
+            <section class="panel cultivation">
+              <Conditions />
+              <details>
+                <summary>Cultivation stats</summary>
+                <CultivationStats />
+              </details>
+            </section>
+            <LogPanel />
+          </main>
+        ) : (
+          <main class="panel mobile-panel">{tabContent}</main>
+        )}
+        {modal}
+      </div>
+    );
+  }
+
   return (
     <div class="app">
       <Header />
@@ -140,22 +236,7 @@ export function App() {
               </button>
             ))}
           </nav>
-          {activeTab === 'resources' && (
-            <ResourcesTab amount={buyAmount} onAmountChange={setBuyAmount} />
-          )}
-          {activeTab === 'techniques' && <TechniquesTab />}
-          {activeTab === 'cores' && <CoresTab />}
-          {activeTab === 'treasures' && <TreasuresTab />}
-          {activeTab === 'regression' && (
-            <RegressionTab
-              onRegressed={(story) => {
-                setRegressionStory(story);
-                setBuyAmount(1);
-              }}
-            />
-          )}
-          {activeTab === 'settings' && <SettingsTab />}
-          {activeTab === 'about' && <AboutTab />}
+          {tabContent}
         </section>
       </main>
       {modal}

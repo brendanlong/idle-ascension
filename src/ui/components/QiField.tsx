@@ -13,6 +13,7 @@ import { claimEncounter } from '../../engine/encounters';
 import { acceptTrial, completeTrial } from '../../engine/trials';
 import { TrialOverlay } from '../trials/TrialOverlay';
 import { game } from '../game';
+import { useMediaQuery } from '../useMediaQuery';
 
 interface Mote {
   x: number;
@@ -202,6 +203,7 @@ export function QiField() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const orbRef = useRef<HTMLButtonElement>(null);
   const [sim] = useState(() => new FieldSim());
+  const touch = useMediaQuery('(pointer: coarse)');
   /** Last cursor position over the field, handed to trials so they know where it starts. */
   const lastPointer = useRef<{ x: number; y: number } | null>(null);
   const { state } = game;
@@ -302,7 +304,11 @@ export function QiField() {
       >
         <span class="orb-glyph">气</span>
       </button>
-      <div class="field-hint">Click the dantian · sweep your cursor through drifting qi</div>
+      <div class="field-hint">
+        {touch
+          ? 'Tap the dantian · drag your finger through drifting qi'
+          : 'Click the dantian · sweep your cursor through drifting qi'}
+      </div>
 
       {encounter && encounterDef && !trialRunning && (
         <button
