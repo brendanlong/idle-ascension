@@ -176,15 +176,15 @@ export function compoundEffect(effect: Effect, level: number): Effect {
 }
 
 /**
- * Compound for the first `fullLevels` levels, then logarithmic: each doubling
- * of the levels beyond that adds one more level-1 bonus (1, 3, 7, 15 extra
- * levels give 1, 2, 3, 4 more bonuses). For effects that would break the game
- * if they kept growing at a flat rate.
+ * Logarithmic scaling, for effects that would break the game if they kept
+ * growing at a flat rate: level 1 is the base bonus, and each doubling of the
+ * level adds it again (levels 1, 3, 7, 15 give 1×, 2×, 3×, 4× the bonus).
+ * Whole-number stats round down.
  */
-export function diminishingEffect(effect: Effect, level: number, fullLevels: number): Effect {
-  const full = compoundEffect(effect, Math.min(level, fullLevels));
-  const extra = effectAtStrength(effect, Math.log2(1 + Math.max(0, level - fullLevels)));
-  if (effect.type !== 'add') return { ...effect, value: full.value * extra.value };
-  const value = full.value + extra.value;
-  return { ...effect, value: INTEGER_STATS.has(effect.stat) ? Math.floor(value) : value };
+export function diminishingEffect(effect: Effect, level: number): Effect {
+  const scaled = effectAtStrength(effect, Math.log2(1 + level));
+  if (scaled.type === 'add' && INTEGER_STATS.has(scaled.stat)) {
+    return { ...scaled, value: Math.floor(scaled.value) };
+  }
+  return scaled;
 }

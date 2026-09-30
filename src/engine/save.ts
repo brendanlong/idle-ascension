@@ -6,7 +6,6 @@ import { PERKS_BY_ID, PERK_LEVEL_LIMIT } from '../content/perks';
 import { FINAL_STAGE } from '../content/realms';
 import { MAX_TREASURE_LEVEL, TREASURES_BY_ID } from '../content/treasures';
 import { UPGRADES_BY_ID } from '../content/upgrades';
-import { memoriesSpentOn } from './prestige';
 import { SAVE_VERSION, createInitialState, type GameState, type NumberFormat } from './state';
 
 type RawSave = Record<string, unknown>;
@@ -14,36 +13,11 @@ type RawSave = Record<string, unknown>;
 /**
  * migrations[n] upgrades a save from version n to n + 1. When changing the
  * shape of GameState in a way that defaults can't fill in, bump SAVE_VERSION
- * and add a migration here.
+ * and add a migration here. The game hasn't been released yet, so for now
+ * it's fine to skip migrations and let sanitize() drop whatever no longer
+ * fits. Never lower SAVE_VERSION: newer saves are refused, not overwritten.
  */
-const migrations: Record<number, (save: RawSave) => RawSave> = {
-  // v2: treasures went from owned flags to levels.
-  1: (save) => {
-    if (isPlainObject(save.treasures)) {
-      save.treasures = Object.fromEntries(
-        Object.entries(save.treasures).map(([id, owned]) => [id, owned === true ? 1 : owned]),
-      );
-    }
-    return save;
-  },
-  // v3: Soul-Bound Treasures became leveled, and level 1 used to keep every
-  // treasure level. Raise it as far as the player's Memories cover, so
-  // unspent Memories never go negative.
-  2: (save) => {
-    const prestige = save.prestige;
-    if (!isPlainObject(prestige) || !isPlainObject(prestige.perks)) return save;
-    const perks = prestige.perks as Record<string, number>;
-    const memories = typeof prestige.memories === 'number' ? prestige.memories : 0;
-    if (!(perks.soulbound >= 1)) return save;
-    while (
-      perks.soulbound < MAX_TREASURE_LEVEL &&
-      memoriesSpentOn({ ...perks, soulbound: perks.soulbound + 1 }) <= memories
-    ) {
-      perks.soulbound++;
-    }
-    return save;
-  },
-};
+const migrations: Record<number, (save: RawSave) => RawSave> = {};
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);

@@ -187,7 +187,7 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
     },
   },
   {
-    id: 'epiphany',
+    id: 'leaf',
     name: 'Falling Leaf',
     icon: '🍂',
     weight: 7,

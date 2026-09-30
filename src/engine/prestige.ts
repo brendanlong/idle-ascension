@@ -1,12 +1,5 @@
 import { generatorCount } from '../content/generators';
-import {
-  PERKS,
-  PERKS_BY_ID,
-  PERK_LEVEL_LIMIT,
-  STASH_GENERATORS,
-  perkCost,
-  type PerkDef,
-} from '../content/perks';
+import { PERKS, PERKS_BY_ID, STASH_GENERATORS, perkCost, type PerkDef } from '../content/perks';
 import { firstStageOfRealm } from '../content/realms';
 import { log } from './events';
 import { createInitialState, type GameState } from './state';
@@ -108,17 +101,13 @@ export function describeSpecialPerk(perk: PerkDef, level: number): string | null
   }
 }
 
-export function memoriesSpentOn(perks: Record<string, number>): number {
+export function spentMemories(state: GameState): number {
   let spent = 0;
   for (const perk of PERKS) {
-    const level = Math.min(perks[perk.id] ?? 0, PERK_LEVEL_LIMIT);
+    const level = state.prestige.perks[perk.id] ?? 0;
     for (let l = 0; l < level; l++) spent += perkCost(perk, l);
   }
   return spent;
-}
-
-export function spentMemories(state: GameState): number {
-  return memoriesSpentOn(state.prestige.perks);
 }
 
 export function availableMemories(state: GameState): number {

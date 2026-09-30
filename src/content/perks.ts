@@ -11,10 +11,14 @@ export interface PerkDef {
   baseCost: number;
   costGrowth: number;
   requires?: readonly string[];
-  /** Level-1 effects. They compound each level (×2, ×4, ×8) unless diminishAfter is set. */
+  /** Level-1 effects; `scaling` decides how they grow. */
   effects: readonly Effect[];
-  /** After this many levels, further levels grow logarithmically (see diminishingEffect). */
-  diminishAfter?: number;
+  /**
+   * compound (default): multipliers multiply each level (×2, ×4, ×8).
+   * diminishing: logarithmic (see diminishingEffect), for effects that would
+   * break the game if they kept growing at a flat rate.
+   */
+  scaling?: 'compound' | 'diminishing';
   /** Non-effect behaviour, handled in engine/prestige.ts. */
   special?: 'keepTreasures' | 'startingResources';
 }
@@ -57,8 +61,8 @@ export const PERKS: readonly PerkDef[] = [
     baseCost: 3,
     costGrowth: 3,
     requires: ['meridians'],
-    diminishAfter: 4,
-    effects: [{ type: 'mult', stat: 'encounterRateMult', value: 1.25 }],
+    scaling: 'diminishing',
+    effects: [{ type: 'mult', stat: 'encounterRateMult', value: 1.5 }],
   },
   {
     id: 'lightning',
@@ -67,10 +71,10 @@ export const PERKS: readonly PerkDef[] = [
     maxLevel: Infinity,
     baseCost: 5,
     costGrowth: 4,
-    diminishAfter: 3,
+    scaling: 'diminishing',
     effects: [
       { type: 'add', stat: 'tribulationAllowedHits', value: 1 },
-      { type: 'mult', stat: 'tribulationBoltTimeMult', value: 1.15 },
+      { type: 'mult', stat: 'tribulationBoltTimeMult', value: 1.2 },
     ],
   },
   {
@@ -100,7 +104,7 @@ export const PERKS: readonly PerkDef[] = [
     maxLevel: Infinity,
     baseCost: 5,
     costGrowth: 3,
-    diminishAfter: 3,
+    scaling: 'diminishing',
     effects: [
       { type: 'add', stat: 'offlineCapHours', value: 4 },
       { type: 'add', stat: 'offlineEfficiency', value: 0.1 },

@@ -54,12 +54,8 @@ export function generatingPairs(elements: ReadonlySet<string>): number {
 
 export function perkEffects(perk: PerkDef, level: number): Effect[] {
   if (level <= 0) return [];
-  const { diminishAfter } = perk;
-  return perk.effects.map((e) =>
-    diminishAfter === undefined
-      ? compoundEffect(e, level)
-      : diminishingEffect(e, level, diminishAfter),
-  );
+  const scale = perk.scaling === 'diminishing' ? diminishingEffect : compoundEffect;
+  return perk.effects.map((e) => scale(e, level));
 }
 
 export function treasureEffects(treasure: TreasureDef, level: number): Effect[] {

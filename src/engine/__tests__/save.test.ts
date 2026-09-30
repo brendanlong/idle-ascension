@@ -69,24 +69,6 @@ describe('save/load', () => {
     expect(loaded.encounter.active).toBeNull();
   });
 
-  it('migrates v1 owned-treasure flags to levels', () => {
-    const raw = JSON.parse(serialize(newGame()));
-    raw.saveVersion = 1;
-    raw.treasures = { ring: true, pendant: true };
-    expect(deserialize(JSON.stringify(raw)).treasures).toEqual({ ring: 1, pendant: 1 });
-  });
-
-  it('raises v2 Soul-Bound Treasures as far as Memories cover it', () => {
-    const raw = JSON.parse(serialize(newGame()));
-    raw.saveVersion = 2;
-    raw.prestige.memories = 1000;
-    raw.prestige.perks = { soulbound: 1 };
-    // Levels cost 40, 120, 360, 1080: level 3 totals 520, level 4 totals 1600.
-    expect(deserialize(JSON.stringify(raw)).prestige.perks.soulbound).toBe(3);
-    raw.prestige.memories = 40;
-    expect(deserialize(JSON.stringify(raw)).prestige.perks.soulbound).toBe(1);
-  });
-
   it('limits absurd perk levels from edited saves', () => {
     const raw = JSON.parse(serialize(newGame()));
     raw.prestige.perks = { meridians: 1e12, soulbound: 1e12 };
