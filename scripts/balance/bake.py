@@ -35,19 +35,14 @@ write('src/content/realms.ts', realms)
 # Technique prices.
 ups = read('src/content/upgrades.ts')
 gens = read('src/content/generators.ts')
+gen_ids = set(re.findall(r"^    id: '(\w+)',", gens, re.M))
 for uid, cost in prices['up'].items():
-    m = re.match(r'^(\w+)-(1|5)$', uid)
-    if m and f"id: '{m.group(1)}'" in gens:
-        continue
+    if re.match(r'^(\w+)-1$', uid) and uid[:-2] in gen_ids:
+        continue  # resource techniques are priced from the resource's own cost
     pat = re.compile(r"(id: '" + re.escape(uid) + r"',.*?cost: )([^,\n]+)(,)", re.S)
     ups, n = pat.subn(lambda mm: mm.group(1) + lit(cost) + mm.group(3), ups, count=1)
     assert n == 1, uid
 write('src/content/upgrades.ts', ups)
-for gid in re.findall(r"^    id: '(\w+)',", gens, re.M):
-    a, b = prices['up'][f'{gid}-1'], prices['up'][f'{gid}-5']
-    block = re.compile(r"(id: '" + gid + r"',.*?upgradeNames: \[[^\]]*\],)(\n\s*upgradeCosts: \[[^\]]*\],)?", re.S)
-    gens, n = block.subn(lambda mm: mm.group(1) + f"\n    upgradeCosts: [{lit(a)}, {lit(b)}],", gens, count=1)
-    assert n == 1, gid
 for gid, (cost, qps) in prices['gen'].items():
     block = re.compile(r"(id: '" + gid + r"',.*?baseCost: )([^,\n]+)(,\s*baseQps: )([^,\n]+)(,)", re.S)
     gens, n = block.subn(lambda mm: mm.group(1) + lit(cost) + mm.group(3) + lit(qps) + mm.group(5), gens, count=1)

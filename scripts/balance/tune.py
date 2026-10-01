@@ -2,7 +2,7 @@
 """
 Schedule tuner. Runs the idle bot (scripts/sim.ts, SIM_PLAYER=passive) that
 regresses only when stuck, over a few seeds, and:
-- moves each first-time purchase's price toward its realm's target wait
+- moves each breakthrough, core and realm-gated resource price toward its realm's target wait
   (time since the previous first-time purchase, including regressing),
   with longer waits at the realms where we want a regression (walls);
 - moves each realm-gated resource's output so its first unit is about
@@ -44,12 +44,22 @@ def run(params, seed, extra={}):
     return {'done': final.group(1) == 'Godhood', 'time': dur(final.group(2)), 'loops': int(final.group(3)),
             'buys': buys, 'futile': int(gaps.group(4)), 'bursts': bursts}
 
-def all_keys():
+def dump_prices():
     out = subprocess.run(['npx', 'tsx', 'scripts/sim.ts'], capture_output=True, text=True, cwd=ROOT,
                          env=dict(os.environ, SIM_DUMP_PRICES='1')).stdout
-    d = json.loads(out)
-    gathering = {f'palm-{i}' for i in range(1, 6)}  # unlocked by motes absorbed
-    keys = {f'up:{u}' for u in d['up'] if u not in gathering} | {f'form:{i}' for i in range(len(d['form']))}
+    return json.loads(out)
+
+def fixed_price(key):
+    # Techniques keep their own prices (by hand early, a share of their realm's entry cost
+    # later, or from their resource's cost); the tuner sets the realm structure around them:
+    # breakthroughs, cores and late resources. Tuning techniques fed back on itself: one that
+    # barely helps gets bought the moment it's cheap, looks "too quick", and gets pricier
+    # every round.
+    return key.startswith('up:')
+
+def all_keys():
+    d = dump_prices()
+    keys = {f'up:{u}' for u in d['up'] if not fixed_price(f'up:{u}')} | {f'form:{i}' for i in range(len(d['form']))}
     keys |= {f'grade:{g}' for g in range(1, len(d['grade']) - 1)}  # the last grade is only reachable at Godhood
     return keys
 
@@ -65,7 +75,7 @@ def main():
         for key in set().union(*(r['buys'].keys() for r in res)):
             seen = [r['buys'][key] for r in res if key in r['buys']]
             realm = statistics.mode(b['realm'] for b in seen)
-            if realm not in TARGET: continue
+            if realm not in TARGET or fixed_price(key): continue
             wait = max(MIN_WAIT, statistics.median(b['wait'] for b in seen))
             goal = WALL_WAIT if key in WALL_STAGES else TARGET[realm]
             err = math.log(goal / wait)

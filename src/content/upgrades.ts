@@ -12,24 +12,19 @@ export interface UpgradeDef {
 }
 
 /**
- * Two techniques per resource: one soon after you start buying it, one when
- * you own a good stack. Ids keep the old first and last milestones' numbers.
+ * One technique per resource, once you own a few: priced from the resource's
+ * own cost so it arrives while that resource still matters.
  */
-const GENERATOR_MILESTONES = [
-  { id: 1, count: 5, costMult: 50, mult: 3 },
-  { id: 5, count: 25, costMult: 2_000, mult: 3 },
-];
+const GENERATOR_MILESTONE = { count: 10, costMult: 100, mult: 4 };
 
-const generatorUpgrades: UpgradeDef[] = GENERATORS.flatMap((gen) =>
-  GENERATOR_MILESTONES.map((m, i) => ({
-    id: `${gen.id}-${m.id}`,
-    name: gen.upgradeNames[i],
-    description: `Refine your ${gen.name} technique.`,
-    cost: gen.upgradeCosts?.[i] ?? gen.baseCost * m.costMult,
-    unlock: { type: 'generator', id: gen.id, count: m.count },
-    effects: [{ type: 'generatorMult', generator: gen.id, value: m.mult }],
-  })),
-);
+const generatorUpgrades: UpgradeDef[] = GENERATORS.map((gen) => ({
+  id: `${gen.id}-1`,
+  name: gen.upgradeName,
+  description: `Refine your ${gen.name} technique.`,
+  cost: gen.baseCost * GENERATOR_MILESTONE.costMult,
+  unlock: { type: 'generator', id: gen.id, count: GENERATOR_MILESTONE.count },
+  effects: [{ type: 'generatorMult', generator: gen.id, value: GENERATOR_MILESTONE.mult }],
+}));
 
 /** Gathering techniques: your hands learn to pull qi motes out of the air. */
 const palmUpgrades: UpgradeDef[] = [
@@ -45,7 +40,7 @@ const palmUpgrades: UpgradeDef[] = [
     id: 'palm-2',
     name: 'Cloud-Parting Palm',
     description: 'You part the clouds and gather what falls out. Well, small clouds.',
-    cost: 630_000,
+    cost: 5_000,
     unlock: { type: 'motes', count: 100 },
     effects: [
       { type: 'mult', stat: 'moteBaseMult', value: 2 },
@@ -56,7 +51,7 @@ const palmUpgrades: UpgradeDef[] = [
     id: 'palm-3',
     name: 'Eighteen Dragon-Subduing Palms',
     description: 'Each mote you seize carries more of everything you cultivate.',
-    cost: 8.8e11,
+    cost: 500_000,
     unlock: { type: 'motes', count: 400 },
     effects: [{ type: 'mult', stat: 'moteValueMult', value: 1.25 }],
   },
@@ -99,7 +94,7 @@ const senseUpgrades: UpgradeDef[] = [
     id: 'sense-1',
     name: 'Spiritual Sense',
     description: 'You begin to notice the drifting motes of qi around you.',
-    cost: 1_800,
+    cost: 300,
     unlock: { type: 'realm', realm: 'qiCondensation' },
     effects: [
       { type: 'mult', stat: 'moteSpawnMult', value: 1.5 },
@@ -110,7 +105,7 @@ const senseUpgrades: UpgradeDef[] = [
     id: 'sense-2',
     name: 'Qi Whirlpool',
     description: 'Qi spirals toward you like water into a drain.',
-    cost: 1.7e9,
+    cost: 400_000,
     unlock: { type: 'realm', realm: 'foundation' },
     effects: [{ type: 'mult', stat: 'moteSpawnMult', value: 1.5 }],
   },
@@ -138,7 +133,7 @@ const scriptureUpgrades: UpgradeDef[] = [
     name: 'Sunflower Manual',
     description:
       '"To practice this art, one must first—" You close the book. You will not be practicing this art.',
-    cost: 1.5e9,
+    cost: 7_777,
     unlock: { type: 'realm', realm: 'qiCondensation' },
     effects: [{ type: 'mult', stat: 'globalMult', value: 1.01 }],
   },
@@ -146,7 +141,7 @@ const scriptureUpgrades: UpgradeDef[] = [
     id: 'scripture-1',
     name: 'Heaven and Earth Harmony Scripture',
     description: 'Breathe with the world, and the world breathes with you.',
-    cost: 2.9e9,
+    cost: 3_000_000,
     unlock: { type: 'realm', realm: 'foundation' },
     effects: [{ type: 'mult', stat: 'globalMult', value: 1.5 }],
   },
@@ -162,7 +157,7 @@ const scriptureUpgrades: UpgradeDef[] = [
     id: 'scripture-3',
     name: 'Nine Yin True Scripture',
     description: 'The cold counterpart to Nine Yang. Together, they balance.',
-    cost: 1.2e14,
+    cost: 3.7e12,
     unlock: { type: 'realm', realm: 'nascentSoul' },
     effects: [{ type: 'mult', stat: 'globalMult', value: 2 }],
   },
@@ -205,7 +200,7 @@ const soulUpgrades: UpgradeDef[] = [
     id: 'soul-1',
     name: 'Soul Nourishing Wood',
     description: 'Your Nascent Soul grows quicker at its practice, and cultivates beside you.',
-    cost: 3e15,
+    cost: 7.4e12,
     unlock: { type: 'realm', realm: 'nascentSoul' },
     effects: [{ type: 'mult', stat: 'globalMult', value: 1.5 }],
   },
