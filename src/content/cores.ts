@@ -85,11 +85,11 @@ export interface CoreGradeDef {
 
 export const CORE_GRADES: readonly CoreGradeDef[] = [
   { name: 'Mud', mult: 1.2, refineCost: 0, color: '#6b5a45' },
-  { name: 'Iron', mult: 1.5, refineCost: 4.7e10, color: '#7d8590' },
-  { name: 'Bronze', mult: 2, refineCost: 7.3e11, color: '#b0773e' },
-  { name: 'Silver', mult: 2.5, refineCost: 5.9e14, color: '#c9d1da' },
-  { name: 'Gold', mult: 3, refineCost: 2.3e18, color: '#f0c24b' },
-  { name: 'Jade', mult: 4, refineCost: 5e22, color: '#63c29a' },
+  { name: 'Iron', mult: 1.5, refineCost: 5.9e10, color: '#7d8590' },
+  { name: 'Bronze', mult: 2, refineCost: 1.1e12, color: '#b0773e' },
+  { name: 'Silver', mult: 2.5, refineCost: 3.5e14, color: '#c9d1da' },
+  { name: 'Gold', mult: 3, refineCost: 3.7e19, color: '#f0c24b' },
+  { name: 'Jade', mult: 4, refineCost: 5.6e22, color: '#63c29a' },
   { name: 'Starsteel', mult: 5, refineCost: 5e27, color: '#9fb8ff' },
   { name: 'Primordial', mult: 7, refineCost: 3e34, color: '#f4f0ff' },
 ];
@@ -98,4 +98,4 @@ export const CORE_GRADES: readonly CoreGradeDef[] = [
  * Qi cost to form the Nth core (0-based), priced for the realm whose core
  * slot it usually fills (Core Formation, Nascent Soul, ...).
  */
-export const CORE_FORM_COSTS: readonly number[] = [4.9e10, 3.6e13, 4e17, 1e22, 5e27];
+export const CORE_FORM_COSTS: readonly number[] = [7.5e10, 2.2e13, 1.8e17, 1e21, 5e27];

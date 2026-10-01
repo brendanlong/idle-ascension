@@ -46,11 +46,11 @@ describe('regression', () => {
     );
     expect(byRealm).toEqual({
       coreFormation: 3,
-      nascentSoul: 10,
-      spiritSevering: 25,
-      daoSeeking: 59,
-      immortalAscension: 82,
-      godhood: 98,
+      nascentSoul: 11,
+      spiritSevering: 31,
+      daoSeeking: 50,
+      immortalAscension: 65,
+      godhood: 79,
     });
   });
 

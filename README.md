@@ -35,6 +35,7 @@ npm run typecheck
 npm run build
 npm run sim -- 72 10     # headless balance sim: max hours, minutes without progress before regressing
 SIM_PLAYER=passive npm run sim   # also active, or taper (default); see scripts/sim.ts for SIM_TREASURES, SIM_IMPACT, SIM_TUNE
+scripts/balance/eval.sh <(echo '{}') SIM_PLAYER=passive   # 6 seeds; see scripts/balance/ for the price tuner
 npm run format
 npm run social-preview   # re-render public/social-preview.jpg from scripts/social-preview.html
 npm run icons            # re-render the favicon and install icons in public/
