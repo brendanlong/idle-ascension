@@ -11,13 +11,19 @@ describe('formatNumber', () => {
     expect(formatNumber(12_345)).toBe('12.3K');
     expect(formatNumber(123_456)).toBe('123K');
     expect(formatNumber(999_999)).toBe('1.00M');
+    expect(formatNumber(3e27)).toBe('3.00Oc');
+    expect(formatNumber(3e28)).toBe('30.0Oc');
+    expect(formatNumber(3e29)).toBe('300Oc');
     expect(formatNumber(1e50)).toBe('1.00e50');
     expect(formatNumber(1_500_000, 'scientific')).toBe('1.50e6');
   });
 
   it('supports Chinese myriad units', () => {
-    expect(formatNumber(1_500_000, 'myriad')).toBe('150.0万');
-    expect(formatNumber(2.3e9, 'myriad')).toBe('23.00亿');
-    expect(formatNumber(99_995_000, 'myriad')).toBe('1.000亿');
+    expect(formatNumber(9_999, 'myriad')).toBe('9999');
+    expect(formatNumber(15_000, 'myriad')).toBe('1.50万');
+    expect(formatNumber(1_500_000, 'myriad')).toBe('150万');
+    expect(formatNumber(12_345_678, 'myriad')).toBe('1230万');
+    expect(formatNumber(2.3e9, 'myriad')).toBe('23.0亿');
+    expect(formatNumber(99_960_000, 'myriad')).toBe('1.00亿');
   });
 });
