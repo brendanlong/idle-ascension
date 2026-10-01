@@ -1,20 +1,25 @@
 import { generatorCount } from '../content/generators';
 import { PERKS, PERKS_BY_ID, STASH_GENERATORS, perkCost, type PerkDef } from '../content/perks';
-import { firstStageOfRealm } from '../content/realms';
+import { FINAL_STAGE, STAGES, firstStageOfRealm } from '../content/realms';
 import { log } from './events';
 import { createInitialState, type GameState } from './state';
 import { computeModifiers } from './stats';
 
 const REGRESSION_REALM = 'coreFormation';
 const BASE_MEMORIES = 3;
-/** Each stage beyond Core Formation multiplies the Memories a regression yields by this. */
-const MEMORY_GROWTH_PER_STAGE = 1.35;
+/**
+ * Memories grow with the breakthrough cost of the stage reached, to this
+ * power. Stages in early realms are cheap steps apart, so early regressions
+ * gain little; late realms' steep stages make each regression count.
+ */
+const MEMORY_COST_EXPONENT = 0.1;
 
 /** Memories gained by regressing from a given stage. */
 export function memoriesForStage(stage: number): number {
   const first = firstStageOfRealm(REGRESSION_REALM);
   if (stage < first) return 0;
-  return Math.floor(BASE_MEMORIES * MEMORY_GROWTH_PER_STAGE ** (stage - first));
+  const ratio = STAGES[Math.min(stage, FINAL_STAGE)].cost / STAGES[first].cost;
+  return Math.floor(BASE_MEMORIES * ratio ** MEMORY_COST_EXPONENT);
 }
 
 export function pendingMemories(state: GameState): number {

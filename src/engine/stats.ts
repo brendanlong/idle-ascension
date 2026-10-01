@@ -26,6 +26,8 @@ export interface Stats {
   generatorQps: number;
   clickPower: number;
   autoClickQps: number;
+  /** Qi/s from motes gathered automatically. */
+  autoMoteQps: number;
   /** Total passive qi/s. */
   qps: number;
   moteValue: number;
@@ -33,12 +35,14 @@ export interface Stats {
 }
 
 const BASE_MOTE_SPAWN_PER_SECOND = 1;
-const MOTE_CLICK_FRACTION = 0.3;
 /**
- * A mote is also worth at least this many seconds of qi/s (before mote
- * multipliers), so motes stay relevant once production outgrows clicking.
+ * A mote is worth this fraction of a click's flat power (not the part that
+ * comes from qi/s), or this many seconds of resource qi/s if that's more,
+ * before mote multipliers. Early on motes track clicks; later they track
+ * production. Auto-clicks are left out so click bonuses don't also raise motes.
  */
-const MOTE_QPS_SECONDS = 0.05;
+const MOTE_CLICK_FRACTION = 1;
+const MOTE_QPS_SECONDS = 0.15;
 
 export function realmMultiplier(stage: number): number {
   let mult = 1;
@@ -111,9 +115,14 @@ export function computeStats(state: GameState, includeBuffs = true): Stats {
     generatorQps += unit * (state.generators[g.id] ?? 0);
   }
 
-  const clickPower =
-    mods.clickFlat * mods.clickMult * global + mods.clickQpsFraction * generatorQps;
+  const flatClickPower = mods.clickFlat * mods.clickMult * global;
+  const clickPower = flatClickPower + mods.clickQpsFraction * generatorQps;
   const autoClickQps = mods.autoClicksPerSecond * clickPower;
+  const moteValue =
+    Math.max(flatClickPower * MOTE_CLICK_FRACTION, generatorQps * MOTE_QPS_SECONDS) *
+    mods.moteValueMult;
+  const moteSpawnPerSecond = BASE_MOTE_SPAWN_PER_SECOND * mods.moteSpawnMult;
+  const autoMoteQps = moteSpawnPerSecond * Math.min(1, mods.moteAutoCollect) * moteValue;
 
   return {
     mods,
@@ -124,10 +133,9 @@ export function computeStats(state: GameState, includeBuffs = true): Stats {
     generatorQps,
     clickPower,
     autoClickQps,
-    qps: generatorQps + autoClickQps,
-    moteValue:
-      Math.max(clickPower * MOTE_CLICK_FRACTION, (generatorQps + autoClickQps) * MOTE_QPS_SECONDS) *
-      mods.moteValueMult,
-    moteSpawnPerSecond: BASE_MOTE_SPAWN_PER_SECOND * mods.moteSpawnMult,
+    autoMoteQps,
+    qps: generatorQps + autoClickQps + autoMoteQps,
+    moteValue,
+    moteSpawnPerSecond,
   };
 }

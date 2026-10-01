@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BUFFS_BY_ID } from '../../content/buffs';
+import { CORE_GRADES } from '../../content/cores';
 import { ENCOUNTERS } from '../../content/encounters';
 import { REGRESSION_STORY } from '../../content/lore';
 import { NAME_TABLES } from '../../content/names';
@@ -110,5 +111,13 @@ describe('content integrity', () => {
     for (let i = 2; i < STAGES.length; i++) {
       expect(STAGES[i].cost).toBeGreaterThan(STAGES[i - 1].cost);
     }
+  });
+
+  it('prices each core grade above the entry cost of the realm that unlocks it', () => {
+    CORE_GRADES.forEach((grade, i) => {
+      if (i === 0) return;
+      const realm = REALMS.find((r) => (r.coreGradeCap ?? -1) >= i)!;
+      expect(grade.refineCost).toBeGreaterThan(realm.firstStageCost);
+    });
   });
 });

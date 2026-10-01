@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { REALMS, STAGES, firstStageOfRealm } from '../../content/realms';
 import {
+  FAMILIAR_STAGE_COST_MULT,
   attemptBreakthrough,
   breakthroughBlocker,
+  breakthroughCost,
   currentTribulationTrial,
   recordTribulationTrial,
   tribulationPassScore,
@@ -17,6 +19,22 @@ describe('breakthroughs', () => {
     expect(attemptBreakthrough(state, computeStats(state).mods)).toBe('advanced');
     expect(state.stage).toBe(1);
     expect(state.qi).toBe(100 - STAGES[1].cost);
+  });
+
+  it('discounts stages reached in an earlier loop', () => {
+    const state = newGame({ stage: 4 });
+    state.stats.bestStage = 5;
+    expect(breakthroughCost(state, 5)).toBe(STAGES[5].cost * FAMILIAR_STAGE_COST_MULT);
+    expect(breakthroughCost(state, 6)).toBe(STAGES[6].cost);
+  });
+
+  it('lets you through tribulations you have survived before', () => {
+    const target = firstStageOfRealm('coreFormation');
+    const state = newGame({ qi: 1e12, stage: target - 1 });
+    state.stats.bestStage = target;
+    expect(attemptBreakthrough(state, computeStats(state).mods)).toBe('advanced');
+    expect(state.tribulation).toBeNull();
+    expect(state.stage).toBe(target);
   });
 
   it('requires a pill furnace for Foundation Establishment', () => {

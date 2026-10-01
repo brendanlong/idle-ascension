@@ -1,11 +1,4 @@
-import {
-  CORE_FORM_BASE_COST,
-  CORE_FORM_COST_GROWTH,
-  CORE_GRADES,
-  CORE_REFINE_COST_GROWTH,
-  ELEMENTS_BY_ID,
-  type ElementId,
-} from '../content/cores';
+import { CORE_FORM_COSTS, CORE_GRADES, ELEMENTS_BY_ID, type ElementId } from '../content/cores';
 import { REALMS, STAGES } from '../content/realms';
 import { spendQi } from './economy';
 import type { Modifiers } from './effects';
@@ -14,12 +7,18 @@ import type { GameState } from './state';
 import { unlockedCoreSlots } from './stats';
 
 export function coreFormCost(mods: Modifiers, coreIndex: number): number {
-  return CORE_FORM_BASE_COST * CORE_FORM_COST_GROWTH ** coreIndex * mods.coreCostMult;
+  const costs = CORE_FORM_COSTS;
+  return costs[Math.min(coreIndex, costs.length - 1)] * mods.coreCostMult;
 }
 
+/**
+ * A grade's own price, but never less than forming this core: a core formed in
+ * a later realm doesn't catch up to the grade cap for free.
+ */
 export function coreRefineCost(state: GameState, mods: Modifiers, coreIndex: number): number {
-  const core = state.cores[coreIndex];
-  return coreFormCost(mods, coreIndex) * CORE_REFINE_COST_GROWTH ** (core.grade + 1);
+  const next = CORE_GRADES[state.cores[coreIndex].grade + 1];
+  if (!next) return Infinity;
+  return Math.max(next.refineCost * mods.coreCostMult, coreFormCost(mods, coreIndex));
 }
 
 export function canFormCore(state: GameState, mods: Modifiers, element: ElementId): boolean {

@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { PERKS_BY_ID } from '../../content/perks';
-import { firstStageOfRealm } from '../../content/realms';
+import { REALMS, firstStageOfRealm } from '../../content/realms';
 import {
   availableMemories,
   buyPerk,
   describeSpecialPerk,
+  memoriesForStage,
   pendingMemories,
   perkStatus,
   regress,
@@ -25,6 +26,24 @@ describe('regression', () => {
 
   it('refuses to regress when blocked', () => {
     expect(regress(newGame({ stage: CORE_FORMATION - 1 }), 0)).toBeNull();
+  });
+
+  it('awards Memories by realm as tuned, so changing breakthrough costs is a deliberate choice', () => {
+    // memoriesForStage follows breakthrough costs; re-run the sim if these move.
+    const byRealm = Object.fromEntries(
+      REALMS.filter((r) => firstStageOfRealm(r.id) >= CORE_FORMATION).map((r) => [
+        r.id,
+        memoriesForStage(firstStageOfRealm(r.id)),
+      ]),
+    );
+    expect(byRealm).toEqual({
+      coreFormation: 3,
+      nascentSoul: 5,
+      spiritSevering: 16,
+      daoSeeking: 70,
+      immortalAscension: 261,
+      godhood: 1039,
+    });
   });
 
   it('awards more memories for deeper cultivation', () => {

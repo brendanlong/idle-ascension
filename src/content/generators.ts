@@ -234,8 +234,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     icon: '🛕',
     description: 'Mortals in countless worlds burn incense to you. Their faith becomes qi.',
     minRealm: 'immortalAscension',
-    baseCost: 5e27,
-    baseQps: 1.2e11,
+    baseCost: 5e26,
+    baseQps: 3e10,
     upgradeNames: [
       'Wayside Shrines',
       'Golden Statues',
@@ -250,8 +250,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     icon: '🏛️',
     description: 'A throne among the immortals, and a share of heaven itself.',
     minRealm: 'immortalAscension',
-    baseCost: 3e29,
-    baseQps: 3e12,
+    baseCost: 3e28,
+    baseQps: 3e11,
     upgradeNames: [
       'Jade Tablet of Office',
       'Celestial Bureaucracy',
@@ -266,8 +266,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     icon: '🌑',
     description: 'A fragment of the nothing that came before heaven and earth.',
     minRealm: 'immortalAscension',
-    baseCost: 2e31,
-    baseQps: 8e13,
+    baseCost: 2e30,
+    baseQps: 8e12,
     upgradeNames: [
       'Touching the Void',
       'Chaos Qi',
