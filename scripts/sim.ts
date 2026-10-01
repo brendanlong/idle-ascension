@@ -3,8 +3,10 @@
  * long each milestone takes. Run with `npm run sim -- [clicksPerSecond] [hours] [stallMinutes]`.
  * Environment variables:
  *   SIM_SEED=<n>      a different random seed
- *   SIM_ACTIVE=<0-1>  fraction of each 10 minutes spent actively playing (clicking, catching
- *                     motes, claiming encounters and trials); the rest is idle (default 0.5)
+ *   SIM_ACTIVE=<0-1>  fraction of each 10 minutes spent actively playing: clicking, catching
+ *                     motes, claiming encounters and trials, buying and breaking through. The
+ *                     rest is idle. By default it tapers from 80% at the start toward 10%,
+ *                     halving the gap every 2 hours, like a player who gets more passive.
  *   SIM_IMPACT=1      also print how much each resource, technique, core and treasure adds
  *                     to income when it first becomes available
  */
@@ -14,7 +16,12 @@ import { UPGRADES } from '../src/content/upgrades';
 import { PERKS } from '../src/content/perks';
 import { REALMS, STAGES, stageName } from '../src/content/realms';
 import { MAX_TREASURE_LEVEL, TREASURES } from '../src/content/treasures';
-import { attemptBreakthrough, nextStage, recordTribulationTrial } from '../src/engine/breakthrough';
+import {
+  attemptBreakthrough,
+  breakthroughCost,
+  nextStage,
+  recordTribulationTrial,
+} from '../src/engine/breakthrough';
 import {
   canFormCore,
   canRefineCore,
@@ -49,13 +56,15 @@ import { tick } from '../src/engine/tick';
 const clicksPerSecond = Number(process.argv[2] ?? 3);
 const maxHours = Number(process.argv[3] ?? 48);
 const MOTE_CATCH_RATE = 0.4;
-const ACTIVE_FRACTION = Number(process.env.SIM_ACTIVE ?? 0.5);
+const FIXED_ACTIVE_FRACTION = process.env.SIM_ACTIVE ? Number(process.env.SIM_ACTIVE) : null;
 const ACTIVE_CYCLE_SECONDS = 600;
 const printImpact = !!process.env.SIM_IMPACT;
 /** How well the bot plays elemental trials (0-1), for tribulations and optional offers. */
 const TRIBULATION_TRIAL_SCORE = 0.8;
 const OPTIONAL_TRIAL_SCORE = 0.7;
 const STALL_SECONDS = Number(process.argv[4] ?? 45) * 60;
+/** The bot regresses once that would multiply its Memory bonus by this much (or it's stalled). */
+const REGRESS_AT_MEMORY_GAIN = 1.5;
 const CORE_ORDER: ElementId[] = ['wood', 'fire', 'water', 'earth', 'metal'];
 
 let seed = Number(process.env.SIM_SEED ?? 12345);
@@ -68,6 +77,14 @@ let state: GameState = createInitialState(0);
 state.flags.introSeen = true;
 let time = 0;
 let lastProgress = 0;
+/** Gaps between breakthroughs (or before regressing), the "sitting on your hands" time. */
+const waits: number[] = [];
+let loopLongestWait = { seconds: 0, stage: 0 };
+function recordWait(): void {
+  const gap = time - lastProgress;
+  waits.push(gap);
+  if (gap > loopLongestWait.seconds) loopLongestWait = { seconds: gap, stage: state.stage };
+}
 
 /** Per-realm activity in the current loop, printed for the final loop. */
 interface RealmActivity {
@@ -89,8 +106,12 @@ function activity(): RealmActivity {
 }
 const reachedRealm = new Set<number>();
 
+function activeFraction(): number {
+  return FIXED_ACTIVE_FRACTION ?? 0.1 + 0.7 * 0.5 ** (time / 3600 / 2);
+}
+
 function isActive(): boolean {
-  return time % ACTIVE_CYCLE_SECONDS < ACTIVE_CYCLE_SECONDS * ACTIVE_FRACTION;
+  return time % ACTIVE_CYCLE_SECONDS < ACTIVE_CYCLE_SECONDS * activeFraction();
 }
 
 /** Qi/s while idle (passive) and while actively playing (plus clicks and caught motes), buffs excluded. */
@@ -103,7 +124,7 @@ function income(s: GameState): { passive: number; active: number } {
 }
 
 function averageIncome(i: { passive: number; active: number }): number {
-  return i.passive + ACTIVE_FRACTION * (i.active - i.passive);
+  return i.passive + activeFraction() * (i.active - i.passive);
 }
 
 /** What something added to income at the moment it was first bought (or could first be found). */
@@ -223,10 +244,12 @@ function spend(): void {
     bought = false;
     let stats = computeStats(state);
     const next = nextStage(state);
-    if (next && state.qi >= next.cost) {
+    const nextCost = next ? breakthroughCost(state, next.index) : Infinity;
+    if (next && state.qi >= nextCost) {
       const result = attemptBreakthrough(state, stats.mods, rng);
       if (result !== 'blocked') {
         while (state.tribulation) recordTribulationTrial(state, TRIBULATION_TRIAL_SCORE);
+        recordWait();
         lastProgress = time;
         bought = true;
         continue;
@@ -270,7 +293,7 @@ function spend(): void {
       }
     });
     // Save up for a breakthrough if it's within a few minutes of income.
-    const reserve = next && next.cost < stats.qps * 180 ? next.cost : 0;
+    const reserve = nextCost < stats.qps * 180 ? nextCost : 0;
     stats = computeStats(state);
     let best: { id: string; ratio: number; cost: number } | null = null;
     GENERATORS.forEach((g, i) => {
@@ -298,12 +321,34 @@ function spend(): void {
   }
 }
 
-/** Where active-play income comes from: "gen 40% auto 10% click 30% motes 20%". */
+/**
+ * Seconds spent in each realm per loop, and the loop that first completed it
+ * (left it for the next realm). Loops up to that one are the realm's first
+ * visits, which shouldn't be skipped; later loops are replays, which should be quick.
+ */
+interface RealmVisits {
+  seconds: Map<number, number>;
+  completedLoop?: number;
+}
+const realmVisits: RealmVisits[] = [];
+let previousRealm = 0;
+function trackRealmVisits(): void {
+  const r = STAGES[state.stage].realmIndex;
+  const loop = state.prestige.loops;
+  const left = realmVisits[previousRealm];
+  if (r > previousRealm && left && left.completedLoop === undefined) left.completedLoop = loop;
+  previousRealm = r;
+  const v = (realmVisits[r] ??= { seconds: new Map() });
+  v.seconds.set(loop, (v.seconds.get(loop) ?? 0) + 1);
+}
+
+/** Where active-play income comes from: "gen 40% auto 10% gather 5% click 25% motes 20%". */
 function incomeSources(): string {
   const stats = computeStats(state, false);
   const sources = {
     gen: stats.generatorQps,
     auto: stats.autoClickQps,
+    gather: stats.autoMoteQps,
     click: clicksPerSecond * stats.clickPower,
     motes: stats.moteSpawnPerSecond * MOTE_CATCH_RATE * stats.moteValue,
   };
@@ -332,7 +377,9 @@ while (time < maxHours * 3600) {
   tick(state, 1, rng);
   time++;
   activity().seconds++;
-  spend();
+  // Idle players don't shop or face tribulations; they catch up when they check in.
+  if (isActive()) spend();
+  trackRealmVisits();
   if (printImpact) {
     trackLaterImpact();
     trackTreasures();
@@ -350,8 +397,17 @@ while (time < maxHours * 3600) {
 
   const pending = pendingMemories(state);
   const stalled = time - lastProgress > STALL_SECONDS;
-  if (!regressionBlocker(state) && (stalled || pending >= Math.max(3, state.prestige.memories))) {
-    report(`regress (+${pending} memories${stalled ? ', stalled' : ''})`);
+  const { memoryMult: memoryMultBefore, mods } = computeStats(state);
+  const memoryGain = (memoryMultBefore + pending * mods.memoryBonus) / memoryMultBefore;
+  if (
+    isActive() &&
+    !regressionBlocker(state) &&
+    (stalled || memoryGain >= REGRESS_AT_MEMORY_GAIN)
+  ) {
+    recordWait();
+    const wait = `longest wait ${formatDuration(loopLongestWait.seconds)} at ${stageName(loopLongestWait.stage)}`;
+    loopLongestWait = { seconds: 0, stage: 0 };
+    const label = `regress (+${pending} memories${stalled ? ', stalled' : ''}`;
     state = regress(state, 0)!;
     realmActivity = {};
     lastProgress = time;
@@ -362,11 +418,17 @@ while (time < maxHours * 3600) {
         if (perkStatus(state, p.id) === 'available')
           boughtPerk = buyPerk(state, p.id) || boughtPerk;
     }
+    report(`${label}, ×${(computeStats(state).memoryMult / memoryMultBefore).toFixed(2)})`);
+    console.log(`          ${wait}`);
   }
 }
 
 console.log(
   `\nFinal: ${stageName(state.stage)} after ${formatDuration(time)}, ${state.prestige.loops} regressions`,
+);
+const sortedWaits = [...waits].sort((a, b) => b - a);
+console.log(
+  `Waits between breakthroughs: longest ${sortedWaits.slice(0, 3).map(formatDuration).join(', ')}; ${waits.filter((w) => w > 15 * 60).length} over 15m, ${waits.filter((w) => w > 30 * 60).length} over 30m`,
 );
 console.log('Final loop by realm:');
 for (const [realm, r] of Object.entries(realmActivity)) {
@@ -374,6 +436,24 @@ for (const [realm, r] of Object.entries(realmActivity)) {
     `  ${realm.padEnd(26)} ${formatDuration(r.seconds).padStart(8)}  bought ${String(r.generatorsBought).padStart(5)} resources, ${String(r.techniques).padStart(3)} techniques  ${r.firstBought.length ? `first bought: ${r.firstBought.join(', ')}` : ''}`,
   );
 }
+console.log(
+  'Realm visits: time spent before first completing it (and over how many loops); median time per later loop:',
+);
+realmVisits.forEach((v, r) => {
+  if (!v || r === 0) return;
+  const done = v.completedLoop ?? Infinity;
+  const loops = [...v.seconds.keys()];
+  const before = loops.filter((l) => l <= done);
+  const firstVisits = before.reduce((sum, l) => sum + v.seconds.get(l)!, 0);
+  const replays = loops
+    .filter((l) => l > done)
+    .map((l) => v.seconds.get(l)!)
+    .sort((a, b) => a - b);
+  const median = replays.length ? formatDuration(replays[Math.floor(replays.length / 2)]) : '—';
+  console.log(
+    `  ${REALMS[r].name.padEnd(26)} ${formatDuration(firstVisits).padStart(8)} over ${before.length} loop${before.length === 1 ? ' ' : 's'}${v.completedLoop === undefined ? ' (never completed)' : ''}   replays ${median.padStart(8)}`,
+  );
+});
 const treasureLevels = Object.values(state.treasures);
 console.log(
   `Treasures: ${treasureLevels.length}/${TREASURES.length} found, levels ${treasureLevels.reduce((a, b) => a + b, 0)}/${TREASURES.length * MAX_TREASURE_LEVEL}`,

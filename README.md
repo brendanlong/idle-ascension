@@ -22,7 +22,7 @@ It runs in the browser on desktop or phone, and can be added to your home screen
 - **Cores**: from Core Formation you condense cores. Each is attuned to one of the Five Elements (its colour/effect) and refined through metal grades (Mud → Iron → Bronze → … → Primordial). Your realm limits how far you can refine. Cores adjacent in the generating cycle (Wood → Fire → Earth → Metal → Water → Wood) grant a bonus.
 - **Fortuitous encounters**: arrogant young masters, hidden caves, mysterious old beggars… click them for qi windfalls, buffs, or treasures.
 - **Treasures**: rarer finds from encounters, each with a permanent bonus. Finding a treasure again refines it to a higher level.
-- **Regression (prestige)**: once you've reached Core Formation, court death and let your mother's jade pendant send you back to age sixteen. You keep **Memories** (+2% qi each, forever) and spend them on permanent insights, most of which can be levelled up indefinitely.
+- **Regression (prestige)**: once you've reached Core Formation, court death and let your mother's jade pendant send you back to age sixteen. You keep **Memories** (+2% qi each, forever; deeper regressions yield far more) and spend them on permanent insights, most of which can be levelled up indefinitely. Stages you've reached before cost a fraction as much, so you're soon back where you left off.
 - **Closed-door cultivation**: offline progress (capped, reduced efficiency; both upgradeable). Leaving the tab in the background for over a minute counts too.
 
 ## Development
@@ -34,7 +34,7 @@ npm test           # Vitest unit tests for the engine
 npm run typecheck
 npm run build
 npm run sim -- 1 72 45   # headless balance sim: clicks/sec, max hours, minutes stalled before regressing
-SIM_ACTIVE=0.2 SIM_IMPACT=1 npm run sim   # play actively 20% of the time; report each item's impact
+SIM_ACTIVE=0.2 SIM_IMPACT=1 npm run sim   # play actively 20% of the time (default: tapering from 80%); report each item's impact
 npm run format
 npm run social-preview   # re-render public/social-preview.jpg from scripts/social-preview.html
 npm run icons            # re-render the favicon and install icons in public/

@@ -59,10 +59,10 @@ export const ELEMENTS: readonly ElementDef[] = [
     name: 'Water',
     glyph: '水',
     color: '#4f8fd6',
-    description: 'Flow. Qi motes appear more often and are worth more.',
+    description: 'Flow. Qi motes are worth more, and some flow to you on their own.',
     effects: (g) => [
-      { type: 'mult', stat: 'moteSpawnMult', value: 1.2 + 0.03 * g },
-      { type: 'mult', stat: 'moteValueMult', value: 1.3 + 0.05 * g },
+      { type: 'mult', stat: 'moteValueMult', value: 1.3 },
+      { type: 'add', stat: 'moteAutoCollect', value: 0.05 + 0.02 * g },
     ],
   },
 ];
@@ -93,12 +93,12 @@ export const CORE_GRADES: readonly CoreGradeDef[] = [
   { name: 'Silver', mult: 2.5, refineCost: 5e11, color: '#c9d1da' },
   { name: 'Gold', mult: 3, refineCost: 3e16, color: '#f0c24b' },
   { name: 'Jade', mult: 4, refineCost: 5e22, color: '#63c29a' },
-  { name: 'Starsteel', mult: 5, refineCost: 5e28, color: '#9fb8ff' },
-  { name: 'Primordial', mult: 7, refineCost: 1e37, color: '#f4f0ff' },
+  { name: 'Starsteel', mult: 5, refineCost: 5e27, color: '#9fb8ff' },
+  { name: 'Primordial', mult: 7, refineCost: 3e34, color: '#f4f0ff' },
 ];
 
 /**
  * Qi cost to form the Nth core (0-based), priced for the realm whose core
  * slot it usually fills (Core Formation, Nascent Soul, ...).
  */
-export const CORE_FORM_COSTS: readonly number[] = [1e8, 1e11, 5e15, 1e22, 5e28];
+export const CORE_FORM_COSTS: readonly number[] = [1e8, 1e11, 5e15, 1e22, 5e27];

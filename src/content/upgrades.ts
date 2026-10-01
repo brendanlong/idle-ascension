@@ -47,10 +47,14 @@ const palmUpgrades: UpgradeDef[] = [
   {
     id: 'palm-2',
     name: 'Cloud-Parting Palm',
-    description: 'Your strikes part the clouds. Well, small clouds.',
+    description:
+      'Your strikes part the clouds. Well, small clouds. Each one carries some of what you cultivate.',
     cost: 5_000,
     unlock: { type: 'clicks', count: 150 },
-    effects: [{ type: 'mult', stat: 'clickMult', value: 2 }],
+    effects: [
+      { type: 'mult', stat: 'clickMult', value: 2 },
+      { type: 'add', stat: 'clickQpsFraction', value: 0.06 },
+    ],
   },
   {
     id: 'palm-3',
@@ -58,7 +62,7 @@ const palmUpgrades: UpgradeDef[] = [
     description: 'Each click channels a fraction of everything you cultivate.',
     cost: 500_000,
     unlock: { type: 'clicks', count: 500 },
-    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.03 }],
+    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.05 }],
   },
   {
     id: 'palm-4',
@@ -66,7 +70,7 @@ const palmUpgrades: UpgradeDef[] = [
     description: 'A palm so vast a monkey king could not escape it.',
     cost: 20_000_000,
     unlock: { type: 'clicks', count: 1_500 },
-    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.04 }],
+    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.05 }],
   },
   {
     id: 'palm-5',
@@ -74,7 +78,7 @@ const palmUpgrades: UpgradeDef[] = [
     description: 'One finger. The sky cracks.',
     cost: 5e10,
     unlock: { type: 'clicks', count: 4_000 },
-    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.06 }],
+    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.04 }],
   },
   {
     id: 'palm-6',
@@ -82,15 +86,15 @@ const palmUpgrades: UpgradeDef[] = [
     description: 'You raise your hand and the sun goes dark.',
     cost: 2e24,
     unlock: { type: 'realm', realm: 'daoSeeking' },
-    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.08 }],
+    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.04 }],
   },
   {
     id: 'palm-7',
     name: 'Finger That Ends Worlds',
     description: 'Somewhere, a small world you never visited quietly ceases to exist.',
-    cost: 2e31,
+    cost: 2e30,
     unlock: { type: 'realm', realm: 'immortalAscension' },
-    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.12 }],
+    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.05 }],
   },
 ];
 
@@ -117,10 +121,10 @@ const senseUpgrades: UpgradeDef[] = [
   {
     id: 'sense-3',
     name: 'Divine Sense',
-    description: 'Your awareness blankets the mountain. No mote escapes you.',
+    description: 'Your awareness blankets the mountain. Motes drift to you even while you rest.',
     cost: 5e10,
     unlock: { type: 'realm', realm: 'nascentSoul' },
-    effects: [{ type: 'mult', stat: 'moteValueMult', value: 1.5 }],
+    effects: [{ type: 'add', stat: 'moteAutoCollect', value: 0.1 }],
   },
   {
     id: 'sense-4',
@@ -128,7 +132,7 @@ const senseUpgrades: UpgradeDef[] = [
     description: 'You see every mote of qi between here and the edge of the world.',
     cost: 5e24,
     unlock: { type: 'realm', realm: 'daoSeeking' },
-    effects: [{ type: 'mult', stat: 'moteSpawnMult', value: 1.5 }],
+    effects: [{ type: 'add', stat: 'moteAutoCollect', value: 0.15 }],
   },
 ];
 
@@ -186,7 +190,7 @@ const scriptureUpgrades: UpgradeDef[] = [
     id: 'scripture-6',
     name: 'Canon of the Nine Heavens',
     description: 'Written by the first immortal, for the last.',
-    cost: 3e29,
+    cost: 3e28,
     unlock: { type: 'realm', realm: 'immortalAscension' },
     effects: [{ type: 'mult', stat: 'globalMult', value: 3 }],
   },
@@ -194,7 +198,7 @@ const scriptureUpgrades: UpgradeDef[] = [
     id: 'scripture-7',
     name: 'Record of the Heavenly Dao',
     description: 'Not a book about the Dao. The Dao, written down.',
-    cost: 5e32,
+    cost: 5e31,
     unlock: { type: 'realm', realm: 'immortalAscension' },
     effects: [{ type: 'mult', stat: 'globalMult', value: 4 }],
   },
@@ -215,7 +219,7 @@ const soulUpgrades: UpgradeDef[] = [
     description: 'Why have one Nascent Soul when you could have several?',
     cost: 1e15,
     unlock: { type: 'realm', realm: 'spiritSevering' },
-    effects: [{ type: 'add', stat: 'autoClicksPerSecond', value: 2 }],
+    effects: [{ type: 'add', stat: 'autoClicksPerSecond', value: 3 }],
   },
   {
     id: 'soul-3',
@@ -223,7 +227,7 @@ const soulUpgrades: UpgradeDef[] = [
     description: 'Your avatars cultivate in ten thousand places at once.',
     cost: 5e25,
     unlock: { type: 'realm', realm: 'daoSeeking' },
-    effects: [{ type: 'add', stat: 'autoClicksPerSecond', value: 4 }],
+    effects: [{ type: 'add', stat: 'autoClicksPerSecond', value: 9 }],
   },
 ];
 

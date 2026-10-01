@@ -67,6 +67,20 @@ describe('generators', () => {
   });
 });
 
+describe('qi motes', () => {
+  it('adds automatically gathered motes to passive qi/s', () => {
+    const state = newGame();
+    state.generators.herb = 10;
+    const before = computeStats(state);
+    state.upgrades['sense-3'] = true;
+    const after = computeStats(state);
+    expect(after.autoMoteQps).toBeCloseTo(
+      after.moteSpawnPerSecond * after.mods.moteAutoCollect * after.moteValue,
+    );
+    expect(after.qps).toBeCloseTo(before.qps + after.autoMoteQps);
+  });
+});
+
 describe('clicking and upgrades', () => {
   it('clicks for click power and counts clicks', () => {
     const state = newGame();

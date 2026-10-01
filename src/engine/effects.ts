@@ -17,6 +17,8 @@ export interface Modifiers {
   clickQpsFraction: number;
   moteValueMult: number;
   moteSpawnMult: number;
+  /** Fraction of spawning motes gathered automatically, on top of the ones you catch. */
+  moteAutoCollect: number;
   encounterRateMult: number;
   /** Subtracted from a tribulation's pass mark. */
   tribulationLeniency: number;
@@ -44,6 +46,7 @@ export type MultStat =
 export type AddStat =
   | 'clickFlat'
   | 'clickQpsFraction'
+  | 'moteAutoCollect'
   | 'tribulationLeniency'
   | 'autoClicksPerSecond'
   | 'offlineCapHours'
@@ -67,6 +70,7 @@ export function baseModifiers(): Modifiers {
     clickQpsFraction: 0,
     moteValueMult: 1,
     moteSpawnMult: 1,
+    moteAutoCollect: 0,
     encounterRateMult: 1,
     tribulationLeniency: 0,
     tribulationSlowMult: 1,
@@ -110,6 +114,7 @@ const STAT_LABELS: Record<MultStat | AddStat, string> = {
   coreCostMult: 'core costs',
   clickFlat: 'base click power',
   clickQpsFraction: 'of qi/s added to each click',
+  moteAutoCollect: 'of qi motes gathered automatically',
   tribulationLeniency: 'tribulation pass marks',
   autoClicksPerSecond: 'automatic clicks per second',
   offlineCapHours: 'hours of closed-door cultivation (offline cap)',
@@ -121,6 +126,7 @@ const STAT_LABELS: Record<MultStat | AddStat, string> = {
 
 const PERCENT_ADD_STATS: ReadonlySet<AddStat> = new Set([
   'clickQpsFraction',
+  'moteAutoCollect',
   'offlineEfficiency',
   'memoryBonus',
 ]);

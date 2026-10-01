@@ -4,6 +4,7 @@ import { REALMS, STAGES, stageName, type RealmDef } from '../../content/realms';
 import {
   attemptBreakthrough,
   breakthroughBlocker,
+  breakthroughCost,
   nextStage,
   tribulationPassScore,
 } from '../../engine/breakthrough';
@@ -29,10 +30,12 @@ export function BreakthroughBox() {
   }
   const nextRealm = REALMS[next.realmIndex];
   const blocker = breakthroughBlocker(state);
-  const progress = Math.min(1, state.qi / next.cost);
+  const cost = breakthroughCost(state, next.index);
+  const familiar = cost < next.cost;
+  const progress = Math.min(1, state.qi / cost);
   const tribulation = next.isMajor ? nextRealm.tribulation : undefined;
   const unlocks = next.isMajor ? realmUnlocks(nextRealm) : [];
-  const eta = stats.qps > 0 && state.qi < next.cost ? (next.cost - state.qi) / stats.qps : 0;
+  const eta = stats.qps > 0 && state.qi < cost ? (cost - state.qi) / stats.qps : 0;
 
   return (
     <div class="breakthrough">
@@ -45,9 +48,12 @@ export function BreakthroughBox() {
           style={{ width: `${progress * 100}%`, background: nextRealm.color }}
         />
         <span class="bar-text">
-          {game.fmt(state.qi)} / {game.fmt(next.cost)}
+          {game.fmt(state.qi)} / {game.fmt(cost)}
         </span>
       </div>
+      {familiar && (
+        <div class="muted small">You've walked this path before: it costs far less.</div>
+      )}
       {eta > 0 && eta < 86400 * 30 && (
         <div class="muted small">≈ {formatDuration(eta)} at current rate</div>
       )}
@@ -134,6 +140,12 @@ export function CultivationStats() {
         <>
           <dt>Nascent Soul</dt>
           <dd>{game.fmt(stats.autoClickQps)}/s</dd>
+        </>
+      )}
+      {stats.autoMoteQps > 0 && (
+        <>
+          <dt>Gathered motes</dt>
+          <dd>{game.fmt(stats.autoMoteQps)}/s</dd>
         </>
       )}
     </dl>
