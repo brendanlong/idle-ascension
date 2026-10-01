@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Writes tuned prices (SIM_TUNE params) back into src/content, rounded to 2 significant figures."""
+"""Writes tuned breakthrough and resource prices (SIM_TUNE params) back into src/content, rounded to 2 significant figures."""
 import json, math, os, re, subprocess, sys
 
 ROOT = os.path.join(os.path.dirname(__file__), '..', '..')
@@ -32,17 +32,8 @@ def stage_block(m):
 realms = re.sub(r"stageNames: [^\n]*\n\s*stageCosts: \[[^\]]*\]", stage_block, realms)
 write('src/content/realms.ts', realms)
 
-# Technique prices.
-ups = read('src/content/upgrades.ts')
+# Techniques are priced from realm breakthroughs and resource costs (src/content/upgrades.ts).
 gens = read('src/content/generators.ts')
-gen_ids = set(re.findall(r"^    id: '(\w+)',", gens, re.M))
-for uid, cost in prices['up'].items():
-    if re.match(r'^(\w+)-[15]$', uid) and uid[:-2] in gen_ids:
-        continue  # resource and revival techniques are priced from the resource's own cost
-    pat = re.compile(r"(id: '" + re.escape(uid) + r"',.*?cost: )([^,\n]+)(,)", re.S)
-    ups, n = pat.subn(lambda mm: mm.group(1) + lit(cost) + mm.group(3), ups, count=1)
-    assert n == 1, uid
-write('src/content/upgrades.ts', ups)
 for gid, (cost, qps) in prices['gen'].items():
     block = re.compile(r"(id: '" + gid + r"',.*?baseCost: )([^,\n]+)(,\s*baseQps: )([^,\n]+)(,)", re.S)
     gens, n = block.subn(lambda mm: mm.group(1) + lit(cost) + mm.group(3) + lit(qps) + mm.group(5), gens, count=1)

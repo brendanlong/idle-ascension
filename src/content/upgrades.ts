@@ -1,12 +1,15 @@
 import type { Condition } from '../engine/conditions';
 import type { Effect } from '../engine/effects';
 import { GENERATORS } from './generators';
+import { REALMS_BY_ID } from './realms';
 
 export interface UpgradeDef {
   id: string;
   name: string;
   description: string;
   cost: number;
+  /** For a realm's techniques: the stage of the realm whose breakthrough prices it. */
+  realmStage?: number;
   unlock: Condition;
   effects: readonly Effect[];
 }
@@ -17,6 +20,16 @@ const GENERATOR_MILESTONE = { count: 3, costMult: 15, mult: 2 };
 const REVIVAL_NEWER_COUNT = 10;
 /** About five minutes of income when a revival unlocks, across the game. */
 const REVIVAL_COST_MULT = 20_000;
+
+/**
+ * A realm's techniques each cost this share of a different breakthrough in
+ * the realm, so they arrive one at a time as you climb it.
+ */
+const REALM_TECHNIQUE_SHARE = 0.5;
+
+export function realmTechniqueCost(realm: string, stage: number): number {
+  return REALMS_BY_ID.get(realm)!.stageCosts[stage] * REALM_TECHNIQUE_SHARE;
+}
 
 const generatorUpgrades: UpgradeDef[] = GENERATORS.flatMap((gen, i) => {
   const early: UpgradeDef = {
@@ -89,7 +102,8 @@ const palmUpgrades: UpgradeDef[] = [
     id: 'palm-6',
     name: 'Palm That Covers the Sky',
     description: 'You raise your hand and the qi of the whole sky drifts toward it.',
-    cost: 1e20,
+    cost: realmTechniqueCost('daoSeeking', 3),
+    realmStage: 3,
     unlock: { type: 'realm', realm: 'daoSeeking' },
     effects: [{ type: 'mult', stat: 'moteSpawnMult', value: 1.25 }],
   },
@@ -97,7 +111,8 @@ const palmUpgrades: UpgradeDef[] = [
     id: 'palm-7',
     name: 'Finger That Ends Worlds',
     description: 'Somewhere, a small world you never visited quietly becomes qi for you.',
-    cost: 1.4e23,
+    cost: realmTechniqueCost('immortalAscension', 1),
+    realmStage: 1,
     unlock: { type: 'realm', realm: 'immortalAscension' },
     effects: [{ type: 'mult', stat: 'moteValueMult', value: 1.25 }],
   },
@@ -119,7 +134,8 @@ const senseUpgrades: UpgradeDef[] = [
     id: 'sense-2',
     name: 'Qi Whirlpool',
     description: 'Qi spirals toward you like water into a drain.',
-    cost: 400_000,
+    cost: realmTechniqueCost('foundation', 2),
+    realmStage: 2,
     unlock: { type: 'realm', realm: 'foundation' },
     effects: [{ type: 'mult', stat: 'moteSpawnMult', value: 1.5 }],
   },
@@ -127,7 +143,8 @@ const senseUpgrades: UpgradeDef[] = [
     id: 'sense-3',
     name: 'Divine Sense',
     description: 'Your awareness blankets the mountain. Motes drift to you even while you rest.',
-    cost: 9.1e12,
+    cost: realmTechniqueCost('nascentSoul', 1),
+    realmStage: 1,
     unlock: { type: 'realm', realm: 'nascentSoul' },
     effects: [{ type: 'add', stat: 'moteAutoCollect', value: 0.1 }],
   },
@@ -135,7 +152,8 @@ const senseUpgrades: UpgradeDef[] = [
     id: 'sense-4',
     name: 'Eye of Heaven',
     description: 'You see every mote of qi between here and the edge of the world.',
-    cost: 1e20,
+    cost: realmTechniqueCost('daoSeeking', 1),
+    realmStage: 1,
     unlock: { type: 'realm', realm: 'daoSeeking' },
     effects: [{ type: 'add', stat: 'moteAutoCollect', value: 0.1 }],
   },
@@ -155,7 +173,8 @@ const scriptureUpgrades: UpgradeDef[] = [
     id: 'scripture-1',
     name: 'Heaven and Earth Harmony Scripture',
     description: 'Breathe with the world, and the world breathes with you.',
-    cost: 3_000_000,
+    cost: realmTechniqueCost('foundation', 0),
+    realmStage: 0,
     unlock: { type: 'realm', realm: 'foundation' },
     effects: [{ type: 'mult', stat: 'globalMult', value: 1.5 }],
   },
@@ -163,7 +182,8 @@ const scriptureUpgrades: UpgradeDef[] = [
     id: 'scripture-2',
     name: 'Nine Yang Divine Art',
     description: 'Your body burns with inexhaustible yang energy.',
-    cost: 2.2e11,
+    cost: realmTechniqueCost('coreFormation', 1),
+    realmStage: 1,
     unlock: { type: 'realm', realm: 'coreFormation' },
     effects: [{ type: 'mult', stat: 'globalMult', value: 1.5 }],
   },
@@ -171,7 +191,8 @@ const scriptureUpgrades: UpgradeDef[] = [
     id: 'scripture-3',
     name: 'Nine Yin True Scripture',
     description: 'The cold counterpart to Nine Yang. Together, they balance.',
-    cost: 3.7e12,
+    cost: realmTechniqueCost('nascentSoul', 0),
+    realmStage: 0,
     unlock: { type: 'realm', realm: 'nascentSoul' },
     effects: [{ type: 'mult', stat: 'globalMult', value: 2 }],
   },
@@ -179,7 +200,8 @@ const scriptureUpgrades: UpgradeDef[] = [
     id: 'scripture-4',
     name: 'Scripture of Severed Emotion',
     description: 'Love, hate, grief. Burn them all as fuel.',
-    cost: 1.5e16,
+    cost: realmTechniqueCost('spiritSevering', 0),
+    realmStage: 0,
     unlock: { type: 'realm', realm: 'spiritSevering' },
     effects: [{ type: 'mult', stat: 'globalMult', value: 2 }],
   },
@@ -187,7 +209,8 @@ const scriptureUpgrades: UpgradeDef[] = [
     id: 'scripture-5',
     name: 'The Wordless Sutra',
     description: 'It has no words. You understand it completely.',
-    cost: 1e20,
+    cost: realmTechniqueCost('daoSeeking', 0),
+    realmStage: 0,
     unlock: { type: 'realm', realm: 'daoSeeking' },
     effects: [{ type: 'mult', stat: 'globalMult', value: 3 }],
   },
@@ -195,7 +218,8 @@ const scriptureUpgrades: UpgradeDef[] = [
     id: 'scripture-6',
     name: 'Canon of the Nine Heavens',
     description: 'Written by the first immortal, for the last.',
-    cost: 1.4e23,
+    cost: realmTechniqueCost('immortalAscension', 0),
+    realmStage: 0,
     unlock: { type: 'realm', realm: 'immortalAscension' },
     effects: [{ type: 'mult', stat: 'globalMult', value: 3 }],
   },
@@ -203,7 +227,8 @@ const scriptureUpgrades: UpgradeDef[] = [
     id: 'scripture-7',
     name: 'Record of the Heavenly Dao',
     description: 'Not a book about the Dao. The Dao, written down.',
-    cost: 1.4e23,
+    cost: realmTechniqueCost('immortalAscension', 2),
+    realmStage: 2,
     unlock: { type: 'realm', realm: 'immortalAscension' },
     effects: [{ type: 'mult', stat: 'globalMult', value: 4 }],
   },
@@ -214,7 +239,8 @@ const soulUpgrades: UpgradeDef[] = [
     id: 'soul-1',
     name: 'Soul Nourishing Wood',
     description: 'Your Nascent Soul grows quicker at its practice, and cultivates beside you.',
-    cost: 7.4e12,
+    cost: realmTechniqueCost('nascentSoul', 2),
+    realmStage: 2,
     unlock: { type: 'realm', realm: 'nascentSoul' },
     effects: [{ type: 'mult', stat: 'globalMult', value: 1.5 }],
   },
@@ -222,7 +248,8 @@ const soulUpgrades: UpgradeDef[] = [
     id: 'soul-2',
     name: 'Soul Splitting Art',
     description: 'Why have one Nascent Soul when you could have several?',
-    cost: 1.5e16,
+    cost: realmTechniqueCost('spiritSevering', 2),
+    realmStage: 2,
     unlock: { type: 'realm', realm: 'spiritSevering' },
     effects: [{ type: 'mult', stat: 'globalMult', value: 2 }],
   },
@@ -230,7 +257,8 @@ const soulUpgrades: UpgradeDef[] = [
     id: 'soul-3',
     name: 'Ten Thousand Avatars',
     description: 'Your avatars cultivate in ten thousand places at once.',
-    cost: 1e20,
+    cost: realmTechniqueCost('daoSeeking', 2),
+    realmStage: 2,
     unlock: { type: 'realm', realm: 'daoSeeking' },
     effects: [{ type: 'mult', stat: 'globalMult', value: 2.5 }],
   },

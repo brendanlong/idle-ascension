@@ -10,7 +10,7 @@ import { REALMS, REALMS_BY_ID, STAGES } from '../../content/realms';
 import { TREASURES } from '../../content/treasures';
 import { UPGRADES } from '../../content/upgrades';
 import type { Effect } from '../effects';
-import { gradeRefinePrice } from '../cores';
+import { refineStage } from '../cores';
 import { placeholders } from '../text';
 
 function expectUniqueIds(items: readonly { id: string }[]) {
@@ -119,8 +119,8 @@ describe('content integrity', () => {
   });
 
   it('makes each core grade cost more than the last', () => {
-    for (let i = 2; i < CORE_GRADES.length; i++) {
-      expect(gradeRefinePrice(i)).toBeGreaterThan(gradeRefinePrice(i - 1));
-    }
+    for (let core = 0; core < 5; core++)
+      for (let i = 2; i < CORE_GRADES.length; i++)
+        expect(refineStage(core, i)).toBeGreaterThanOrEqual(refineStage(core, i - 1));
   });
 });

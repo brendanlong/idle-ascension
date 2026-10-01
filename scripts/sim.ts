@@ -21,10 +21,10 @@
  */
 import { CORE_GRADES, CORE_SLOT_REALMS, ELEMENTS, type ElementId } from '../src/content/cores';
 import { baseModifiers } from '../src/engine/effects';
-import { GENERATORS, generatorName } from '../src/content/generators';
-import { UPGRADES } from '../src/content/upgrades';
+import { GENERATORS, generatorName, type GeneratorDef } from '../src/content/generators';
+import { UPGRADES, realmTechniqueCost } from '../src/content/upgrades';
 import { PERKS } from '../src/content/perks';
-import { REALMS, STAGES, stageName } from '../src/content/realms';
+import { REALMS, STAGES, firstStageOfRealm, stageName } from '../src/content/realms';
 import { MAX_TREASURE_LEVEL, TREASURES } from '../src/content/treasures';
 import {
   attemptBreakthrough,
@@ -38,7 +38,6 @@ import {
   coreFormCost,
   coreRefineCost,
   formCore,
-  gradeRefinePrice,
   refineCore,
 } from '../src/engine/cores';
 import {
@@ -111,9 +110,6 @@ const CORE_ORDER: ElementId[] = ['wood', 'fire', 'water', 'earth', 'metal'];
  * paid it: the wait since its previous purchase, and its price in seconds of
  * passive qi/s.
  */
-/** Within a realm, a stage costs at most this many times the previous one. */
-const MAX_STAGE_STEP = 8;
-
 function applyTuning(): void {
   if (!process.env.SIM_TUNE) return;
   const tune = JSON.parse(process.env.SIM_TUNE) as {
@@ -122,7 +118,9 @@ function applyTuning(): void {
     stageGrowth?: Record<string, number>;
     price?: Record<string, number>;
     genQps?: Record<string, number>;
+    entries?: Record<string, number>;
   };
+  if (tune.entries) applyStageCurve(tune.entries);
   const priceMult: number[] = [];
   REALMS.forEach((r, i) => (priceMult[i] = (priceMult[i - 1] ?? 1) * (tune.shift?.[r.id] ?? 1)));
   const realmIndex = (id: string) => REALMS.findIndex((r) => r.id === id);
@@ -165,14 +163,67 @@ function applyTuning(): void {
       );
     if (kind === 'stage') scaled(STAGES[Number(id)], 'cost', factor);
   }
-  // Breakthroughs must keep getting more expensive, without spikes inside a realm.
-  STAGES.forEach((st, i) => {
-    if (i <= 1) return;
-    const previous = STAGES[i - 1].cost;
-    let cost = Math.max(st.cost, previous * 1.3);
-    if (!st.isMajor) cost = Math.min(cost, previous * MAX_STAGE_STEP);
-    (st as { cost: number }).cost = cost;
+}
+
+/**
+ * Replaces every breakthrough cost with a smooth curve through the realm
+ * entry costs (log10 of qi, by realm id; Qi Condensation keeps its own), so
+ * stages within and between realms grow at a gradually changing rate instead
+ * of jumping at realm gates. Everything priced for a realm (its gated
+ * resources, at the same output per qi) moves with the realm's entry cost, and
+ * realm techniques are repriced from their stages.
+ */
+function applyStageCurve(entries: Record<string, number>): void {
+  const knots = [{ x: 1, y: Math.log10(STAGES[1].cost) }];
+  for (const [id, y] of Object.entries(entries)) knots.push({ x: firstStageOfRealm(id), y });
+  knots.sort((p, q) => p.x - q.x);
+  const logCost = monotoneSpline(knots);
+  const oldEntry = REALMS.map((r) => r.stageCosts[0]);
+  for (let i = 2; i < STAGES.length; i++) (STAGES[i] as { cost: number }).cost = 10 ** logCost(i);
+  for (const st of STAGES)
+    (REALMS[st.realmIndex].stageCosts as number[])[st.stageInRealm] = st.cost;
+  const entryChange = (realmId: string) => {
+    const i = REALMS.findIndex((r) => r.id === realmId);
+    return REALMS[i].stageCosts[0] / oldEntry[i];
+  };
+  for (const g of GENERATORS) {
+    if (!g.minRealm) continue;
+    const factor = entryChange(g.minRealm);
+    (g as { baseCost: number }).baseCost *= factor;
+    (g as { baseQps: number }).baseQps *= factor;
+    for (const u of UPGRADES)
+      if (u.unlock.type === 'generator' && u.unlock.id === g.id)
+        (u as { cost: number }).cost *= factor;
+  }
+  for (const u of UPGRADES)
+    if (u.unlock.type === 'realm' && u.realmStage !== undefined)
+      (u as { cost: number }).cost = realmTechniqueCost(u.unlock.realm, u.realmStage);
+}
+
+/** Fritsch-Carlson monotone cubic through the knots (sorted by x). */
+function monotoneSpline(knots: { x: number; y: number }[]): (x: number) => number {
+  const n = knots.length;
+  const slope = knots.slice(1).map((k, i) => (k.y - knots[i].y) / (k.x - knots[i].x));
+  const tangent = knots.map((_, i) => {
+    if (i === 0) return slope[0];
+    if (i === n - 1) return slope[n - 2];
+    const [a, b] = [slope[i - 1], slope[i]];
+    const [h0, h1] = [knots[i].x - knots[i - 1].x, knots[i + 1].x - knots[i].x];
+    return a * b <= 0 ? 0 : (3 * (h0 + h1)) / ((2 * h1 + h0) / a + (h1 + 2 * h0) / b);
   });
+  return (x) => {
+    let i = knots.findIndex((_, j) => j < n - 1 && x <= knots[j + 1].x);
+    if (i < 0) i = n - 2;
+    const [k0, k1] = [knots[i], knots[i + 1]];
+    const h = k1.x - k0.x;
+    const t = (x - k0.x) / h;
+    return (
+      (2 * t ** 3 - 3 * t ** 2 + 1) * k0.y +
+      (t ** 3 - 2 * t ** 2 + t) * h * tangent[i] +
+      (-2 * t ** 3 + 3 * t ** 2) * k1.y +
+      (t ** 3 - t ** 2) * h * tangent[i + 1]
+    );
+  };
 }
 
 /**
@@ -208,7 +259,6 @@ if (process.env.SIM_DUMP_PRICES) {
       stage: STAGES.map((st) => st.cost),
       form: CORE_SLOT_REALMS.map((_, n) => coreFormCost(baseModifiers(), n)),
       gen: Object.fromEntries(GENERATORS.map((g) => [g.id, [g.baseCost, g.baseQps]])),
-      grade: CORE_GRADES.map((_, g) => gradeRefinePrice(g)),
     }),
   );
   process.exit(0);
@@ -462,6 +512,43 @@ function trackRevivalPoints(): void {
       income: averageIncome(income(state)),
       realm: REALMS[STAGES[state.stage].realmIndex].id,
     };
+  });
+}
+
+/**
+ * SIM_CALIBRATE=1: on first reaching a realm, prices the resources it unlocks
+ * from the economy there and uses them for the rest of the run: the first
+ * costs CALIBRATE_SECONDS of income and its first unit is CALIBRATE_EFFICIENCY
+ * times as much qi/s per qi as the best resource you can buy; each later one
+ * in the same realm costs CALIBRATE_TIER_COST times more, at
+ * CALIBRATE_TIER_EFFICIENCY times the efficiency. Prints the prices as
+ * CALIBRATION {id: [baseCost, baseQps]}.
+ */
+const CALIBRATE_SECONDS = 60;
+const CALIBRATE_EFFICIENCY = 2;
+const CALIBRATE_TIER_COST = 15;
+const CALIBRATE_TIER_EFFICIENCY = 0.5;
+const calibration: Record<string, [number, number]> = {};
+function calibrateGatedResources(): void {
+  const realm = REALMS[STAGES[state.stage].realmIndex];
+  const gated = GENERATORS.filter((g) => g.minRealm === realm.id && !calibration[g.id]);
+  if (!gated.length) return;
+  const stats = computeStats(state, false);
+  const efficiency = (g: GeneratorDef) =>
+    stats.generatorUnitQps[g.id] / generatorCost(state, stats.mods, g.id);
+  const best = Math.max(
+    ...GENERATORS.filter((g, i) => !g.minRealm && isGeneratorVisible(state, i)).map(efficiency),
+  );
+  const cost = averageIncome(income(state)) * CALIBRATE_SECONDS;
+  gated.forEach((g, tier) => {
+    const def = g as { baseCost: number; baseQps: number };
+    const qpsPerBase = stats.generatorUnitQps[g.id] / def.baseQps;
+    const costPerBase = generatorCost(state, stats.mods, g.id) / def.baseCost;
+    const tierCost = cost * CALIBRATE_TIER_COST ** tier;
+    def.baseCost = tierCost / costPerBase;
+    def.baseQps =
+      (CALIBRATE_EFFICIENCY * CALIBRATE_TIER_EFFICIENCY ** tier * best * tierCost) / qpsPerBase;
+    calibration[g.id] = [def.baseCost, def.baseQps];
   });
 }
 
@@ -748,6 +835,7 @@ while (time < maxHours * 3600) {
   if (computeStats(state, false).qps >= lastStepIncome * STEP_INCOME_GAIN) recordStep();
   if (time % 60 === 0) ratioSamples[STAGES[state.stage].realmIndex].push(activeRatio());
   trackRealmVisits();
+  if (process.env.SIM_CALIBRATE) calibrateGatedResources();
   if (printImpact) {
     trackLaterImpact();
     trackTreasures();
@@ -890,6 +978,7 @@ if (printImpact) {
   const unbought = UPGRADES.filter((u) => !impacts.has(`upgrade:${u.id}`)).map((u) => u.name);
   console.log(`Techniques never bought: ${unbought.join(', ') || 'none'}`);
 }
+if (process.env.SIM_CALIBRATE) console.log(`CALIBRATION ${JSON.stringify(calibration)}`);
 if (process.env.SIM_PRICES) console.log(`PRICES ${JSON.stringify(firstBuys)}`);
 if (process.env.SIM_REVIVAL) console.log(`REVIVAL ${JSON.stringify(revivalPoints)}`);
 console.log(`Realms: ${REALMS.length}, stages: ${STAGES.length}, elements: ${ELEMENTS.length}`);

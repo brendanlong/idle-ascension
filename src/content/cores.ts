@@ -75,23 +75,18 @@ export interface CoreGradeDef {
   name: string;
   /** Multiplier to all qi gain from a core of this grade. */
   mult: number;
-  /**
-   * Cost to refine a core up to this grade, as a share of the first
-   * breakthrough of the realm that allows the grade (see gradeRefinePrice).
-   */
-  refineShare: number;
   color: string;
 }
 
 export const CORE_GRADES: readonly CoreGradeDef[] = [
-  { name: 'Mud', mult: 1.2, refineShare: 0, color: '#6b5a45' },
-  { name: 'Iron', mult: 1.5, refineShare: 0.5, color: '#7d8590' },
-  { name: 'Bronze', mult: 2, refineShare: 3, color: '#b0773e' },
-  { name: 'Silver', mult: 2.5, refineShare: 0.5, color: '#c9d1da' },
-  { name: 'Gold', mult: 3, refineShare: 0.5, color: '#f0c24b' },
-  { name: 'Jade', mult: 4, refineShare: 0.5, color: '#63c29a' },
-  { name: 'Starsteel', mult: 5, refineShare: 0.5, color: '#9fb8ff' },
-  { name: 'Primordial', mult: 7, refineShare: 0.5, color: '#f4f0ff' },
+  { name: 'Mud', mult: 1.2, color: '#6b5a45' },
+  { name: 'Iron', mult: 1.5, color: '#7d8590' },
+  { name: 'Bronze', mult: 2, color: '#b0773e' },
+  { name: 'Silver', mult: 2.5, color: '#c9d1da' },
+  { name: 'Gold', mult: 3, color: '#f0c24b' },
+  { name: 'Jade', mult: 4, color: '#63c29a' },
+  { name: 'Starsteel', mult: 5, color: '#9fb8ff' },
+  { name: 'Primordial', mult: 7, color: '#f4f0ff' },
 ];
 
 /**

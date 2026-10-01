@@ -158,7 +158,7 @@ export const TREASURES: readonly TreasureDef[] = [
     description: 'It shows your past lives. There are more of them than you remembered.',
     rarity: 'rare',
     minRealm: 'spiritSevering',
-    effects: [{ type: 'add', stat: 'memoryBonus', value: 0.002 }],
+    effects: [{ type: 'add', stat: 'memoryBonus', value: 0.004 }],
   },
   {
     id: 'lamp',

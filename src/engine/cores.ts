@@ -1,5 +1,5 @@
 import { CORE_GRADES, CORE_SLOT_REALMS, ELEMENTS_BY_ID, type ElementId } from '../content/cores';
-import { REALMS, REALMS_BY_ID, STAGES } from '../content/realms';
+import { FINAL_STAGE, REALMS, REALMS_BY_ID, STAGES, firstStageOfRealm } from '../content/realms';
 import { spendQi } from './economy';
 import type { Modifiers } from './effects';
 import { log } from './events';
@@ -16,21 +16,29 @@ export function coreFormCost(mods: Modifiers, coreIndex: number): number {
   return REALMS_BY_ID.get(realm)!.stageCosts[0] * mods.coreCostMult;
 }
 
-/** Base price of refining to a grade: a share of the first breakthrough of the realm allowing it. */
-export function gradeRefinePrice(grade: number): number {
-  const realm = REALMS.find((r) => (r.coreGradeCap ?? -1) >= grade)!;
-  return realm.stageCosts[0] * CORE_GRADES[grade].refineShare;
-}
+/** Refining costs this share of the breakthrough at the stage it's priced at (see refineStage). */
+const REFINE_SHARE = 0.5;
 
 /**
- * A grade's own price, but never less than forming this core: a core formed in
- * a later realm doesn't catch up to the grade cap for free.
+ * The stage whose breakthrough prices refining a core to a grade. A realm's
+ * new grade comes to each core one stage after the core before it, and a core
+ * formed in a later realm catches up one grade per stage, so a realm's core
+ * upgrades spread across it instead of all arriving at its first breakthrough.
  */
+export function refineStage(coreIndex: number, grade: number): number {
+  const gradeRealm = REALMS.find((r) => (r.coreGradeCap ?? -1) >= grade)!;
+  const slotRealm = CORE_SLOT_REALMS[Math.min(coreIndex, CORE_SLOT_REALMS.length - 1)];
+  const stage = Math.max(
+    firstStageOfRealm(gradeRealm.id) + Math.min(coreIndex, 3),
+    firstStageOfRealm(slotRealm) + grade - 1,
+  );
+  return Math.min(stage, FINAL_STAGE);
+}
+
 export function coreRefineCost(state: GameState, mods: Modifiers, coreIndex: number): number {
-  const next = CORE_GRADES[state.cores[coreIndex].grade + 1];
-  if (!next) return Infinity;
   const grade = state.cores[coreIndex].grade + 1;
-  return Math.max(gradeRefinePrice(grade) * mods.coreCostMult, coreFormCost(mods, coreIndex));
+  if (!CORE_GRADES[grade]) return Infinity;
+  return STAGES[refineStage(coreIndex, grade)].cost * REFINE_SHARE * mods.coreCostMult;
 }
 
 export function canFormCore(state: GameState, mods: Modifiers, element: ElementId): boolean {

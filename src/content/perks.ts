@@ -96,7 +96,7 @@ export const PERKS: readonly PerkDef[] = [
     baseCost: 10,
     costGrowth: 3,
     requires: ['foresight'],
-    effects: [{ type: 'add', stat: 'memoryBonus', value: 0.002 }],
+    effects: [{ type: 'add', stat: 'memoryBonus', value: 0.004 }],
   },
   {
     id: 'patience',
