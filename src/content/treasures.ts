@@ -57,8 +57,8 @@ export const TREASURES: readonly TreasureDef[] = [
     rarity: 'common',
     minRealm: 'qiCondensation',
     effects: [
+      { type: 'mult', stat: 'globalMult', value: 1.2 },
       { type: 'mult', stat: 'moteSpawnMult', value: 1.25 },
-      { type: 'mult', stat: 'moteValueMult', value: 1.5 },
     ],
   },
   {
@@ -68,7 +68,7 @@ export const TREASURES: readonly TreasureDef[] = [
     description: 'It gathers a single drop of heavenly dew each night. Your herbs adore it.',
     rarity: 'uncommon',
     minRealm: 'qiCondensation',
-    effects: [{ type: 'generatorMult', generator: 'herb', value: 5 }],
+    effects: [{ type: 'generatorMult', generator: 'herb', value: 4 }],
   },
   // --- Foundation Establishment ---
   {
@@ -93,15 +93,6 @@ export const TREASURES: readonly TreasureDef[] = [
     effects: [{ type: 'mult', stat: 'encounterRateMult', value: 1.5 }],
   },
   {
-    id: 'pill',
-    name: 'Nine-Revolution Golden Pill',
-    icon: '💊',
-    description: 'Swallow it and your core will form as if polished by heaven.',
-    rarity: 'uncommon',
-    minRealm: 'foundation',
-    effects: [{ type: 'mult', stat: 'coreCostMult', value: 0.5 }],
-  },
-  {
     id: 'ring',
     name: 'Ring of the Old Master',
     icon: '💍',
@@ -114,7 +105,25 @@ export const TREASURES: readonly TreasureDef[] = [
       { type: 'add', stat: 'clickQpsFraction', value: 0.01 },
     ],
   },
+  {
+    id: 'cauldron',
+    name: 'Cauldron of the Yellow Emperor',
+    icon: '🏺',
+    description: 'Pills refined in it come out with cloud patterns. Very prestigious.',
+    rarity: 'uncommon',
+    minRealm: 'foundation',
+    effects: [{ type: 'generatorMult', generator: 'furnace', value: 4 }],
+  },
   // --- Core Formation ---
+  {
+    id: 'pill',
+    name: 'Nine-Revolution Golden Pill',
+    icon: '💊',
+    description: 'Swallow it and your core will form as if polished by heaven.',
+    rarity: 'uncommon',
+    minRealm: 'coreFormation',
+    effects: [{ type: 'mult', stat: 'coreCostMult', value: 0.5 }],
+  },
   {
     id: 'sword',
     name: "Shard of an Immortal's Sword",
@@ -127,13 +136,13 @@ export const TREASURES: readonly TreasureDef[] = [
   },
   // --- Nascent Soul ---
   {
-    id: 'cauldron',
-    name: 'Cauldron of the Yellow Emperor',
-    icon: '🏺',
-    description: 'Pills refined in it come out with cloud patterns. Very prestigious.',
+    id: 'gourd',
+    name: 'Heaven-Swallowing Gourd',
+    icon: '🫙',
+    description: 'Uncork it beside a spirit vein and watch the vein disappear.',
     rarity: 'uncommon',
     minRealm: 'nascentSoul',
-    effects: [{ type: 'generatorMult', generator: 'furnace', value: 10 }],
+    effects: [{ type: 'generatorMult', generator: 'vein', value: 4 }],
   },
   // --- Spirit Severing ---
   {
@@ -146,15 +155,6 @@ export const TREASURES: readonly TreasureDef[] = [
     effects: [{ type: 'mult', stat: 'tribulationSlowMult', value: 1.2 }],
   },
   {
-    id: 'gourd',
-    name: 'Heaven-Swallowing Gourd',
-    icon: '🫙',
-    description: 'Uncork it beside a spirit vein and watch the vein disappear.',
-    rarity: 'uncommon',
-    minRealm: 'spiritSevering',
-    effects: [{ type: 'generatorMult', generator: 'vein', value: 8 }],
-  },
-  {
     id: 'mirror',
     name: 'Mirror of Samsara',
     icon: '🪞',
@@ -162,6 +162,15 @@ export const TREASURES: readonly TreasureDef[] = [
     rarity: 'rare',
     minRealm: 'spiritSevering',
     effects: [{ type: 'add', stat: 'memoryBonus', value: 0.01 }],
+  },
+  {
+    id: 'lamp',
+    name: 'Lamp of the Eternal Dao',
+    icon: '🪔',
+    description: 'Its flame has burned since before the first sunrise.',
+    rarity: 'uncommon',
+    minRealm: 'spiritSevering',
+    effects: [{ type: 'generatorMult', generator: 'dao', value: 4 }],
   },
   // --- Dao Seeking ---
   {
@@ -183,16 +192,7 @@ export const TREASURES: readonly TreasureDef[] = [
     description: 'Every flick carries a trace of everything you cultivate.',
     rarity: 'uncommon',
     minRealm: 'daoSeeking',
-    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.02 }],
-  },
-  {
-    id: 'lamp',
-    name: 'Lamp of the Eternal Dao',
-    icon: '🪔',
-    description: 'Its flame has burned since before the first sunrise.',
-    rarity: 'uncommon',
-    minRealm: 'daoSeeking',
-    effects: [{ type: 'generatorMult', generator: 'dao', value: 10 }],
+    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.05 }],
   },
   {
     id: 'seal',

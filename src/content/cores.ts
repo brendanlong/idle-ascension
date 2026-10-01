@@ -28,7 +28,10 @@ export const ELEMENTS: readonly ElementDef[] = [
     glyph: '火',
     color: '#e0603a',
     description: 'Ferocity. Greatly boosts click power.',
-    effects: (g) => [{ type: 'mult', stat: 'clickMult', value: 2 + g }],
+    effects: (g) => [
+      { type: 'mult', stat: 'clickMult', value: 2 + g },
+      { type: 'add', stat: 'clickQpsFraction', value: 0.01 * (g + 1) },
+    ],
   },
   {
     id: 'earth',
@@ -58,8 +61,8 @@ export const ELEMENTS: readonly ElementDef[] = [
     color: '#4f8fd6',
     description: 'Flow. Qi motes appear more often and are worth more.',
     effects: (g) => [
-      { type: 'mult', stat: 'moteSpawnMult', value: 1.25 + 0.05 * g },
-      { type: 'mult', stat: 'moteValueMult', value: 1.5 + 0.25 * g },
+      { type: 'mult', stat: 'moteSpawnMult', value: 1.2 + 0.03 * g },
+      { type: 'mult', stat: 'moteValueMult', value: 1.3 + 0.05 * g },
     ],
   },
 ];
@@ -75,22 +78,27 @@ export interface CoreGradeDef {
   name: string;
   /** Multiplier to all qi gain from a core of this grade. */
   mult: number;
+  /**
+   * Qi cost to refine a core up to this grade, priced for the realm that
+   * unlocks the grade so it isn't free when you first get there.
+   */
+  refineCost: number;
   color: string;
 }
 
 export const CORE_GRADES: readonly CoreGradeDef[] = [
-  { name: 'Mud', mult: 1.2, color: '#6b5a45' },
-  { name: 'Iron', mult: 1.5, color: '#7d8590' },
-  { name: 'Bronze', mult: 2, color: '#b0773e' },
-  { name: 'Silver', mult: 2.5, color: '#c9d1da' },
-  { name: 'Gold', mult: 3, color: '#f0c24b' },
-  { name: 'Jade', mult: 4, color: '#63c29a' },
-  { name: 'Starsteel', mult: 5, color: '#9fb8ff' },
-  { name: 'Primordial', mult: 7, color: '#f4f0ff' },
+  { name: 'Mud', mult: 1.2, refineCost: 0, color: '#6b5a45' },
+  { name: 'Iron', mult: 1.5, refineCost: 4e8, color: '#7d8590' },
+  { name: 'Bronze', mult: 2, refineCost: 4e9, color: '#b0773e' },
+  { name: 'Silver', mult: 2.5, refineCost: 5e11, color: '#c9d1da' },
+  { name: 'Gold', mult: 3, refineCost: 3e16, color: '#f0c24b' },
+  { name: 'Jade', mult: 4, refineCost: 5e22, color: '#63c29a' },
+  { name: 'Starsteel', mult: 5, refineCost: 1e29, color: '#9fb8ff' },
+  { name: 'Primordial', mult: 7, refineCost: 1e37, color: '#f4f0ff' },
 ];
 
-/** Qi cost to form the Nth core (0-based). */
-export const CORE_FORM_BASE_COST = 1e8;
-export const CORE_FORM_COST_GROWTH = 1000;
-/** Refining to the next grade costs this multiple of the previous grade. */
-export const CORE_REFINE_COST_GROWTH = 12;
+/**
+ * Qi cost to form the Nth core (0-based), priced for the realm whose core
+ * slot it usually fills (Core Formation, Nascent Soul, ...).
+ */
+export const CORE_FORM_COSTS: readonly number[] = [1e8, 1e11, 5e15, 1e22, 5e28];

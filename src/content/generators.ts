@@ -235,7 +235,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     description: 'Mortals in countless worlds burn incense to you. Their faith becomes qi.',
     minRealm: 'immortalAscension',
     baseCost: 5e27,
-    baseQps: 1.2e11,
+    baseQps: 3e11,
     upgradeNames: [
       'Wayside Shrines',
       'Golden Statues',

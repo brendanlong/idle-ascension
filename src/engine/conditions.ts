@@ -16,7 +16,8 @@ export function meetsCondition(state: GameState, cond: Condition): boolean {
     case 'realm':
       return state.stage >= firstStageOfRealm(cond.realm);
     case 'clicks':
-      return state.stats.loopClicks >= cond.count;
+      // Lifetime clicks, so click techniques aren't locked again after every regression.
+      return state.stats.totalClicks >= cond.count;
     case 'qiEarned':
       return state.qiEarnedThisLoop >= cond.amount;
   }

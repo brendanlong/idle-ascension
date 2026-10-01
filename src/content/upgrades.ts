@@ -11,12 +11,17 @@ export interface UpgradeDef {
   effects: readonly Effect[];
 }
 
+/**
+ * Counts where most resources still make up a good share of income, so each
+ * ×2 matters when it unlocks. Costs are roughly 20-50 times the price of the
+ * resource at that count.
+ */
 const GENERATOR_MILESTONES = [
   { count: 1, costMult: 10 },
-  { count: 10, costMult: 100 },
-  { count: 25, costMult: 5_000 },
-  { count: 50, costMult: 500_000 },
-  { count: 100, costMult: 50_000_000 },
+  { count: 5, costMult: 50 },
+  { count: 15, costMult: 300 },
+  { count: 30, costMult: 3_000 },
+  { count: 50, costMult: 50_000 },
 ];
 
 const generatorUpgrades: UpgradeDef[] = GENERATORS.flatMap((gen) =>
@@ -53,15 +58,15 @@ const palmUpgrades: UpgradeDef[] = [
     description: 'Each click channels a fraction of everything you cultivate.',
     cost: 500_000,
     unlock: { type: 'clicks', count: 500 },
-    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.01 }],
+    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.03 }],
   },
   {
     id: 'palm-4',
     name: "Tathagata's Palm",
     description: 'A palm so vast a monkey king could not escape it.',
-    cost: 50_000_000,
+    cost: 20_000_000,
     unlock: { type: 'clicks', count: 1_500 },
-    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.02 }],
+    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.04 }],
   },
   {
     id: 'palm-5',
@@ -69,7 +74,7 @@ const palmUpgrades: UpgradeDef[] = [
     description: 'One finger. The sky cracks.',
     cost: 5e10,
     unlock: { type: 'clicks', count: 4_000 },
-    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.03 }],
+    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.06 }],
   },
   {
     id: 'palm-6',
@@ -77,7 +82,7 @@ const palmUpgrades: UpgradeDef[] = [
     description: 'You raise your hand and the sun goes dark.',
     cost: 2e24,
     unlock: { type: 'realm', realm: 'daoSeeking' },
-    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.03 }],
+    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.08 }],
   },
   {
     id: 'palm-7',
@@ -85,7 +90,7 @@ const palmUpgrades: UpgradeDef[] = [
     description: 'Somewhere, a small world you never visited quietly ceases to exist.',
     cost: 2e31,
     unlock: { type: 'realm', realm: 'immortalAscension' },
-    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.05 }],
+    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.12 }],
   },
 ];
 
@@ -113,9 +118,9 @@ const senseUpgrades: UpgradeDef[] = [
     id: 'sense-3',
     name: 'Divine Sense',
     description: 'Your awareness blankets the mountain. No mote escapes you.',
-    cost: 2e11,
+    cost: 5e10,
     unlock: { type: 'realm', realm: 'nascentSoul' },
-    effects: [{ type: 'mult', stat: 'moteValueMult', value: 2 }],
+    effects: [{ type: 'mult', stat: 'moteValueMult', value: 1.5 }],
   },
   {
     id: 'sense-4',
@@ -123,10 +128,7 @@ const senseUpgrades: UpgradeDef[] = [
     description: 'You see every mote of qi between here and the edge of the world.',
     cost: 5e24,
     unlock: { type: 'realm', realm: 'daoSeeking' },
-    effects: [
-      { type: 'mult', stat: 'moteSpawnMult', value: 1.5 },
-      { type: 'mult', stat: 'moteValueMult', value: 1.5 },
-    ],
+    effects: [{ type: 'mult', stat: 'moteSpawnMult', value: 1.5 }],
   },
 ];
 
@@ -205,7 +207,7 @@ const soulUpgrades: UpgradeDef[] = [
     description: 'Your Nascent Soul grows quicker at its practice.',
     cost: 1e12,
     unlock: { type: 'realm', realm: 'nascentSoul' },
-    effects: [{ type: 'add', stat: 'autoClicksPerSecond', value: 2 }],
+    effects: [{ type: 'add', stat: 'autoClicksPerSecond', value: 1 }],
   },
   {
     id: 'soul-2',
@@ -213,7 +215,7 @@ const soulUpgrades: UpgradeDef[] = [
     description: 'Why have one Nascent Soul when you could have several?',
     cost: 1e15,
     unlock: { type: 'realm', realm: 'spiritSevering' },
-    effects: [{ type: 'add', stat: 'autoClicksPerSecond', value: 5 }],
+    effects: [{ type: 'add', stat: 'autoClicksPerSecond', value: 2 }],
   },
   {
     id: 'soul-3',
@@ -221,7 +223,7 @@ const soulUpgrades: UpgradeDef[] = [
     description: 'Your avatars cultivate in ten thousand places at once.',
     cost: 5e25,
     unlock: { type: 'realm', realm: 'daoSeeking' },
-    effects: [{ type: 'add', stat: 'autoClicksPerSecond', value: 10 }],
+    effects: [{ type: 'add', stat: 'autoClicksPerSecond', value: 4 }],
   },
 ];
 
