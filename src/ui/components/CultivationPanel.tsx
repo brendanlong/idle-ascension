@@ -5,6 +5,7 @@ import {
   attemptBreakthrough,
   breakthroughBlocker,
   breakthroughCost,
+  isFamiliarStage,
   nextStage,
   tribulationPassScore,
 } from '../../engine/breakthrough';
@@ -31,9 +32,9 @@ export function BreakthroughBox() {
   const nextRealm = REALMS[next.realmIndex];
   const blocker = breakthroughBlocker(state);
   const cost = breakthroughCost(state, next.index);
-  const familiar = cost < next.cost;
+  const familiar = isFamiliarStage(state, next.index);
   const progress = Math.min(1, state.qi / cost);
-  const tribulation = next.isMajor ? nextRealm.tribulation : undefined;
+  const tribulation = next.isMajor && !familiar ? nextRealm.tribulation : undefined;
   const unlocks = next.isMajor ? realmUnlocks(nextRealm) : [];
   const eta = stats.qps > 0 && state.qi < cost ? (cost - state.qi) / stats.qps : 0;
 
@@ -52,7 +53,9 @@ export function BreakthroughBox() {
         </span>
       </div>
       {familiar && (
-        <div class="muted small">You've walked this path before: it costs far less.</div>
+        <div class="muted small">
+          You've walked this path before: it costs far less, and its tribulation won't stop you.
+        </div>
       )}
       {eta > 0 && eta < 86400 * 30 && (
         <div class="muted small">≈ {formatDuration(eta)} at current rate</div>

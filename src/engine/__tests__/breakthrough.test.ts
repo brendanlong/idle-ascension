@@ -28,6 +28,15 @@ describe('breakthroughs', () => {
     expect(breakthroughCost(state, 6)).toBe(STAGES[6].cost);
   });
 
+  it('lets you through tribulations you have survived before', () => {
+    const target = firstStageOfRealm('coreFormation');
+    const state = newGame({ qi: 1e12, stage: target - 1 });
+    state.stats.bestStage = target;
+    expect(attemptBreakthrough(state, computeStats(state).mods)).toBe('advanced');
+    expect(state.tribulation).toBeNull();
+    expect(state.stage).toBe(target);
+  });
+
   it('requires a pill furnace for Foundation Establishment', () => {
     const state = newGame({ qi: 1e12, stage: firstStageOfRealm('foundation') - 1 });
     expect(breakthroughBlocker(state)).toMatch(/Pill Furnace/);

@@ -5,8 +5,10 @@
  *   SIM_SEED=<n>      a different random seed
  *   SIM_ACTIVE=<0-1>  fraction of each 10 minutes spent actively playing: clicking, catching
  *                     motes, claiming encounters and trials, buying and breaking through. The
- *                     rest is idle. By default it tapers from 80% at the start toward 10%,
- *                     halving the gap every 2 hours, like a player who gets more passive.
+ *                     rest is idle. By default it depends on the furthest realm reached, from
+ *                     80% in Qi Condensation to 10% in Immortal Ascension, like a player who
+ *                     gets more passive as the game goes on. After regressing it stays
+ *                     active while replaying stages it has reached before (up to 15 minutes).
  *   SIM_IMPACT=1      also print how much each resource, technique, core and treasure adds
  *                     to income when it first becomes available
  */
@@ -77,6 +79,7 @@ let state: GameState = createInitialState(0);
 state.flags.introSeen = true;
 let time = 0;
 let lastProgress = 0;
+let stalledRegressions = 0;
 /** Gaps between breakthroughs (or before regressing), the "sitting on your hands" time. */
 const waits: number[] = [];
 let loopLongestWait = { seconds: 0, stage: 0 };
@@ -106,12 +109,21 @@ function activity(): RealmActivity {
 }
 const reachedRealm = new Set<number>();
 
+/** Default attention by furthest realm reached: Mortal, Qi Condensation, ..., Godhood. */
+const ACTIVE_BY_REALM = [0.8, 0.8, 0.7, 0.55, 0.4, 0.3, 0.2, 0.1, 0.1];
+
 function activeFraction(): number {
-  return FIXED_ACTIVE_FRACTION ?? 0.1 + 0.7 * 0.5 ** (time / 3600 / 2);
+  return FIXED_ACTIVE_FRACTION ?? ACTIVE_BY_REALM[STAGES[state.stats.bestStage].realmIndex];
 }
 
+/** After regressing, the player stays to replay familiar stages, for up to this long. */
+const REPLAY_ATTENTION_SECONDS = 15 * 60;
+let lastRegression = -Infinity;
+
 function isActive(): boolean {
-  return time % ACTIVE_CYCLE_SECONDS < ACTIVE_CYCLE_SECONDS * activeFraction();
+  const replaying =
+    state.stage < state.stats.bestStage && time - lastRegression < REPLAY_ATTENTION_SECONDS;
+  return replaying || time % ACTIVE_CYCLE_SECONDS < ACTIVE_CYCLE_SECONDS * activeFraction();
 }
 
 /** Qi/s while idle (passive) and while actively playing (plus clicks and caught motes), buffs excluded. */
@@ -335,8 +347,11 @@ let previousRealm = 0;
 function trackRealmVisits(): void {
   const r = STAGES[state.stage].realmIndex;
   const loop = state.prestige.loops;
-  const left = realmVisits[previousRealm];
-  if (r > previousRealm && left && left.completedLoop === undefined) left.completedLoop = loop;
+  // Several breakthroughs can happen in one tick, so a realm can be entered and left at once.
+  for (let passed = previousRealm; passed < r; passed++) {
+    const p = (realmVisits[passed] ??= { seconds: new Map([[loop, 0]]) });
+    p.completedLoop ??= loop;
+  }
   previousRealm = r;
   const v = (realmVisits[r] ??= { seconds: new Map() });
   v.seconds.set(loop, (v.seconds.get(loop) ?? 0) + 1);
@@ -397,18 +412,20 @@ while (time < maxHours * 3600) {
 
   const pending = pendingMemories(state);
   const stalled = time - lastProgress > STALL_SECONDS;
-  const { memoryMult: memoryMultBefore, mods } = computeStats(state);
-  const memoryGain = (memoryMultBefore + pending * mods.memoryBonus) / memoryMultBefore;
-  if (
-    isActive() &&
-    !regressionBlocker(state) &&
-    (stalled || memoryGain >= REGRESS_AT_MEMORY_GAIN)
-  ) {
+  const memoryMultBefore = computeStats(state).memoryMult;
+  const canRegress = isActive() && !regressionBlocker(state);
+  // Measured on the regressed state, which may have fewer treasures (and so a smaller Memory bonus).
+  const memoryGain = canRegress
+    ? computeStats(regress(structuredClone(state), 0)!).memoryMult / memoryMultBefore
+    : 0;
+  if (canRegress && (stalled || memoryGain >= REGRESS_AT_MEMORY_GAIN)) {
+    if (stalled) stalledRegressions++;
     recordWait();
     const wait = `longest wait ${formatDuration(loopLongestWait.seconds)} at ${stageName(loopLongestWait.stage)}`;
     loopLongestWait = { seconds: 0, stage: 0 };
     const label = `regress (+${pending} memories${stalled ? ', stalled' : ''}`;
     state = regress(state, 0)!;
+    lastRegression = time;
     realmActivity = {};
     lastProgress = time;
     let boughtPerk = true;
@@ -428,7 +445,7 @@ console.log(
 );
 const sortedWaits = [...waits].sort((a, b) => b - a);
 console.log(
-  `Waits between breakthroughs: longest ${sortedWaits.slice(0, 3).map(formatDuration).join(', ')}; ${waits.filter((w) => w > 15 * 60).length} over 15m, ${waits.filter((w) => w > 30 * 60).length} over 30m`,
+  `Waits between breakthroughs: longest ${sortedWaits.slice(0, 3).map(formatDuration).join(', ')}; ${waits.filter((w) => w > 15 * 60).length} over 15m, ${waits.filter((w) => w > 30 * 60).length} over 30m; gave up and regressed ${stalledRegressions} times`,
 );
 console.log('Final loop by realm:');
 for (const [realm, r] of Object.entries(realmActivity)) {

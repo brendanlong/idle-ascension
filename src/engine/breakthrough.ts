@@ -24,8 +24,8 @@ const MIN_TRIAL_SPEED = 0.5;
 
 /**
  * Stages you've reached in an earlier loop cost this much of their usual
- * price, so realms you've already finished go quickly after a regression
- * while new ones still take their full time.
+ * price, and their tribulations pass on their own, so realms you've already
+ * finished go quickly after a regression while new ones still take their full time.
  */
 export const FAMILIAR_STAGE_COST_MULT = 0.001;
 
@@ -33,9 +33,12 @@ export function nextStage(state: GameState): StageDef | null {
   return state.stage < FINAL_STAGE ? STAGES[state.stage + 1] : null;
 }
 
+export function isFamiliarStage(state: GameState, stage: number): boolean {
+  return stage <= state.stats.bestStage;
+}
+
 export function breakthroughCost(state: GameState, stage: number): number {
-  const familiar = stage <= state.stats.bestStage;
-  return STAGES[stage].cost * (familiar ? FAMILIAR_STAGE_COST_MULT : 1);
+  return STAGES[stage].cost * (isFamiliarStage(state, stage) ? FAMILIAR_STAGE_COST_MULT : 1);
 }
 
 /** Why the player can't break through right now, or null if they can. */
@@ -95,7 +98,9 @@ export function attemptBreakthrough(
   if (!next || breakthroughBlocker(state) !== null) return 'blocked';
   spendQi(state, breakthroughCost(state, next.index));
   const trib = REALMS[next.realmIndex].tribulation;
-  if (next.isMajor && trib) {
+  if (next.isMajor && trib && isFamiliarStage(state, next.index)) {
+    log(`You have survived the ${trib.name} before. This time it parts before you.`, 'good');
+  } else if (next.isMajor && trib) {
     state.tribulation = {
       targetStage: next.index,
       trials: randomElements(rng, trib.trials),
