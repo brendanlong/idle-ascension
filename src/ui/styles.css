@@ -10,7 +10,8 @@
   --crimson: #d0513f;
   --lightning: #b9a8ff;
   --radius: 8px;
-  font-family: 'Noto Serif Variable', 'Noto Serif', 'Noto Serif SC', Georgia, 'Times New Roman', serif;
+  font-family:
+    'Noto Serif Variable', 'Noto Serif', 'Noto Serif SC', Georgia, 'Times New Roman', serif;
   font-variant-numeric: tabular-nums;
   color: var(--text);
   background: var(--bg);
