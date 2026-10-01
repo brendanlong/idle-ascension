@@ -444,6 +444,29 @@ const treasureCheckedStages = new Set<number>();
  */
 const resourceEfficiency: { realm: string; byGenerator: Record<string, number> }[] = [];
 const efficiencyCheckedRealms = new Set<number>();
+/**
+ * SIM_REVIVAL=1: for each resource, the first time you own REVIVAL_NEWER_COUNT
+ * of the resource two tiers newer, how many times its total output trails the best resource's
+ * total, and average income then. Used to size and price revival techniques.
+ */
+const REVIVAL_NEWER_COUNT = 10;
+const revivalPoints: Record<string, { behind: number; income: number; realm: string }> = {};
+function trackRevivalPoints(): void {
+  const stats = computeStats(state, false);
+  const total = (id: string) => stats.generatorUnitQps[id] * state.generators[id];
+  const best = Math.max(...GENERATORS.map((g) => total(g.id)));
+  GENERATORS.forEach((g, i) => {
+    const newer = GENERATORS[i + 2];
+    if (!newer || revivalPoints[g.id] || !state.generators[g.id]) return;
+    if (state.generators[newer.id] < REVIVAL_NEWER_COUNT) return;
+    revivalPoints[g.id] = {
+      behind: best / total(g.id),
+      income: averageIncome(income(state)),
+      realm: REALMS[STAGES[state.stage].realmIndex].id,
+    };
+  });
+}
+
 function trackResourceEfficiency(): void {
   const realm = STAGES[state.stage].realmIndex;
   if (efficiencyCheckedRealms.has(realm)) return;
@@ -716,6 +739,7 @@ while (time < maxHours * 3600) {
   time++;
   activity().seconds++;
   if (isCheckedIn()) spend();
+  if (process.env.SIM_REVIVAL) trackRevivalPoints();
   if (replayTarget !== null && state.stage >= replayTarget) {
     replayTimes.push(time - lastRegression);
     replayTarget = null;
@@ -867,4 +891,5 @@ if (printImpact) {
   console.log(`Techniques never bought: ${unbought.join(', ') || 'none'}`);
 }
 if (process.env.SIM_PRICES) console.log(`PRICES ${JSON.stringify(firstBuys)}`);
+if (process.env.SIM_REVIVAL) console.log(`REVIVAL ${JSON.stringify(revivalPoints)}`);
 console.log(`Realms: ${REALMS.length}, stages: ${STAGES.length}, elements: ${ELEMENTS.length}`);
