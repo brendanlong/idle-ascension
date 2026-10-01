@@ -36,6 +36,28 @@ If a stage is off target even though the curve is smooth, the content
 around it is to blame (a burst of income from several upgrades at once, or a
 drought), and that's what to fix.
 
+## Content follows the curve
+
+The game's content is priced from the breakthrough curve too, so it stays
+evenly spread whatever the curve's numbers are:
+
+- **Resources** form a ladder (`RESOURCE_LADDER` in
+  `src/content/generators.ts`): a new tier every couple of stages all game,
+  priced as a share of the breakthrough at its stage, each a fixed fraction as
+  efficient (qi/s per qi) as the tier before. Realm locks are flavor and match
+  where each tier lands.
+- **A resource's techniques** are priced from the resource (its first
+  technique arrives soon after it, its revival later).
+- **Realm techniques** are priced from a stage within their realm, staggered
+  so a realm's upgrades arrive one at a time.
+- **Cores** (`engine/cores.ts`): each realm's new core forms a third of the
+  way through its realm and gets its first refine two thirds of the way
+  through; every core gains a grade per realm after that, with the older
+  cores' refines spread over the rest of each realm. Each costs half the
+  breakthrough cost at its point in the climb.
+
+`tune_curve.py` fits the curve, the ladder and the Memory weight together.
+
 ## Reference players
 
 Checks are measured on bots that buy whatever pays for itself soonest, and
@@ -62,7 +84,9 @@ Stages climb steeply within a life, and regressing knocks them back down:
   Rises linearly from `floorFirst` (10s at the first stage) to `floorLast`
   (at Godhood), so later climbs start a bit slower.
 - **Growth:** each stage past your reach takes `growth`× longer than the one
-  before (about ×1.25).
+  before (about ×1.25). The first life, before any regression, climbs more
+  gently (`firstLifeGrowth`, about ×1.11), so it lasts until regression is
+  worth it (see the layers below).
 - **Reach:** the deepest stage you've regressed from, i.e. where your Memories
   carry you. It starts at 0.
 
@@ -77,7 +101,8 @@ stage to first reaching the next, including any regressions in between. Its
 reach is the deepest stage it regressed from before reaching that stage.
 
 - Every stage's time is within `tolerance`× of floor × growth ^ (stages past
-  reach).
+  reach), with the last realm's stages `lastRealmLonger`× longer: the final
+  realm should feel a bit long.
 - Within a life, each stage takes at least `monotoneSlack`× as long as the
   previous one (both players).
 - Players regress once they're bored: when the next stage is more than
@@ -89,6 +114,17 @@ For this to work, Memories are exponential in stage index
 (`src/content/memories.ts`): each stage deeper you regress from yields
 `growthPerStage` times as many, matching `growth`, and `weight` sets how far
 the reset knocks stage times down.
+
+### Layers (`layers`)
+
+Each system carries the player further before stages get boring (take over
+`boredSeconds`), measured on the active bot with systems switched off:
+
+- **Resources and techniques alone** (no cores, never regressing): around
+  Core Formation, stage `resourcesOnlyBoredBy`.
+- **Plus cores** (never regressing): around where the first regression should
+  happen, stage `withCoresBoredBy`.
+- **Plus regression:** the whole game stays on the sawtooth.
 
 ### 2. Always something to buy (`somethingToBuy`)
 

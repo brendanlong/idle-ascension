@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { onLog } from '../events';
-import { GENERATORS } from '../../content/generators';
+import { GENERATORS, GENERATORS_BY_ID } from '../../content/generators';
 import { firstStageOfRealm } from '../../content/realms';
 import { UPGRADES_BY_ID } from '../../content/upgrades';
 import {
@@ -55,16 +55,16 @@ describe('generators', () => {
     expect(isGeneratorVisible(state, index)).toBe(false);
     expect(nextLockedGenerator(state)?.id).toBe('sect');
     expect(buyGenerator(state, mods, 'sect')).toBe(false);
-    state.stage = firstStageOfRealm('spiritSevering');
+    state.stage = firstStageOfRealm('nascentSoul');
     expect(isGeneratorVisible(state, index)).toBe(true);
     expect(buyGenerator(state, mods, 'sect')).toBe(true);
-    expect(nextLockedGenerator(state)?.id).toBe('smallWorld');
+    expect(nextLockedGenerator(state)?.id).toBe('dragon');
   });
 
   it('produces qi from generators', () => {
     const state = newGame();
     state.generators.herb = 3;
-    expect(computeStats(state).qps).toBeCloseTo(3);
+    expect(computeStats(state).qps).toBeCloseTo(3 * GENERATORS_BY_ID.get('herb')!.baseQps);
   });
 });
 

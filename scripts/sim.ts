@@ -14,6 +14,7 @@
  *   SIM_ACTIVE=<0-1>    taper player with a fixed share instead
  *   SIM_REGRESS=<mode>  efficient (default), never or eager: see REGRESS_MODE
  *   SIM_SPEC=1          print measurements for scripts/balance/spec.py
+ *   SIM_NO_CORES=1      never form or refine cores, to see how far the game goes without them
  *   SIM_TREASURES=<x>   random (default), none (encounters never give treasures), or all
  *                       (every treasure at level 1 as soon as its realm is reached)
  *   SIM_IMPACT=1        also print how much each resource, technique, core and treasure adds
@@ -22,9 +23,14 @@
 import { readFileSync } from 'node:fs';
 import { CORE_GRADES, CORE_SLOT_REALMS, ELEMENTS, type ElementId } from '../src/content/cores';
 import { baseModifiers } from '../src/engine/effects';
-import { GENERATORS, generatorName, type GeneratorDef } from '../src/content/generators';
+import {
+  GENERATORS,
+  RESOURCE_LADDER,
+  generatorName,
+  priceResources,
+} from '../src/content/generators';
 import { MEMORIES } from '../src/content/memories';
-import { UPGRADES, realmTechniqueCost } from '../src/content/upgrades';
+import { UPGRADES, priceUpgrades } from '../src/content/upgrades';
 import { PERKS, type PerkDef } from '../src/content/perks';
 import {
   COST_CURVE,
@@ -108,6 +114,7 @@ const OPTIONAL_TRIAL_SCORE = 0.7;
  *                        STUCK_SECONDS (3 minutes), for any gain
  */
 const REGRESS_MODE = process.env.SIM_REGRESS ?? 'efficient';
+const NO_CORES = !!process.env.SIM_NO_CORES;
 const STUCK_SECONDS = 3 * 60;
 const REGRESS_WHEN_STUCK_AT_GAIN = 1.1;
 /**
@@ -138,6 +145,7 @@ const CORE_ORDER: ElementId[] = ['wood', 'fire', 'water', 'earth', 'metal'];
  *   genQps       multiplies a resource's output
  *   curve        overrides COST_CURVE (src/content/realms.ts)
  *   memory       overrides MEMORIES (src/content/memories.ts)
+ *   ladder       overrides RESOURCE_LADDER (src/content/generators.ts)
  * SIM_PRICES=1 prints, as JSON, each of those prices the first time the bot
  * paid it: the wait since its previous purchase, and its price in seconds of
  * passive qi/s.
@@ -152,7 +160,11 @@ function applyTuning(): void {
     genQps?: Record<string, number>;
     curve?: Partial<CostCurve>;
     memory?: Partial<typeof MEMORIES>;
+    ladder?: Partial<typeof RESOURCE_LADDER>;
   };
+  Object.assign(RESOURCE_LADDER, tune.ladder);
+  priceResources();
+  priceUpgrades();
   if (tune.curve) applyCostCurve(tune.curve);
   Object.assign(MEMORIES, tune.memory);
   const priceMult: number[] = [];
@@ -205,31 +217,15 @@ function applyCostCurve(curve: Partial<CostCurve>): void {
 }
 
 /**
- * Sets every breakthrough cost, moving what's priced for a realm with it: its
- * gated resources (at the same output per qi) with its entry cost, and realm
- * techniques from their stages.
+ * Sets every breakthrough cost, and re-prices what follows it: resources
+ * (priceResources) and techniques (priceUpgrades).
  */
 function setStageCosts(costs: number[]): void {
-  const oldEntry = REALMS.map((r) => r.stageCosts[0]);
   STAGES.forEach((st, i) => ((st as { cost: number }).cost = costs[i]));
   for (const st of STAGES)
     (REALMS[st.realmIndex].stageCosts as number[])[st.stageInRealm] = st.cost;
-  const entryChange = (realmId: string) => {
-    const i = REALMS.findIndex((r) => r.id === realmId);
-    return REALMS[i].stageCosts[0] / oldEntry[i];
-  };
-  for (const g of GENERATORS) {
-    if (!g.minRealm) continue;
-    const factor = entryChange(g.minRealm);
-    (g as { baseCost: number }).baseCost *= factor;
-    (g as { baseQps: number }).baseQps *= factor;
-    for (const u of UPGRADES)
-      if (u.unlock.type === 'generator' && u.unlock.id === g.id)
-        (u as { cost: number }).cost *= factor;
-  }
-  for (const u of UPGRADES)
-    if (u.unlock.type === 'realm' && u.realmStage !== undefined)
-      (u as { cost: number }).cost = realmTechniqueCost(u.unlock.realm, u.realmStage);
+  priceResources();
+  priceUpgrades();
 }
 
 /**
@@ -552,43 +548,6 @@ const treasureCheckedStages = new Set<number>();
  */
 const resourceEfficiency: { realm: string; byGenerator: Record<string, number> }[] = [];
 const efficiencyCheckedRealms = new Set<number>();
-/**
- * SIM_CALIBRATE=1: on first reaching a realm, prices the resources it unlocks
- * from the economy there and uses them for the rest of the run: the first
- * costs CALIBRATE_SECONDS of income and its first unit is CALIBRATE_EFFICIENCY
- * times as much qi/s per qi as the best resource you can buy; each later one
- * in the same realm costs CALIBRATE_TIER_COST times more, at
- * CALIBRATE_TIER_EFFICIENCY times the efficiency. Prints the prices as
- * CALIBRATION {id: [share of the realm's first breakthrough, qi/s per qi]}.
- */
-const CALIBRATE_SECONDS = 60;
-const CALIBRATE_EFFICIENCY = 2;
-const CALIBRATE_TIER_COST = 15;
-const CALIBRATE_TIER_EFFICIENCY = 0.5;
-const calibration: Record<string, [number, number]> = {};
-function calibrateGatedResources(): void {
-  const realm = REALMS[STAGES[state.stage].realmIndex];
-  const gated = GENERATORS.filter((g) => g.minRealm === realm.id && !calibration[g.id]);
-  if (!gated.length) return;
-  const stats = computeStats(state, false);
-  const efficiency = (g: GeneratorDef) =>
-    stats.generatorUnitQps[g.id] / generatorCost(state, stats.mods, g.id);
-  const best = Math.max(
-    ...GENERATORS.filter((g, i) => !g.minRealm && isGeneratorVisible(state, i)).map(efficiency),
-  );
-  const cost = averageIncome(income(state)) * CALIBRATE_SECONDS;
-  gated.forEach((g, tier) => {
-    const def = g as { baseCost: number; baseQps: number };
-    const qpsPerBase = stats.generatorUnitQps[g.id] / def.baseQps;
-    const costPerBase = generatorCost(state, stats.mods, g.id) / def.baseCost;
-    const tierCost = cost * CALIBRATE_TIER_COST ** tier;
-    def.baseCost = tierCost / costPerBase;
-    def.baseQps =
-      (CALIBRATE_EFFICIENCY * CALIBRATE_TIER_EFFICIENCY ** tier * best * tierCost) / qpsPerBase;
-    calibration[g.id] = [def.baseCost / realm.stageCosts[0], def.baseQps / def.baseCost];
-  });
-}
-
 function trackNewResources(): void {
   GENERATORS.forEach((g, i) => {
     if (i === 0 || !state.generators[g.id] || newResourceShares.some((r) => r.id === g.id)) return;
@@ -709,7 +668,7 @@ function candidates(): Candidate[] {
       },
     });
   }
-  const element = CORE_ORDER.find((e) => canFormCore(state, stats.mods, e));
+  const element = NO_CORES ? undefined : CORE_ORDER.find((e) => canFormCore(state, stats.mods, e));
   if (element) {
     const cost = coreFormCost(stats.mods, state.cores.length);
     list.push({
@@ -728,31 +687,32 @@ function candidates(): Candidate[] {
       },
     });
   }
-  state.cores.forEach((core, i) => {
-    if (!canRefineCore(state, i)) return;
-    const cost = coreRefineCost(state, stats.mods, i);
-    list.push({
-      key: `grade:${core.grade + 1}`,
-      cost,
-      tryOn: () => {
-        core.grade++;
-        return () => core.grade--;
-      },
-      buy: () => {
-        if (!refineCore(state, stats.mods, i)) return false;
-        recordImpact(
-          `refine:${core.element}:${core.grade}`,
-          'core',
-          `${core.element} → ${CORE_GRADES[core.grade].name}`,
-          cost,
-          (s) => {
-            s.cores[i].grade--;
-          },
-        );
-        return true;
-      },
+  if (!NO_CORES)
+    state.cores.forEach((core, i) => {
+      if (!canRefineCore(state, i)) return;
+      const cost = coreRefineCost(state, stats.mods, i);
+      list.push({
+        key: `grade:${core.grade + 1}`,
+        cost,
+        tryOn: () => {
+          core.grade++;
+          return () => core.grade--;
+        },
+        buy: () => {
+          if (!refineCore(state, stats.mods, i)) return false;
+          recordImpact(
+            `refine:${core.element}:${core.grade}`,
+            'core',
+            `${core.element} → ${CORE_GRADES[core.grade].name}`,
+            cost,
+            (s) => {
+              s.cores[i].grade--;
+            },
+          );
+          return true;
+        },
+      });
     });
-  });
   GENERATORS.forEach((g, i) => {
     if (!isGeneratorVisible(state, i)) return;
     const cost = generatorCost(state, stats.mods, g.id);
@@ -895,7 +855,6 @@ while (time < maxHours * 3600) {
   if (computeStats(state, false).qps >= lastStepIncome * STEP_INCOME_GAIN) recordStep();
   if (time % 60 === 0) ratioSamples[STAGES[state.stage].realmIndex].push(activeRatio());
   trackRealmVisits();
-  if (process.env.SIM_CALIBRATE) calibrateGatedResources();
   if (trackImpact) {
     trackLaterImpact();
     trackTreasures();
@@ -1104,6 +1063,5 @@ if (specMode) {
     })}`,
   );
 }
-if (process.env.SIM_CALIBRATE) console.log(`CALIBRATION ${JSON.stringify(calibration)}`);
 if (process.env.SIM_PRICES) console.log(`PRICES ${JSON.stringify(firstBuys)}`);
 console.log(`Realms: ${REALMS.length}, stages: ${STAGES.length}, elements: ${ELEMENTS.length}`);

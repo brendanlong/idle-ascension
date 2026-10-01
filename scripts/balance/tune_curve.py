@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Fits the smooth breakthrough cost curve (SIM_TUNE's "curve", see COST_CURVE in
-src/content/realms.ts) and the Memory weight to the sawtooth in the balance spec
+src/content/realms.ts), the resource ladder (RESOURCE_LADDER in
+src/content/generators.ts) and the Memory weight to the sawtooth in the balance spec
 (docs/balance-spec.md): the active reference player's stage times should be
 floor x growth ^ (stages past its deepest regression).
 
@@ -9,12 +10,10 @@ The curve has only a few parameters, so it stays smooth whatever the bot
 happens to do; stages that are still off target point at content (bursts of
 income) rather than prices. A coordinate search: each round tries nudging
 each parameter both ways and keeps whichever scores best (mean |log2| of each
-stage's median time ÷ target over the spec's seeds), halving the nudges when
-nothing helps. Keeps every evaluation in params.json.history.
-
-Realm-gated resources are priced from the economy as they unlock
-(SIM_CALIBRATE), since their right price depends on the curve; run
-calibrate.py on the result to write them.
+stage's median time ÷ target over the spec's seeds, plus how far the spec's
+layers miss: where resources alone, then cores, stop carrying a player who
+never regresses), halving the nudges when nothing helps. Keeps every
+evaluation in params.json.history.
 
 Usage: tune_curve.py rounds params.json
 Write the result into src/content with bake.py params.json.
@@ -23,19 +22,29 @@ import json, math, os, statistics, sys
 from concurrent.futures import ThreadPoolExecutor
 
 sys.path.insert(0, os.path.dirname(__file__))
-from spec import SPEC, run, sawtooth_ratios
+from spec import SPEC, bored_at, run, sawtooth_ratios
 
-START = {'curve': {'early': 0.9, 'late': 0.9, 'mid': 14, 'width': 2}, 'memory': {'weight': 2.5}}
+START = {'curve': {'early': 0.9, 'late': 0.9, 'mid': 14, 'width': 2}, 'memory': {'weight': 1.67},
+         'ladder': {'costShare': 0.1, 'efficiencyStep': 0.5}}
 # (section, parameter, nudge, whether the nudge multiplies)
 NUDGES = [('curve', 'early', 0.1, False), ('curve', 'late', 0.1, False), ('curve', 'mid', 2, False),
-          ('curve', 'width', 1, False), ('memory', 'weight', 1.5, True)]
-LIMITS = {'width': (0.3, 10), 'early': (0.05, 3), 'late': (0.05, 3)}
+          ('curve', 'width', 1, False), ('memory', 'weight', 1.5, True),
+          ('ladder', 'costShare', 2, True), ('ladder', 'efficiencyStep', 1.3, True)]
+# Long enough to see where a player who never regresses gets bored.
+LAYER_HOURS = 3
+LIMITS = {'width': (0.3, 10), 'early': (0.05, 3), 'late': (0.05, 3), 'efficiencyStep': (0.05, 2)}
 
 def score(params, history, path):
     tune = json.dumps(params)
     seeds = SPEC['seeds']
-    with ThreadPoolExecutor(len(seeds)) as ex:
-        runs = list(ex.map(lambda s: run(('active', 'random', 'efficient', s), tune, calibrate=True), seeds))
+    jobs = [('active', 'random', 'efficient', 'cores', s) for s in seeds]
+    # The layers: how far resources alone, then cores, carry a player who never regresses.
+    layers = {'resourcesOnlyBoredBy': ('active', 'random', 'never', 'no cores'),
+              'withCoresBoredBy': ('active', 'random', 'never', 'cores')}
+    jobs += [v + (s,) for v in layers.values() for s in seeds[:2]]
+    with ThreadPoolExecutor(len(jobs)) as ex:
+        results = list(ex.map(lambda j: run(j, tune, hours=LAYER_HOURS if j[2] == 'never' else None), jobs))
+    runs = results[:len(seeds)]
     n = max(len(r['stageReached']) for r in runs) - 1
     errs = {}
     for r in runs:
@@ -45,6 +54,12 @@ def score(params, history, path):
     # Not reaching Godhood counts as far off for every stage it never reached.
     missing = n - len(stage_err)
     err = (sum(abs(e) for e in stage_err.values()) + 5 * missing) / n
+    # Each stage a layer gets boring outside its range costs as much as a stage twice off target.
+    for key, offset in zip(layers, (len(seeds), len(seeds) + 2)):
+        lo, hi = SPEC['layers'][key]
+        for r in results[offset:offset + 2]:
+            at = bored_at(r) or n
+            err += max(lo - at, at - hi, 0) / n / 2
     history.append({'err': err, 'hours': statistics.median(r['seconds'] for r in runs) / 3600,
                     'regressions': [len(r['regressions']) for r in runs], 'stages': stage_err,
                     'params': json.loads(json.dumps(params))})

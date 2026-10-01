@@ -1,16 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { BUFFS_BY_ID } from '../../content/buffs';
-import { CORE_GRADES } from '../../content/cores';
 import { ENCOUNTERS } from '../../content/encounters';
 import { REGRESSION_STORY } from '../../content/lore';
 import { NAME_TABLES } from '../../content/names';
 import { GENERATORS, GENERATORS_BY_ID } from '../../content/generators';
 import { PERKS, PERKS_BY_ID } from '../../content/perks';
-import { REALMS, REALMS_BY_ID, STAGES } from '../../content/realms';
+import { FINAL_STAGE, REALMS, REALMS_BY_ID, STAGES } from '../../content/realms';
 import { TREASURES } from '../../content/treasures';
 import { UPGRADES } from '../../content/upgrades';
 import type { Effect } from '../effects';
-import { refineStage } from '../cores';
+import { formPosition, refinePosition } from '../cores';
 import { placeholders } from '../text';
 
 function expectUniqueIds(items: readonly { id: string }[]) {
@@ -118,9 +117,13 @@ describe('content integrity', () => {
     }
   });
 
-  it('makes each core grade cost more than the last', () => {
-    for (let core = 0; core < 5; core++)
-      for (let i = 2; i < CORE_GRADES.length; i++)
-        expect(refineStage(core, i)).toBeGreaterThanOrEqual(refineStage(core, i - 1));
+  it('schedules each core after the last and each grade after the last', () => {
+    for (let core = 0; core < 5; core++) {
+      if (core > 0) expect(formPosition(core)).toBeGreaterThan(formPosition(core - 1));
+      expect(refinePosition(core, 1)).toBeGreaterThan(formPosition(core));
+      // Grades past the last realm all land at Godhood, where the game ends.
+      for (let grade = 2; refinePosition(core, grade) < FINAL_STAGE; grade++)
+        expect(refinePosition(core, grade)).toBeGreaterThan(refinePosition(core, grade - 1));
+    }
   });
 });

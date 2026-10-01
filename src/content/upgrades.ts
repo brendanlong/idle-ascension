@@ -1,6 +1,6 @@
 import type { Condition } from '../engine/conditions';
 import type { Effect } from '../engine/effects';
-import { GENERATORS } from './generators';
+import { GENERATORS, GENERATORS_BY_ID } from './generators';
 import { REALMS_BY_ID } from './realms';
 
 export interface UpgradeDef {
@@ -15,6 +15,8 @@ export interface UpgradeDef {
   revives?: string;
   /** For a realm's techniques: the stage of the realm whose breakthrough prices it. */
   realmStage?: number;
+  /** For a resource's techniques: priced at `mult` times the resource's base cost. */
+  resourcePrice?: { generator: string; mult: number };
   unlock: Condition;
   effects: readonly Effect[];
 }
@@ -42,6 +44,7 @@ const generatorUpgrades: UpgradeDef[] = GENERATORS.flatMap((gen, i) => {
     name: gen.upgradeName,
     description: `Refine your ${gen.name} technique.`,
     cost: gen.baseCost * GENERATOR_MILESTONE.costMult,
+    resourcePrice: { generator: gen.id, mult: GENERATOR_MILESTONE.costMult },
     unlock: { type: 'generator', id: gen.id, count: GENERATOR_MILESTONE.count },
     effects: [{ type: 'generatorMult', generator: gen.id, value: GENERATOR_MILESTONE.mult }],
   };
@@ -52,6 +55,7 @@ const generatorUpgrades: UpgradeDef[] = GENERATORS.flatMap((gen, i) => {
     name: gen.revival.name,
     description: `Old foundations, new understanding. Your ${gen.name} matters again.`,
     cost: gen.baseCost * REVIVAL_COST_MULT,
+    resourcePrice: { generator: gen.id, mult: REVIVAL_COST_MULT },
     unlock: { type: 'generator', id: newer.id, count: REVIVAL_NEWER_COUNT },
     revives: gen.id,
     effects: [],
@@ -277,6 +281,18 @@ export const UPGRADES: readonly UpgradeDef[] = [
   ...soulUpgrades,
   ...generatorUpgrades,
 ];
+
+/** Re-prices techniques that follow a resource or a breakthrough, after those change. */
+export function priceUpgrades(): void {
+  for (const u of UPGRADES as UpgradeDef[]) {
+    if (u.resourcePrice) {
+      const { generator, mult } = u.resourcePrice;
+      u.cost = GENERATORS_BY_ID.get(generator)!.baseCost * mult;
+    } else if (u.unlock.type === 'realm' && u.realmStage !== undefined) {
+      u.cost = realmTechniqueCost(u.unlock.realm, u.realmStage);
+    }
+  }
+}
 
 export const UPGRADES_BY_ID: ReadonlyMap<string, UpgradeDef> = new Map(
   UPGRADES.map((u) => [u.id, u]),

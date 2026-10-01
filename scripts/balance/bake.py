@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
 Writes tuned parameters (SIM_TUNE params, as from tune_curve.py) into
-src/content: the breakthrough cost curve (COST_CURVE in realms.ts) and the
-Memory curve (MEMORIES in memories.ts). Everything else is priced from those.
+src/content: the breakthrough cost curve (COST_CURVE in realms.ts), the
+resource ladder (RESOURCE_LADDER in generators.ts) and the Memory curve
+(MEMORIES in memories.ts). Everything else is priced from those.
 Usage: bake.py params.json
 """
 import json, os, re, sys
@@ -24,6 +25,8 @@ def write_object(path, name, values):
 
 if 'curve' in params:
     write_object('src/content/realms.ts', 'COST_CURVE', params['curve'])
+if 'ladder' in params:
+    write_object('src/content/generators.ts', 'RESOURCE_LADDER', params['ladder'])
 if 'memory' in params:
     write_object('src/content/memories.ts', 'MEMORIES', params['memory'])
 print('baked')

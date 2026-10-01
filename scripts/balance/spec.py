@@ -13,16 +13,16 @@ ROOT = os.path.join(os.path.dirname(__file__), '..', '..')
 SPEC = json.load(open(os.path.join(os.path.dirname(__file__), 'spec.json')))
 TUNE = open(sys.argv[1]).read() if __name__ == '__main__' and len(sys.argv) > 1 else '{}'
 NEVER_REGRESS_HOURS = 8
+LAST_REALM_FIRST_STAGE = 30  # Immortal Ascension
 REALMS = ['qiCondensation', 'foundation', 'coreFormation', 'nascentSoul', 'spiritSevering',
           'daoSeeking', 'immortalAscension']
 
-def run(job, tune=TUNE, calibrate=False):
-    """calibrate: price realm-gated resources from the economy as they unlock (SIM_CALIBRATE)."""
-    player, treasures, regress, seed = job
+def run(job, tune=TUNE, hours=None):
+    player, treasures, regress, cores, seed = job
     env = dict(os.environ, SIM_SEED=str(seed), SIM_PLAYER=player, SIM_TREASURES=treasures,
-               SIM_REGRESS=regress, SIM_SPEC='1', SIM_TUNE=tune, SIM_CALIBRATE='1' if calibrate else '')
+               SIM_REGRESS=regress, SIM_NO_CORES='' if cores == 'cores' else '1', SIM_SPEC='1', SIM_TUNE=tune)
     # Never regressing is meant to be tedious: stop at NEVER_REGRESS_HOURS and count it slow enough.
-    hours = NEVER_REGRESS_HOURS if regress == 'never' else 40
+    hours = hours or (NEVER_REGRESS_HOURS if regress == 'never' else 40)
     out = subprocess.run(['npx', 'tsx', 'scripts/sim.ts', str(hours)], capture_output=True, text=True,
                          env=env, cwd=ROOT).stdout
     return json.loads(re.search(r'^SPEC (.*)$', out, re.M).group(1))
@@ -54,9 +54,18 @@ def sawtooth_ratios(run, n):
     reached, ratios = run['stageReached'], {}
     for k in range(1, len(reached)):
         reach = max((x['from'] for x in run['regressions'] if x['t'] < reached[k]), default=0)
-        target = floor(k, n) * SPEC['sawtooth']['growth'] ** (k - 1 - reach)
+        st = SPEC['sawtooth']
+        growth = st['growth'] if reach else st['firstLifeGrowth']
+        target = floor(k, n) * growth ** (k - 1 - reach)
+        if k >= LAST_REALM_FIRST_STAGE:
+            target *= st['lastRealmLonger']
         ratios[k] = (max(1, run['stageSeconds'][k]) / target, reach)
     return ratios
+
+def bored_at(run):
+    """The first stage that takes longer than boredSeconds."""
+    return next((k for k, sec in enumerate(run['stageSeconds'])
+                 if k >= 2 and sec > SPEC['sawtooth']['boredSeconds']), None)
 
 def stage_times(runs):
     """Median seconds from first reaching each stage to first reaching the next, by stage."""
@@ -66,18 +75,19 @@ def stage_times(runs):
 
 def main():
     seeds = SPEC['seeds']
-    variants = [('active', 'random', 'efficient'), ('passive', 'random', 'efficient'),
-                ('active', 'none', 'efficient'), ('active', 'all', 'efficient'), ('active', 'random', 'never')]
+    variants = [('active', 'random', 'efficient', 'cores'), ('passive', 'random', 'efficient', 'cores'),
+                ('active', 'none', 'efficient', 'cores'), ('active', 'all', 'efficient', 'cores'),
+                ('active', 'random', 'never', 'cores'), ('active', 'random', 'never', 'no cores')]
     jobs = [v + (s,) for v in variants for s in seeds]
     cache = os.environ.get('SPEC_RESULTS')
     if cache and os.path.exists(cache):
-        results = {tuple(k.split('|')[:3]) + (int(k.split('|')[3]),): v for k, v in json.load(open(cache)).items()}
+        results = {tuple(k.split('|')[:4]) + (int(k.split('|')[4]),): v for k, v in json.load(open(cache)).items()}
     else:
         with ThreadPoolExecutor(len(jobs)) as ex:
             results = dict(zip(jobs, ex.map(run, jobs)))
         if cache:
             json.dump({'|'.join(map(str, k)): v for k, v in results.items()}, open(cache, 'w'))
-    runs = lambda p, t='random', g='efficient': [results[(p, t, g, s)] for s in seeds]
+    runs = lambda p, t='random', g='efficient', c='cores': [results[(p, t, g, c, s)] for s in seeds]
     active, passive = runs('active'), runs('passive')
 
     for name, rs in [('active', active), ('passive', passive)]:
@@ -114,6 +124,17 @@ def main():
         check(f'{name}: within a life, each stage takes at least {st["monotoneSlack"]}x as long as the last',
               not faster, f'{len(faster)} over {len(rs)} runs, e.g. ' +
               ', '.join(f'stage {k} {fmt(b)} after {fmt(a)}' for k, a, b in faster[:8]))
+
+    # Each system carries the player further before stages get boring.
+    for name, rs, key in [('resources and techniques alone', runs('active', 'random', 'never', 'no cores'),
+                           'resourcesOnlyBoredBy'),
+                          ('with cores, never regressing', runs('active', 'random', 'never'), 'withCoresBoredBy')]:
+        lo, hi = SPEC['layers'][key]
+        at = [bored_at(r) for r in rs]
+        known = [a for a in at if a is not None]
+        median = statistics.median(known) if known else None
+        check(f'{name}: stages first take over {st["boredSeconds"]}s around stage {lo}-{hi}',
+              median is not None and lo <= median <= hi, f'first boring stage per run: {at}')
 
     # 2. Always something new to buy, never a pile at once.
     sb = SPEC['somethingToBuy']
