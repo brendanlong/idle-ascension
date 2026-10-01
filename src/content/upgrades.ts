@@ -13,15 +13,15 @@ export interface UpgradeDef {
 
 /**
  * Counts where most resources still make up a good share of income, so each
- * ×2 matters when it unlocks. Costs are roughly 20-50 times the price of the
+ * ×2 matters when it unlocks. Costs are roughly 10-40 times the price of the
  * resource at that count.
  */
 const GENERATOR_MILESTONES = [
   { count: 1, costMult: 10 },
   { count: 5, costMult: 50 },
-  { count: 15, costMult: 300 },
-  { count: 30, costMult: 3_000 },
-  { count: 50, costMult: 50_000 },
+  { count: 10, costMult: 150 },
+  { count: 20, costMult: 700 },
+  { count: 35, costMult: 5_000 },
 ];
 
 const generatorUpgrades: UpgradeDef[] = GENERATORS.flatMap((gen) =>

@@ -93,7 +93,7 @@ export const CORE_GRADES: readonly CoreGradeDef[] = [
   { name: 'Silver', mult: 2.5, refineCost: 5e11, color: '#c9d1da' },
   { name: 'Gold', mult: 3, refineCost: 3e16, color: '#f0c24b' },
   { name: 'Jade', mult: 4, refineCost: 5e22, color: '#63c29a' },
-  { name: 'Starsteel', mult: 5, refineCost: 1e29, color: '#9fb8ff' },
+  { name: 'Starsteel', mult: 5, refineCost: 5e28, color: '#9fb8ff' },
   { name: 'Primordial', mult: 7, refineCost: 1e37, color: '#f4f0ff' },
 ];
 

@@ -116,15 +116,29 @@ interface Impact {
   costSeconds: number;
   passiveMult: number;
   activeMult: number;
-  /** Treasures only: the same, the first time the last stage of their realm is reached. */
-  atPeak?: { passiveMult: number; activeMult: number };
+  /**
+   * The same 5 minutes later in the same loop (or, for treasures, the first
+   * time their realm's last stage is reached). Not measured for cores.
+   */
+  later?: { passiveMult: number; activeMult: number };
   /** Resources only: their share of passive qi/s 5 minutes later, and the most it ever reached. */
   generatorId?: string;
   shareLater?: number;
   peakShare?: number;
 }
 const impacts = new Map<string, Impact>();
-const shareChecks: { impact: Impact; at: number; loop: number }[] = [];
+const laterChecks: {
+  impact: Impact;
+  at: number;
+  loop: number;
+  undo: (s: GameState) => void;
+}[] = [];
+
+function multipliers(after: GameState, before: GameState) {
+  const a = income(after);
+  const b = income(before);
+  return { passiveMult: a.passive / b.passive, activeMult: a.active / b.active };
+}
 
 function recordImpact(
   key: string,
@@ -135,32 +149,36 @@ function recordImpact(
   generatorId?: string,
 ): void {
   if (!printImpact || impacts.has(key)) return;
-  const after = income(state);
   const without = structuredClone(state);
   undo(without);
-  const before = income(without);
   const impact: Impact = {
     kind,
     name,
     stage: stageName(state.stage),
     loop: state.prestige.loops,
-    costSeconds: cost / averageIncome(before),
-    passiveMult: after.passive / before.passive,
-    activeMult: after.active / before.active,
+    costSeconds: cost / averageIncome(income(without)),
+    ...multipliers(state, without),
     generatorId,
   };
   impacts.set(key, impact);
-  if (generatorId) shareChecks.push({ impact, at: time + 300, loop: impact.loop });
+  // Undoing a core later would also undo the refines bought since, so only resources and techniques.
+  if (kind !== 'core') laterChecks.push({ impact, at: time + 300, loop: impact.loop, undo });
 }
 
-function trackGeneratorShares(): void {
+function trackLaterImpact(): void {
   const stats = computeStats(state, false);
-  if (stats.qps <= 0) return;
-  for (const check of shareChecks) {
-    const id = check.impact.generatorId!;
+  for (const check of laterChecks) {
+    const { impact } = check;
+    if (time === check.at && state.prestige.loops === check.loop) {
+      const without = structuredClone(state);
+      check.undo(without);
+      impact.later = multipliers(state, without);
+    }
+    if (!impact.generatorId || stats.qps <= 0) continue;
+    const id = impact.generatorId;
     const share = (stats.generatorUnitQps[id] * state.generators[id]) / stats.qps;
-    check.impact.peakShare = Math.max(check.impact.peakShare ?? 0, share);
-    if (time === check.at && state.prestige.loops === check.loop) check.impact.shareLater = share;
+    impact.peakShare = Math.max(impact.peakShare ?? 0, share);
+    if (impact.later && time === check.at) impact.shareLater = share;
   }
 }
 
@@ -181,15 +199,10 @@ function trackTreasures(): void {
     withIt.treasures[t.id] = 1;
     const without = structuredClone(state);
     delete without.treasures[t.id];
-    const after = income(withIt);
-    const before = income(without);
-    const mults = {
-      passiveMult: after.passive / before.passive,
-      activeMult: after.active / before.active,
-    };
+    const mults = multipliers(withIt, without);
     const key = `treasure:${t.id}`;
     const existing = impacts.get(key);
-    if (existing) existing.atPeak = mults;
+    if (existing) existing.later = mults;
     else {
       impacts.set(key, {
         kind: `treasure (${t.rarity})`,
@@ -198,7 +211,7 @@ function trackTreasures(): void {
         loop: state.prestige.loops,
         costSeconds: 0,
         ...mults,
-        ...(isLast && !stage.isMajor ? { atPeak: mults } : {}),
+        ...(isLast && !stage.isMajor ? { later: mults } : {}),
       });
     }
   }
@@ -321,7 +334,7 @@ while (time < maxHours * 3600) {
   activity().seconds++;
   spend();
   if (printImpact) {
-    trackGeneratorShares();
+    trackLaterImpact();
     trackTreasures();
   }
 
@@ -371,7 +384,7 @@ if (printImpact) {
   const mult = (first: number, peak?: number) =>
     (fixed(first) + (peak === undefined ? '' : `→${fixed(peak)}`)).padStart(10);
   console.log(
-    '\nImpact when first bought (income with ÷ without, buffs excluded; cost in seconds of average income).',
+    '\nImpact when first bought → 5 minutes later (income with ÷ without, buffs excluded; cost in seconds of average income).',
   );
   console.log(
     'Treasures: what a level-1 copy would add on first entering its realm → first reaching its last stage.',
@@ -381,7 +394,7 @@ if (printImpact) {
   );
   for (const i of impacts.values()) {
     console.log(
-      `  ${i.kind.padEnd(20)} ${i.name.padEnd(34)} ${i.stage.padEnd(36)} ${String(i.loop).padStart(4)} ${formatDuration(i.costSeconds).padStart(9)} ${mult(i.passiveMult, i.atPeak?.passiveMult)} ${mult(i.activeMult, i.atPeak?.activeMult)}  ${pct(i.shareLater)} ${i.generatorId ? '/' : ''} ${pct(i.peakShare)}`,
+      `  ${i.kind.padEnd(20)} ${i.name.padEnd(34)} ${i.stage.padEnd(36)} ${String(i.loop).padStart(4)} ${formatDuration(i.costSeconds).padStart(9)} ${mult(i.passiveMult, i.later?.passiveMult)} ${mult(i.activeMult, i.later?.activeMult)}  ${pct(i.shareLater)} ${i.generatorId ? '/' : ''} ${pct(i.peakShare)}`,
     );
   }
   const unbought = UPGRADES.filter((u) => !impacts.has(`upgrade:${u.id}`)).map((u) => u.name);

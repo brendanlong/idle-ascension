@@ -11,9 +11,14 @@ export function coreFormCost(mods: Modifiers, coreIndex: number): number {
   return costs[Math.min(coreIndex, costs.length - 1)] * mods.coreCostMult;
 }
 
+/**
+ * A grade's own price, but never less than forming this core: a core formed in
+ * a later realm doesn't catch up to the grade cap for free.
+ */
 export function coreRefineCost(state: GameState, mods: Modifiers, coreIndex: number): number {
   const next = CORE_GRADES[state.cores[coreIndex].grade + 1];
-  return next ? next.refineCost * mods.coreCostMult : Infinity;
+  if (!next) return Infinity;
+  return Math.max(next.refineCost * mods.coreCostMult, coreFormCost(mods, coreIndex));
 }
 
 export function canFormCore(state: GameState, mods: Modifiers, element: ElementId): boolean {

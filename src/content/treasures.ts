@@ -112,7 +112,7 @@ export const TREASURES: readonly TreasureDef[] = [
     description: 'Pills refined in it come out with cloud patterns. Very prestigious.',
     rarity: 'uncommon',
     minRealm: 'foundation',
-    effects: [{ type: 'generatorMult', generator: 'furnace', value: 4 }],
+    effects: [{ type: 'generatorMult', generator: 'furnace', value: 5 }],
   },
   // --- Core Formation ---
   {

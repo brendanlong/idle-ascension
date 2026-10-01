@@ -8,7 +8,7 @@ import { computeModifiers } from './stats';
 const REGRESSION_REALM = 'coreFormation';
 const BASE_MEMORIES = 3;
 /** Each stage beyond Core Formation multiplies the Memories a regression yields by this. */
-const MEMORY_GROWTH_PER_STAGE = 1.35;
+const MEMORY_GROWTH_PER_STAGE = 1.3;
 
 /** Memories gained by regressing from a given stage. */
 export function memoriesForStage(stage: number): number {
