@@ -7,8 +7,8 @@
  *                       for a share of each 10 minutes that falls from 80% in Qi
  *                       Condensation to 10% in Immortal Ascension (and stays while
  *                       replaying after a regression).
- *                       passive: gathers and claims encounters only in the first two
- *                       realms and while replaying after a regression, but buys the moment
+ *                       passive: gathers and claims encounters only to get started (under
+ *                       1 qi/s) and while replaying after a regression, but buys the moment
  *                       anything is affordable, to show how the economy paces an idle player.
  *                       active: gathers and checks in all the time.
  *   SIM_ACTIVE=<0-1>    taper player with a fixed share instead
@@ -74,6 +74,8 @@ const TREASURE_MODE = process.env.SIM_TREASURES ?? 'random';
 const FIXED_ACTIVE_FRACTION = process.env.SIM_ACTIVE ? Number(process.env.SIM_ACTIVE) : null;
 /** The passive player still gathers in these early realms (by index). */
 const PASSIVE_GATHERS_UNTIL_REALM = 2;
+/** The passive player gathers only to get going, until it makes this much qi/s. */
+const PASSIVE_STARTUP_QPS = 1;
 const ACTIVE_CYCLE_SECONDS = 600;
 const printImpact = !!process.env.SIM_IMPACT;
 /** How well the bot plays elemental trials (0-1), for tribulations and optional offers. */
@@ -112,6 +114,9 @@ const CORE_ORDER: ElementId[] = ['wood', 'fire', 'water', 'earth', 'metal'];
  * paid it: the wait since its previous purchase, and its price in seconds of
  * passive qi/s.
  */
+/** Within a realm, a stage costs at most this many times the previous one. */
+const MAX_STAGE_STEP = 8;
+
 function applyTuning(): void {
   if (!process.env.SIM_TUNE) return;
   const tune = JSON.parse(process.env.SIM_TUNE) as {
@@ -173,9 +178,13 @@ function applyTuning(): void {
     if (kind === 'form') (CORE_FORM_COSTS as number[])[Number(id)] *= factor;
     if (kind === 'grade') scaled(CORE_GRADES[Number(id)], 'refineCost', factor);
   }
-  // Breakthroughs must keep getting more expensive.
+  // Breakthroughs must keep getting more expensive, without spikes inside a realm.
   STAGES.forEach((st, i) => {
-    if (i > 1) (st as { cost: number }).cost = Math.max(st.cost, STAGES[i - 1].cost * 1.3);
+    if (i <= 1) return;
+    const previous = STAGES[i - 1].cost;
+    let cost = Math.max(st.cost, previous * 1.3);
+    if (!st.isMajor) cost = Math.min(cost, previous * MAX_STAGE_STEP);
+    (st as { cost: number }).cost = cost;
   });
   // So must core grades and core slots.
   CORE_GRADES.forEach((grade, g) => {
@@ -340,7 +349,7 @@ function inTaperWindow(): boolean {
 function isGathering(): boolean {
   if (PLAYER === 'active') return true;
   if (PLAYER === 'passive')
-    return isReplaying() || STAGES[state.stats.bestStage].realmIndex <= PASSIVE_GATHERS_UNTIL_REALM;
+    return isReplaying() || computeStats(state, false).qps < PASSIVE_STARTUP_QPS;
   return inTaperWindow();
 }
 

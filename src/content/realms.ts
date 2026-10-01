@@ -50,7 +50,7 @@ export const REALMS: readonly RealmDef[] = [
     color: '#b9c7d6',
     description: 'You draw qi into your body and compress it, layer by layer.',
     stageNames: LAYERS,
-    stageCosts: [24, 150, 870, 1_100, 790_000, 1_000_000, 1_400_000, 4_900_000, 8_600_000],
+    stageCosts: [15, 36, 86, 210, 500, 1_200, 2_900, 6_900, 17_000],
     stageMultiplier: 1.2,
   },
   {
@@ -59,7 +59,7 @@ export const REALMS: readonly RealmDef[] = [
     color: '#7fc4a4',
     description: 'Your qi turns liquid, laying the foundation of your Dao.',
     stageNames: PHASES,
-    stageCosts: [8.3e7, 1.5e10, 5.4e10, 7e10],
+    stageCosts: [150_000, 520_000, 1_800_000, 6_400_000],
     stageMultiplier: 1.5,
     requirement: {
       type: 'generator',
@@ -75,7 +75,7 @@ export const REALMS: readonly RealmDef[] = [
     color: '#e0b64a',
     description: 'Your liquid qi condenses into a solid core within your dantian.',
     stageNames: PHASES,
-    stageCosts: [5e12, 6.5e12, 8.4e12, 1.1e13],
+    stageCosts: [4e7, 1.6e8, 6.4e8, 2.6e9],
     stageMultiplier: 1.6,
     tribulation: { name: 'Minor Thunder Tribulation', trials: 1, passScore: 0.5 },
     effects: [{ type: 'add', stat: 'coreSlots', value: 1 }],
@@ -88,7 +88,7 @@ export const REALMS: readonly RealmDef[] = [
     color: '#d7738a',
     description: 'Your core cracks open and a tiny soul is born, cultivating beside you.',
     stageNames: PHASES,
-    stageCosts: [5.7e13, 1.3e15, 6.4e15, 1.5e16],
+    stageCosts: [2e10, 1.6e11, 1.3e12, 1e13],
     stageMultiplier: 1.7,
     tribulation: { name: 'Crimson Thunder Tribulation', trials: 1, passScore: 0.55 },
     effects: [
