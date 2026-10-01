@@ -72,8 +72,8 @@ const MOTES_LEFT_WHILE_GATHERING = 5;
 const PLAYER = process.env.SIM_PLAYER ?? 'taper';
 const TREASURE_MODE = process.env.SIM_TREASURES ?? 'random';
 const FIXED_ACTIVE_FRACTION = process.env.SIM_ACTIVE ? Number(process.env.SIM_ACTIVE) : null;
-/** The passive player still gathers in these early realms (by index). */
-const PASSIVE_GATHERS_UNTIL_REALM = 2;
+/** Waits in realms up to this one (by index) are the early game, left out of the late-game gap summary. */
+const EARLY_GAME_UNTIL_REALM = 2;
 /** The passive player gathers only to get going, until it makes this much qi/s. */
 const PASSIVE_STARTUP_QPS = 1;
 const ACTIVE_CYCLE_SECONDS = 600;
@@ -836,7 +836,7 @@ console.log(
   `\nFinal: ${stageName(state.stage)} after ${formatDuration(time)}, ${state.prestige.loops} regressions`,
 );
 const lateGaps = stepGaps
-  .filter((g) => g.realm > PASSIVE_GATHERS_UNTIL_REALM)
+  .filter((g) => g.realm > EARLY_GAME_UNTIL_REALM)
   .map((g) => g.seconds)
   .sort((a, b) => b - a);
 console.log(
