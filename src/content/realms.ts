@@ -49,7 +49,7 @@ export interface CostCurve {
   width: number;
 }
 
-export const COST_CURVE: CostCurve = { first: 59, early: 0.9, late: 0.9, mid: 14, width: 2 };
+export const COST_CURVE: CostCurve = { first: 59, early: 1, late: 0.79, mid: 14, width: 4 };
 
 /** The cost of every stage, Mortal (free) first. */
 export function curveCosts(curve: CostCurve, stages: number): number[] {
