@@ -34,6 +34,7 @@ npm test           # Vitest unit tests for the engine
 npm run typecheck
 npm run build
 npm run sim -- 1 72 45   # headless balance sim: clicks/sec, max hours, minutes stalled before regressing
+SIM_ACTIVE=0.2 SIM_IMPACT=1 npm run sim   # play actively 20% of the time; report each item's impact
 npm run format
 npm run social-preview   # re-render public/social-preview.jpg from scripts/social-preview.html
 npm run icons            # re-render the favicon and install icons in public/
