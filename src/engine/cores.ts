@@ -1,14 +1,25 @@
-import { CORE_FORM_COSTS, CORE_GRADES, ELEMENTS_BY_ID, type ElementId } from '../content/cores';
-import { REALMS, STAGES } from '../content/realms';
+import { CORE_GRADES, CORE_SLOT_REALMS, ELEMENTS_BY_ID, type ElementId } from '../content/cores';
+import { REALMS, REALMS_BY_ID, STAGES } from '../content/realms';
 import { spendQi } from './economy';
 import type { Modifiers } from './effects';
 import { log } from './events';
 import type { GameState } from './state';
 import { unlockedCoreSlots } from './stats';
 
+/**
+ * Cores are priced from realm breakthroughs, so they stay in step with the
+ * realm they belong to: forming one costs the first breakthrough of the realm
+ * that opens its slot.
+ */
 export function coreFormCost(mods: Modifiers, coreIndex: number): number {
-  const costs = CORE_FORM_COSTS;
-  return costs[Math.min(coreIndex, costs.length - 1)] * mods.coreCostMult;
+  const realm = CORE_SLOT_REALMS[Math.min(coreIndex, CORE_SLOT_REALMS.length - 1)];
+  return REALMS_BY_ID.get(realm)!.stageCosts[0] * mods.coreCostMult;
+}
+
+/** Base price of refining to a grade: a share of the first breakthrough of the realm allowing it. */
+export function gradeRefinePrice(grade: number): number {
+  const realm = REALMS.find((r) => (r.coreGradeCap ?? -1) >= grade)!;
+  return realm.stageCosts[0] * CORE_GRADES[grade].refineShare;
 }
 
 /**
@@ -18,7 +29,8 @@ export function coreFormCost(mods: Modifiers, coreIndex: number): number {
 export function coreRefineCost(state: GameState, mods: Modifiers, coreIndex: number): number {
   const next = CORE_GRADES[state.cores[coreIndex].grade + 1];
   if (!next) return Infinity;
-  return Math.max(next.refineCost * mods.coreCostMult, coreFormCost(mods, coreIndex));
+  const grade = state.cores[coreIndex].grade + 1;
+  return Math.max(gradeRefinePrice(grade) * mods.coreCostMult, coreFormCost(mods, coreIndex));
 }
 
 export function canFormCore(state: GameState, mods: Modifiers, element: ElementId): boolean {

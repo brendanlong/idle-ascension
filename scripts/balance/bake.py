@@ -49,11 +49,5 @@ for gid, (cost, qps) in prices['gen'].items():
     assert n == 1, gid
 write('src/content/generators.ts', gens)
 
-# Core prices.
-cores = read('src/content/cores.ts')
-grades = iter(prices['grade'])
-cores = re.sub(r'refineCost: [0-9][0-9._e+]*,', lambda m: f'refineCost: {lit(next(grades))},', cores)
-cores = re.sub(r'CORE_FORM_COSTS: readonly number\[\] = \[[^\]]*\]',
-               'CORE_FORM_COSTS: readonly number[] = [' + ', '.join(lit(x) for x in prices['form']) + ']', cores)
-write('src/content/cores.ts', cores)
+# Core prices come from realm breakthroughs (engine/cores.ts), so there's nothing to write.
 print('baked')

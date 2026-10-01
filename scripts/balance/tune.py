@@ -2,7 +2,7 @@
 """
 Schedule tuner. Runs the idle bot (scripts/sim.ts, SIM_PLAYER=passive) that
 regresses only when stuck, over a few seeds, and:
-- moves each breakthrough, core and realm-gated resource price toward its realm's target wait
+- moves each breakthrough and realm-gated resource price toward its realm's target wait
   (realm-gated resources' output is set separately: SIM_IMPACT=1 reports how far behind the
   best resource each is when its realm is reached, and genQps makes it about twice the best);
   (time since the previous first-time purchase, including regressing),
@@ -49,19 +49,16 @@ def dump_prices():
     return json.loads(out)
 
 def fixed_price(key):
-    # Techniques keep their own prices (by hand early, a share of their realm's entry cost
-    # later, or from their resource's cost); the tuner sets the realm structure around them:
-    # breakthroughs, cores and late resources. Tuning techniques fed back on itself: one that
+    # Techniques and cores keep their own prices (by hand early, or from their realm's
+    # entry cost or their resource's cost); the tuner sets the realm structure around
+    # them: breakthroughs and late resources. Tuning techniques fed back on itself: one that
     # barely helps gets bought the moment it's cheap, looks "too quick", and gets pricier
     # every round.
-    return key.startswith('up:')
+    return key.startswith(('up:', 'form:', 'grade:'))
 
 def all_keys():
     d = dump_prices()
-    # The last core slot comes only from an insight the idle bot doesn't buy.
-    keys = {f'up:{u}' for u in d['up'] if not fixed_price(f'up:{u}')} | {f'form:{i}' for i in range(len(d['form']) - 1)}
-    keys |= {f'grade:{g}' for g in range(1, len(d['grade']) - 1)}  # the last grade is only reachable at Godhood
-    return keys
+    return {f'up:{u}' for u in d['up'] if not fixed_price(f'up:{u}')}
 
 def main():
     iterations, path = int(sys.argv[1]), sys.argv[2]

@@ -19,7 +19,8 @@
  *   SIM_IMPACT=1        also print how much each resource, technique, core and treasure adds
  *                       to income when it first becomes available
  */
-import { CORE_FORM_COSTS, CORE_GRADES, ELEMENTS, type ElementId } from '../src/content/cores';
+import { CORE_GRADES, CORE_SLOT_REALMS, ELEMENTS, type ElementId } from '../src/content/cores';
+import { baseModifiers } from '../src/engine/effects';
 import { GENERATORS, generatorName } from '../src/content/generators';
 import { UPGRADES } from '../src/content/upgrades';
 import { PERKS } from '../src/content/perks';
@@ -38,6 +39,7 @@ import {
   coreFormCost,
   coreRefineCost,
   formCore,
+  gradeRefinePrice,
   refineCore,
 } from '../src/engine/cores';
 import {
@@ -100,11 +102,11 @@ const CORE_ORDER: ElementId[] = ['wood', 'fire', 'water', 'earth', 'metal'];
  * src/content:
  *   qps          multiplies every resource's output
  *   shift        multiplies the cost jump into a realm: that realm's breakthroughs and
- *                everything priced for it (gated resources, techniques, core grades and
- *                slots), and so every later realm too
+ *                everything priced for it (gated resources, techniques), and so every
+ *                later realm too
  *   stageGrowth  multiplies a realm's stage cost growth
  *   price        multiplies single prices: "up:<technique id>", "stage:<index>",
- *                "form:<core number>", "grade:<core grade>", "gen:<resource>" (base cost)
+ *                "gen:<resource>" (base cost)
  *   genQps       multiplies a resource's output"
  * SIM_PRICES=1 prints, as JSON, each of those prices the first time the bot
  * paid it: the wait since its previous purchase, and its price in seconds of
@@ -142,14 +144,6 @@ function applyTuning(): void {
     const growth = tune.stageGrowth?.[REALMS[st.realmIndex].id] ?? 1;
     scaled(st, 'cost', priceMult[st.realmIndex] * growth ** st.stageInRealm);
   }
-  CORE_GRADES.forEach((grade, g) => {
-    const realm = REALMS.findIndex((r) => (r.coreGradeCap ?? -1) >= g);
-    if (g > 0) scaled(grade, 'refineCost', priceMult[realm]);
-  });
-  const coreFormation = realmIndex('coreFormation');
-  (CORE_FORM_COSTS as number[]).forEach((_, n, costs) => {
-    costs[n] *= priceMult[Math.min(coreFormation + n, REALMS.length - 1)];
-  });
   for (const [id, factor] of Object.entries(tune.genQps ?? {}))
     scaled(
       GENERATORS.find((g) => g.id === id)!,
@@ -171,8 +165,6 @@ function applyTuning(): void {
         factor,
       );
     if (kind === 'stage') scaled(STAGES[Number(id)], 'cost', factor);
-    if (kind === 'form') (CORE_FORM_COSTS as number[])[Number(id)] *= factor;
-    if (kind === 'grade') scaled(CORE_GRADES[Number(id)], 'refineCost', factor);
   }
   // Breakthroughs must keep getting more expensive, without spikes inside a realm.
   STAGES.forEach((st, i) => {
@@ -181,18 +173,6 @@ function applyTuning(): void {
     let cost = Math.max(st.cost, previous * 1.3);
     if (!st.isMajor) cost = Math.min(cost, previous * MAX_STAGE_STEP);
     (st as { cost: number }).cost = cost;
-  });
-  // So must core grades and core slots.
-  CORE_GRADES.forEach((grade, g) => {
-    if (g > 1)
-      scaled(
-        grade,
-        'refineCost',
-        Math.max(1, (CORE_GRADES[g - 1].refineCost * 1.3) / grade.refineCost),
-      );
-  });
-  (CORE_FORM_COSTS as number[]).forEach((cost, n, costs) => {
-    if (n > 0) costs[n] = Math.max(cost, costs[n - 1] * 1.3);
   });
 }
 
@@ -227,9 +207,9 @@ if (process.env.SIM_DUMP_PRICES) {
     JSON.stringify({
       up: Object.fromEntries(UPGRADES.map((u) => [u.id, u.cost])),
       stage: STAGES.map((st) => st.cost),
-      form: CORE_FORM_COSTS,
+      form: CORE_SLOT_REALMS.map((_, n) => coreFormCost(baseModifiers(), n)),
       gen: Object.fromEntries(GENERATORS.map((g) => [g.id, [g.baseCost, g.baseQps]])),
-      grade: CORE_GRADES.map((g) => g.refineCost),
+      grade: CORE_GRADES.map((_, g) => gradeRefinePrice(g)),
     }),
   );
   process.exit(0);

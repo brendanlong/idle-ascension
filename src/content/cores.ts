@@ -76,26 +76,32 @@ export interface CoreGradeDef {
   /** Multiplier to all qi gain from a core of this grade. */
   mult: number;
   /**
-   * Qi cost to refine a core up to this grade, priced for the realm that
-   * unlocks the grade so it isn't free when you first get there.
+   * Cost to refine a core up to this grade, as a share of the first
+   * breakthrough of the realm that allows the grade (see gradeRefinePrice).
    */
-  refineCost: number;
+  refineShare: number;
   color: string;
 }
 
 export const CORE_GRADES: readonly CoreGradeDef[] = [
-  { name: 'Mud', mult: 1.2, refineCost: 0, color: '#6b5a45' },
-  { name: 'Iron', mult: 1.5, refineCost: 9.8e14, color: '#7d8590' },
-  { name: 'Bronze', mult: 2, refineCost: 1.6e15, color: '#b0773e' },
-  { name: 'Silver', mult: 2.5, refineCost: 2.7e15, color: '#c9d1da' },
-  { name: 'Gold', mult: 3, refineCost: 1.6e18, color: '#f0c24b' },
-  { name: 'Jade', mult: 4, refineCost: 1.4e22, color: '#63c29a' },
-  { name: 'Starsteel', mult: 5, refineCost: 3e22, color: '#9fb8ff' },
-  { name: 'Primordial', mult: 7, refineCost: 3e34, color: '#f4f0ff' },
+  { name: 'Mud', mult: 1.2, refineShare: 0, color: '#6b5a45' },
+  { name: 'Iron', mult: 1.5, refineShare: 0.5, color: '#7d8590' },
+  { name: 'Bronze', mult: 2, refineShare: 3, color: '#b0773e' },
+  { name: 'Silver', mult: 2.5, refineShare: 0.5, color: '#c9d1da' },
+  { name: 'Gold', mult: 3, refineShare: 0.5, color: '#f0c24b' },
+  { name: 'Jade', mult: 4, refineShare: 0.5, color: '#63c29a' },
+  { name: 'Starsteel', mult: 5, refineShare: 0.5, color: '#9fb8ff' },
+  { name: 'Primordial', mult: 7, refineShare: 0.5, color: '#f4f0ff' },
 ];
 
 /**
- * Qi cost to form the Nth core (0-based), priced for the realm whose core
- * slot it usually fills (Core Formation, Nascent Soul, ...).
+ * The realm whose first breakthrough prices the Nth core (0-based): usually
+ * the realm that opens its slot.
  */
-export const CORE_FORM_COSTS: readonly number[] = [5.6e14, 2.5e15, 1.5e18, 8.8e21, 3.1e28];
+export const CORE_SLOT_REALMS: readonly string[] = [
+  'coreFormation',
+  'nascentSoul',
+  'spiritSevering',
+  'daoSeeking',
+  'immortalAscension',
+];
