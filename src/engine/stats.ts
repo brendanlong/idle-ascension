@@ -33,6 +33,20 @@ export interface Stats {
 }
 
 const BASE_MOTE_SPAWN_PER_SECOND = 1;
+/** Most motes the field holds at once. */
+export const MAX_MOTES = 60;
+/**
+ * Motes appear faster on an emptier field: this many times the usual rate when
+ * it's empty, fading logarithmically to nothing at MAX_MOTES (about the usual
+ * rate at 10 waiting). Gathering keeps the field low, so it stays lively,
+ * while a field left alone fills up less the faster motes spawn.
+ */
+const MOTE_EMPTY_FIELD_BOOST = 3;
+
+export function moteSpawnRate(spawnPerSecond: number, motesOnField: number): number {
+  const room = Math.log((MAX_MOTES + 1) / (Math.min(motesOnField, MAX_MOTES) + 1));
+  return (spawnPerSecond * MOTE_EMPTY_FIELD_BOOST * room) / Math.log(MAX_MOTES + 1);
+}
 /**
  * A mote is worth this much qi times all qi multipliers, or this many seconds
  * of resource qi/s if that's more, before mote multipliers. Early on the base

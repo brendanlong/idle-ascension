@@ -12,6 +12,7 @@ import {
 } from '../../engine/breakthrough';
 import { absorbMotes, drawInMote } from '../../engine/economy';
 import { claimEncounter } from '../../engine/encounters';
+import { MAX_MOTES, moteSpawnRate } from '../../engine/stats';
 import { acceptTrial, completeTrial } from '../../engine/trials';
 import { TrialOverlay } from '../trials/TrialOverlay';
 import { game } from '../game';
@@ -34,9 +35,9 @@ interface FloatText {
   color: string;
 }
 
-const MAX_MOTES = 60;
 const MOTE_MIN_LIFE = 8;
 const MOTE_MAX_LIFE = 14;
+const CATCH_UP_STEP = 0.25;
 const ABSORB_RADIUS = 46;
 const FLOAT_LIFETIME = 1.1;
 /** Absorbed motes are credited in batches to avoid re-rendering every animation frame. */
@@ -61,7 +62,7 @@ class FieldSim {
   private spawnAccumulator = 0;
 
   step(dt: number, spawnPerSecond: number): number {
-    this.spawnAccumulator += dt * spawnPerSecond;
+    this.spawnAccumulator += dt * moteSpawnRate(spawnPerSecond, this.motes.length);
     while (this.spawnAccumulator >= 1) {
       this.spawnAccumulator--;
       if (this.motes.length < MAX_MOTES) this.spawnMote();
@@ -88,18 +89,25 @@ class FieldSim {
 
   /**
    * Brings the field to how it would look after `seconds` more of running
-   * unseen: motes already here age, and motes that would have spawned in
-   * that time appear at the age they'd be now, if they wouldn't have faded yet.
+   * unseen. Only the last MOTE_MAX_LIFE seconds matter (older motes would have
+   * faded), so age everything past that, then replay those seconds in small
+   * steps, spawning at the rate for however many motes were waiting.
    */
   catchUp(seconds: number, spawnPerSecond: number): void {
-    for (const m of this.motes) m.age += seconds;
-    this.motes = this.motes.filter((m) => m.age < m.life);
-    // Only the last MOTE_MAX_LIFE seconds of spawns can still be alive.
     const window = Math.min(seconds, MOTE_MAX_LIFE);
-    const expected = window * spawnPerSecond;
-    const count = Math.floor(expected) + (Math.random() < expected % 1 ? 1 : 0);
-    for (let i = 0; i < count && this.motes.length < MAX_MOTES; i++) {
-      this.spawnMote(Math.random() * window);
+    const ageBy = (dt: number) => {
+      for (const m of this.motes) m.age += dt;
+      this.motes = this.motes.filter((m) => m.age < m.life);
+    };
+    ageBy(seconds - window);
+    for (let t = 0; t < window; t += CATCH_UP_STEP) {
+      const dt = Math.min(CATCH_UP_STEP, window - t);
+      this.spawnAccumulator += dt * moteSpawnRate(spawnPerSecond, this.motes.length);
+      while (this.spawnAccumulator >= 1 && this.motes.length < MAX_MOTES) {
+        this.spawnAccumulator--;
+        this.spawnMote();
+      }
+      ageBy(dt);
     }
   }
 
@@ -117,17 +125,14 @@ class FieldSim {
     return { x: mote.x, y: mote.y };
   }
 
-  /** Adds a mote that spawned `age` seconds ago, unless it would already have faded. */
-  private spawnMote(age = 0): void {
-    const life = MOTE_MIN_LIFE + Math.random() * (MOTE_MAX_LIFE - MOTE_MIN_LIFE);
-    if (age >= life) return;
+  private spawnMote(): void {
     this.motes.push({
       x: Math.random() * this.width,
       y: Math.random() * this.height,
       vx: (Math.random() - 0.5) * 12,
       vy: (Math.random() - 0.5) * 12,
-      age,
-      life,
+      age: 0,
+      life: MOTE_MIN_LIFE + Math.random() * (MOTE_MAX_LIFE - MOTE_MIN_LIFE),
     });
   }
 

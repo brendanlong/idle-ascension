@@ -15,7 +15,7 @@ import {
   maxAffordable,
   nextLockedGenerator,
 } from '../economy';
-import { computeStats } from '../stats';
+import { MAX_MOTES, computeStats, moteSpawnRate } from '../stats';
 import { newGame } from './helpers';
 
 describe('generators', () => {
@@ -69,6 +69,13 @@ describe('generators', () => {
 });
 
 describe('qi motes', () => {
+  it('spawns motes faster on an emptier field, fading to none at the cap', () => {
+    expect(moteSpawnRate(2, 0)).toBeCloseTo(6);
+    expect(moteSpawnRate(2, 10)).toBeCloseTo(2.5, 1);
+    expect(moteSpawnRate(2, 30)).toBeLessThan(moteSpawnRate(2, 20));
+    expect(moteSpawnRate(2, MAX_MOTES)).toBe(0);
+  });
+
   it('adds automatically gathered motes to passive qi/s', () => {
     const state = newGame();
     state.generators.herb = 10;
