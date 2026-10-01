@@ -10,7 +10,8 @@
   --crimson: #d0513f;
   --lightning: #b9a8ff;
   --radius: 8px;
-  font-family: 'Noto Serif', 'Noto Serif SC', Georgia, 'Times New Roman', serif;
+  font-family: 'Noto Serif Variable', 'Noto Serif', 'Noto Serif SC', Georgia, 'Times New Roman', serif;
+  font-variant-numeric: tabular-nums;
   color: var(--text);
   background: var(--bg);
   color-scheme: dark;
@@ -139,7 +140,6 @@ header.top h1 {
 .qi-amount {
   font-size: 1.7rem;
   color: #f6e7b0;
-  font-variant-numeric: tabular-nums;
 }
 .qi-rate {
   color: var(--muted);
@@ -211,7 +211,6 @@ header.top h1 {
   align-items: center;
   justify-content: center;
   font-size: 0.8rem;
-  font-variant-numeric: tabular-nums;
 }
 .unlocks {
   margin: 0;
@@ -232,7 +231,6 @@ header.top h1 {
 .stat-list dd {
   margin: 0;
   text-align: right;
-  font-variant-numeric: tabular-nums;
 }
 .buffs {
   list-style: none;
@@ -551,7 +549,6 @@ header.top h1 {
 .shop-owned {
   font-size: 1.5rem;
   color: var(--muted);
-  font-variant-numeric: tabular-nums;
 }
 
 .card {

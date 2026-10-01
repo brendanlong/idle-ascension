@@ -16,6 +16,7 @@
     "screenshot": "vite build && tsx scripts/take-screenshot.ts"
   },
   "dependencies": {
+    "@fontsource-variable/noto-serif": "^5.3.0",
     "preact": "^10.29.8"
   },
   "devDependencies": {

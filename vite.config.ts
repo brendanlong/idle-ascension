@@ -29,7 +29,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeManifestIcons: false,
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png}'],
+        globPatterns: ['**/*.{js,css,html,svg,png}', '**/noto-serif-latin-wght-*.woff2'],
         // Opening a file directly (e.g. the social preview image) shouldn't serve the game.
         navigateFallbackDenylist: [/\.[a-z0-9]+$/i],
       },

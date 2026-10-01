@@ -20,24 +20,34 @@ const SHORT_SUFFIXES = [
 /** Traditional Chinese large-number units, each 10^4 larger than the last. */
 const MYRIAD_UNITS = ['', '万', '亿', '兆', '京', '垓', '秭', '穰', '沟', '涧', '正', '载', '极'];
 
-function fixed(n: number, digits: number): string {
-  return n.toFixed(digits).replace(/\.?0+$/, '');
+/**
+ * Always shows `sigFigs` digits (trailing zeros kept) so the width stays stable as values tick.
+ * `tierDigits` must not exceed `sigFigs`, or the mantissa could need more digits than allowed.
+ */
+function withSuffix(
+  n: number,
+  tierDigits: number,
+  sigFigs: number,
+  suffixes: string[],
+): string | null {
+  const rounded = Number(n.toPrecision(sigFigs));
+  const tier = Math.floor(Math.log10(rounded) / tierDigits);
+  if (tier >= suffixes.length) return null;
+  return `${(rounded / 10 ** (tier * tierDigits)).toPrecision(sigFigs)}${suffixes[tier]}`;
 }
 
 export function formatNumber(n: number, style: NumberFormat = 'short'): string {
   if (!Number.isFinite(n)) return n > 0 ? '∞' : '-∞';
   if (n < 0) return `-${formatNumber(-n, style)}`;
-  if (n < 1000) return n < 10 && !Number.isInteger(n) ? fixed(n, 1) : Math.floor(n).toString();
+  if (n < 1000) return n < 10 && !Number.isInteger(n) ? n.toFixed(1) : Math.floor(n).toString();
 
-  if (style === 'myriad') {
-    const tier = Math.floor(Math.log10(n) / 4);
-    if (tier < MYRIAD_UNITS.length) return `${fixed(n / 10 ** (tier * 4), 2)}${MYRIAD_UNITS[tier]}`;
-  } else if (style === 'short') {
-    const tier = Math.floor(Math.log10(n) / 3);
-    if (tier < SHORT_SUFFIXES.length)
-      return `${fixed(n / 10 ** (tier * 3), 2)}${SHORT_SUFFIXES[tier]}`;
-  }
-  return n.toExponential(2).replace('e+', 'e');
+  const suffixed =
+    style === 'myriad'
+      ? withSuffix(n, 4, 4, MYRIAD_UNITS)
+      : style === 'short'
+        ? withSuffix(n, 3, 3, SHORT_SUFFIXES)
+        : null;
+  return suffixed ?? n.toExponential(2).replace('e+', 'e');
 }
 
 export function formatDuration(seconds: number): string {
