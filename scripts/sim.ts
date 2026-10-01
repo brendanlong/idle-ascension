@@ -23,7 +23,7 @@ import { CORE_GRADES, CORE_SLOT_REALMS, ELEMENTS, type ElementId } from '../src/
 import { baseModifiers } from '../src/engine/effects';
 import { GENERATORS, generatorName, type GeneratorDef } from '../src/content/generators';
 import { UPGRADES, realmTechniqueCost } from '../src/content/upgrades';
-import { PERKS } from '../src/content/perks';
+import { PERKS, type PerkDef } from '../src/content/perks';
 import { REALMS, STAGES, firstStageOfRealm, stageName } from '../src/content/realms';
 import { MAX_TREASURE_LEVEL, TREASURES } from '../src/content/treasures';
 import {
@@ -54,6 +54,7 @@ import { acceptTrial, completeTrial } from '../src/engine/trials';
 import { formatDuration, formatNumber } from '../src/engine/format';
 import {
   buyPerk,
+  perkCost,
   memorySettledFraction,
   pendingMemories,
   perkStatus,
@@ -891,12 +892,13 @@ while (time < maxHours * 3600) {
     loopBestStage = 0;
     realmActivity = {};
     const perksBefore = { ...state.prestige.perks };
-    let boughtPerk = true;
-    while (boughtPerk) {
-      boughtPerk = false;
-      for (const p of PERKS)
-        if (perkStatus(state, p.id) === 'available')
-          boughtPerk = buyPerk(state, p.id) || boughtPerk;
+    // The priciest insight it can afford first (the big pick), then fill in with the rest.
+    for (;;) {
+      const affordable = PERKS.filter((p) => perkStatus(state, p.id) === 'available');
+      if (!affordable.length) break;
+      const level = (p: PerkDef) => state.prestige.perks[p.id] ?? 0;
+      affordable.sort((p, q) => perkCost(q, level(q)) - perkCost(p, level(p)));
+      buyPerk(state, affordable[0].id);
     }
     recordStep();
     report(`${label}, ×${(computeStats(state).memoryMult / memoryMultBefore).toFixed(2)})`);

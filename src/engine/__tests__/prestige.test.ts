@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PERKS_BY_ID } from '../../content/perks';
+import { PERKS, PERKS_BY_ID } from '../../content/perks';
 import { REALMS, firstStageOfRealm } from '../../content/realms';
 import {
   availableMemories,
@@ -8,6 +8,7 @@ import {
   MEMORY_SETTLE_SECONDS,
   memoriesForStage,
   pendingMemories,
+  perkCost,
   perkStatus,
   regress,
   regressionBlocker,
@@ -143,7 +144,25 @@ describe('regression', () => {
     expect(buyPerk(state, 'foresight')).toBe(false);
     expect(buyPerk(state, 'meridians')).toBe(true);
     expect(buyPerk(state, 'foresight')).toBe(true);
-    expect(availableMemories(state)).toBe(10 - 3 - 7);
+    const firstLevel = (id: string) => perkCost(PERKS_BY_ID.get(id)!, 0);
+    expect(availableMemories(state)).toBe(10 - firstLevel('meridians') - firstLevel('foresight'));
+  });
+
+  it('prices insights so one regression buys a few of them, not all', () => {
+    // At each realm, with a level of each perk per realm since its first: no single
+    // insight costs more than regressing from there, and all of them cost a few regressions.
+    const index = (id: string) => REALMS.findIndex((r) => r.id === id);
+    for (const realm of REALMS.slice(index('coreFormation'), index('godhood'))) {
+      const regression = memoriesForStage(firstStageOfRealm(realm.id));
+      const costs = PERKS.filter((p) => index(p.firstRealm) <= index(realm.id))
+        .map((p) => ({ p, level: index(realm.id) - index(p.firstRealm) }))
+        .filter(({ p, level }) => level < p.maxLevel)
+        .map(({ p, level }) => perkCost(p, level));
+      for (const cost of costs) expect(cost).toBeLessThan(regression);
+      const total = costs.reduce((a, b) => a + b, 0);
+      expect(total).toBeGreaterThan(2 * regression);
+      expect(total).toBeLessThan(6 * regression);
+    }
   });
 
   it('keeps realm-gated insights locked until you have reached the realm', () => {

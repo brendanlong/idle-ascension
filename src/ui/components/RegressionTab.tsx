@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import { REGRESSION_STORY } from '../../content/lore';
-import { PERKS, perkCost } from '../../content/perks';
+import { PERKS } from '../../content/perks';
 import { describeEffects } from '../../engine/effects';
 import { MEMORY_WEIGHT, perkEffects } from '../../engine/stats';
 import {
@@ -9,6 +9,7 @@ import {
   describeSpecialPerk,
   memoriesForStage,
   pendingMemories,
+  perkCost,
   perkStatus,
   regress,
   regressionBlocker,

@@ -1,5 +1,5 @@
 import { generatorCount } from '../content/generators';
-import { PERKS, PERKS_BY_ID, STASH_GENERATORS, perkCost, type PerkDef } from '../content/perks';
+import { PERKS, PERKS_BY_ID, STASH_GENERATORS, type PerkDef } from '../content/perks';
 import { FINAL_STAGE, STAGES, firstStageOfRealm } from '../content/realms';
 import { log } from './events';
 import { createInitialState, type GameState } from './state';
@@ -116,6 +116,23 @@ export function describeSpecialPerk(perk: PerkDef, level: number): string | null
     case undefined:
       return null;
   }
+}
+
+/**
+ * Each level of a perk costs about this much more than the last: roughly how
+ * much more a regression yields one realm deeper, so regressing once per realm
+ * buys about a level of each perk.
+ */
+const PERK_LEVEL_GROWTH = 2.4;
+
+/**
+ * Perks are priced from the Memories a regression yields, so at any depth the
+ * next level of every perk costs a share of one regression there: you choose
+ * a few each time, and regressing again from the same depth buys the rest.
+ */
+export function perkCost(perk: PerkDef, currentLevel: number): number {
+  const memories = memoriesForStage(firstStageOfRealm(perk.firstRealm));
+  return Math.ceil(perk.share * memories * PERK_LEVEL_GROWTH ** currentLevel);
 }
 
 export function spentMemories(state: GameState): number {
