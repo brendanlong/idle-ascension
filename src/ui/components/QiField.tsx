@@ -10,7 +10,7 @@ import {
   currentTribulationTrial,
   recordTribulationTrial,
 } from '../../engine/breakthrough';
-import { absorbMotes, click } from '../../engine/economy';
+import { absorbMotes, drawInMote } from '../../engine/economy';
 import { claimEncounter } from '../../engine/encounters';
 import { acceptTrial, completeTrial } from '../../engine/trials';
 import { TrialOverlay } from '../trials/TrialOverlay';
@@ -74,6 +74,20 @@ class FieldSim {
     for (const f of this.floats) f.age += dt;
     this.floats = this.floats.filter((f) => f.age < FLOAT_LIFETIME);
     return absorbed;
+  }
+
+  /** Removes the mote nearest the field's center (the orb), returning where it was. */
+  pullMote(): { x: number; y: number } | null {
+    if (this.motes.length === 0) return null;
+    const cx = this.width / 2;
+    const cy = this.height / 2;
+    let nearest = 0;
+    this.motes.forEach((m, i) => {
+      const best = this.motes[nearest];
+      if (Math.hypot(m.x - cx, m.y - cy) < Math.hypot(best.x - cx, best.y - cy)) nearest = i;
+    });
+    const [mote] = this.motes.splice(nearest, 1);
+    return { x: mote.x, y: mote.y };
   }
 
   private spawnMote(): void {
@@ -260,11 +274,13 @@ export function QiField({ overlay }: { overlay?: ComponentChildren } = {}) {
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   };
 
-  const onOrbClick = (e: MouseEvent) => {
-    const gained = game.act((s, stats) => click(s, stats));
-    // Keyboard activation reports (0, 0); float from the orb's center instead.
-    const p = e.detail === 0 ? { x: sim.width / 2, y: sim.height / 2 - 40 } : localPoint(e);
-    sim.addFloat(p.x, p.y, `+${game.fmt(gained)}`);
+  // Pressing the orb draws in the nearest waiting mote, so it's another way to
+  // gather (for keyboards and taps), never faster than motes appear.
+  const onOrbClick = () => {
+    const from = sim.pullMote();
+    if (!from) return;
+    const gained = game.act((s, stats) => drawInMote(s, stats));
+    sim.addFloat(from.x, from.y - 10, `+${game.fmt(gained)}`, '#9ff5da');
   };
 
   const encounter = state.encounter.active;
@@ -303,15 +319,15 @@ export function QiField({ overlay }: { overlay?: ComponentChildren } = {}) {
         onClick={onOrbClick}
         // Holding Enter would otherwise auto-repeat clicks.
         onKeyDown={(e) => e.repeat && e.preventDefault()}
-        aria-label="Cultivate"
-        title="Click to cultivate. Sweep your cursor through drifting qi motes to absorb them."
+        aria-label="Draw in a qi mote"
+        title="Sweep your cursor through drifting qi motes to absorb them, or press the dantian to draw in the nearest one."
       >
         <span class="orb-glyph">气</span>
       </button>
       <div class="field-hint">
         {touch
-          ? 'Tap the dantian · drag your finger through drifting qi'
-          : 'Click the dantian · sweep your cursor through drifting qi'}
+          ? 'Drag your finger through drifting qi · tap the dantian to draw it in'
+          : 'Sweep your cursor through drifting qi · click the dantian to draw it in'}
       </div>
 
       {encounter && encounterDef && !trialRunning && (

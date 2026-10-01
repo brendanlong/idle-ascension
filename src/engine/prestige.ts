@@ -8,22 +8,33 @@ import { computeModifiers } from './stats';
 const REGRESSION_REALM = 'coreFormation';
 const BASE_MEMORIES = 3;
 /**
- * Memories grow with the breakthrough cost of the stage reached, to this
- * power. Stages in early realms are cheap steps apart, so early regressions
- * gain little; late realms' steep stages make each regression count.
+ * Memories grow by this much for each factor of 10 in breakthrough cost
+ * beyond Core Formation. Each Memory multiplies qi gain, so a regression is
+ * worth a power of how far you got: mild early, strong late, and the same
+ * every time you regress from the same wall (so walls always fall).
  */
-const MEMORY_COST_EXPONENT = 0.1;
+const MEMORIES_PER_DECADE = 4;
 
 /** Memories gained by regressing from a given stage. */
 export function memoriesForStage(stage: number): number {
   const first = firstStageOfRealm(REGRESSION_REALM);
   if (stage < first) return 0;
   const ratio = STAGES[Math.min(stage, FINAL_STAGE)].cost / STAGES[first].cost;
-  return Math.floor(BASE_MEMORIES * ratio ** MEMORY_COST_EXPONENT);
+  return Math.floor(BASE_MEMORIES + MEMORIES_PER_DECADE * Math.log10(ratio));
+}
+
+/**
+ * Memories settle over the first part of each life: regressing sooner gives
+ * that share of them, so repeated quick regressions can't compound.
+ */
+export const MEMORY_SETTLE_SECONDS = 20 * 60;
+
+export function memorySettledFraction(state: GameState): number {
+  return Math.min(1, state.stats.loopTime / MEMORY_SETTLE_SECONDS);
 }
 
 export function pendingMemories(state: GameState): number {
-  return memoriesForStage(state.stage);
+  return Math.floor(memoriesForStage(state.stage) * memorySettledFraction(state));
 }
 
 export function regressionBlocker(state: GameState): string | null {

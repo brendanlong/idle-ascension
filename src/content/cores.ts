@@ -27,11 +27,8 @@ export const ELEMENTS: readonly ElementDef[] = [
     name: 'Fire',
     glyph: '火',
     color: '#e0603a',
-    description: 'Ferocity. Greatly boosts click power.',
-    effects: (g) => [
-      { type: 'mult', stat: 'clickMult', value: 2 + g },
-      { type: 'add', stat: 'clickQpsFraction', value: 0.01 * (g + 1) },
-    ],
+    description: 'Ferocity. Qi motes you seize are worth more.',
+    effects: (g) => [{ type: 'mult', stat: 'moteValueMult', value: 1.25 + 0.1 * g }],
   },
   {
     id: 'earth',

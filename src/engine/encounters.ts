@@ -66,7 +66,7 @@ export function windfallAmount(
   rng: Rng,
 ): number {
   const seconds = randomBetween(rng, reward.qpsSeconds[0], reward.qpsSeconds[1]);
-  return Math.min(state.qi * reward.bankFraction, stats.qps * seconds) + stats.clickPower * 10;
+  return Math.min(state.qi * reward.bankFraction, stats.qps * seconds) + stats.moteValue * 10;
 }
 
 export function claimEncounter(state: GameState, stats: Stats, rng: Rng): boolean {

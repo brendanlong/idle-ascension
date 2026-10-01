@@ -24,8 +24,6 @@ export interface Stats {
   /** Qi/s produced by a single unit of each generator, after all bonuses. */
   generatorUnitQps: Record<string, number>;
   generatorQps: number;
-  clickPower: number;
-  autoClickQps: number;
   /** Qi/s from motes gathered automatically. */
   autoMoteQps: number;
   /** Total passive qi/s. */
@@ -36,13 +34,12 @@ export interface Stats {
 
 const BASE_MOTE_SPAWN_PER_SECOND = 1;
 /**
- * A mote is worth this fraction of a click's flat power (not the part that
- * comes from qi/s), or this many seconds of resource qi/s if that's more,
- * before mote multipliers. Early on motes track clicks; later they track
- * production. Auto-clicks are left out so click bonuses don't also raise motes.
+ * A mote is worth this much qi times all qi multipliers, or this many seconds
+ * of resource qi/s if that's more, before mote multipliers. Early on the base
+ * value carries you; later motes track production.
  */
-const MOTE_CLICK_FRACTION = 1;
-const MOTE_QPS_SECONDS = 0.15;
+const MOTE_BASE_VALUE = 5;
+const MOTE_QPS_SECONDS = 1;
 
 export function realmMultiplier(stage: number): number {
   let mult = 1;
@@ -101,7 +98,7 @@ export function computeModifiers(state: GameState, includeBuffs = true): Modifie
 export function computeStats(state: GameState, includeBuffs = true): Stats {
   const mods = computeModifiers(state, includeBuffs);
   const realmMult = realmMultiplier(state.stage);
-  const memoryMult = 1 + state.prestige.memories * mods.memoryBonus;
+  const memoryMult = (1 + mods.memoryBonus) ** state.prestige.memories;
   const cycleMult =
     GENERATING_CYCLE_BONUS ** generatingPairs(new Set(state.cores.map((c) => c.element)));
   const coreMult = state.cores.reduce((m, c) => m * CORE_GRADES[c.grade].mult, 1);
@@ -115,12 +112,8 @@ export function computeStats(state: GameState, includeBuffs = true): Stats {
     generatorQps += unit * (state.generators[g.id] ?? 0);
   }
 
-  const flatClickPower = mods.clickFlat * mods.clickMult * global;
-  const clickPower = flatClickPower + mods.clickQpsFraction * generatorQps;
-  const autoClickQps = mods.autoClicksPerSecond * clickPower;
-  const moteValue =
-    Math.max(flatClickPower * MOTE_CLICK_FRACTION, generatorQps * MOTE_QPS_SECONDS) *
-    mods.moteValueMult;
+  const baseMoteValue = MOTE_BASE_VALUE * mods.moteBaseMult * global;
+  const moteValue = Math.max(baseMoteValue, generatorQps * MOTE_QPS_SECONDS) * mods.moteValueMult;
   const moteSpawnPerSecond = BASE_MOTE_SPAWN_PER_SECOND * mods.moteSpawnMult;
   const autoMoteQps = moteSpawnPerSecond * Math.min(1, mods.moteAutoCollect) * moteValue;
 
@@ -131,10 +124,8 @@ export function computeStats(state: GameState, includeBuffs = true): Stats {
     cycleMult,
     generatorUnitQps,
     generatorQps,
-    clickPower,
-    autoClickQps,
     autoMoteQps,
-    qps: generatorQps + autoClickQps + autoMoteQps,
+    qps: generatorQps + autoMoteQps,
     moteValue,
     moteSpawnPerSecond,
   };

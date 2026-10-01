@@ -77,7 +77,7 @@ export function completeTrial(
   if (state.trial.active === element) state.trial.active = null;
   const affinity = state.cores.some((c) => c.element === element) ? TRIAL_AFFINITY_MULT : 1;
   const seconds = TRIAL_REWARD_BASE_SECONDS + TRIAL_REWARD_SECONDS_PER_SCORE * clamped;
-  const qi = (stats.qps * seconds + stats.clickPower * 20) * affinity;
+  const qi = (stats.qps * seconds + stats.moteValue * 20) * affinity;
   gainQi(state, qi);
   state.stats.trialsCompleted++;
 

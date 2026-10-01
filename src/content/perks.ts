@@ -41,7 +41,7 @@ export const PERKS: readonly PerkDef[] = [
     maxLevel: Infinity,
     baseCost: 1,
     costGrowth: 3,
-    effects: [{ type: 'mult', stat: 'clickMult', value: 2 }],
+    effects: [{ type: 'mult', stat: 'moteBaseMult', value: 2 }],
   },
   {
     id: 'stash',
@@ -95,7 +95,7 @@ export const PERKS: readonly PerkDef[] = [
     baseCost: 10,
     costGrowth: 3,
     requires: ['foresight'],
-    effects: [{ type: 'add', stat: 'memoryBonus', value: 0.01 }],
+    effects: [{ type: 'add', stat: 'memoryBonus', value: 0.002 }],
   },
   {
     id: 'patience',

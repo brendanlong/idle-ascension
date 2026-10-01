@@ -99,11 +99,11 @@ export const REALMS: readonly RealmDef[] = [
     stageMultiplier: 1.7,
     tribulation: { name: 'Crimson Thunder Tribulation', trials: 1, passScore: 0.55 },
     effects: [
-      { type: 'add', stat: 'autoClicksPerSecond', value: 1 },
+      { type: 'add', stat: 'moteAutoCollect', value: 0.05 },
       { type: 'add', stat: 'coreSlots', value: 1 },
     ],
     coreGradeCap: 3,
-    unlocks: ['Your Nascent Soul cultivates automatically'],
+    unlocks: ['Your Nascent Soul gathers qi motes for you'],
   },
   {
     id: 'spiritSevering',

@@ -8,7 +8,7 @@ import {
   buyGenerator,
   buyUpgrade,
   grantTreasure,
-  click,
+  drawInMote,
   generatorCost,
   isGeneratorVisible,
   maxAffordable,
@@ -81,17 +81,18 @@ describe('qi motes', () => {
   });
 });
 
-describe('clicking and upgrades', () => {
-  it('clicks for click power and counts clicks', () => {
+describe('gathering and upgrades', () => {
+  it('draws in a mote worth the base mote value at the start', () => {
     const state = newGame();
-    expect(click(state, computeStats(state))).toBe(1);
-    expect(state.qi).toBe(1);
-    expect(state.stats.loopClicks).toBe(1);
+    const stats = computeStats(state);
+    expect(drawInMote(state, stats)).toBe(stats.moteValue);
+    expect(state.qi).toBe(stats.moteValue);
+    expect(state.stats.motesAbsorbed).toBe(1);
   });
 
   it('buys all affordable techniques, cheapest first', () => {
     const state = newGame({ stage: firstStageOfRealm('qiCondensation'), qi: 8_500 });
-    state.stats.totalClicks = 150;
+    state.stats.motesAbsorbed = 100;
     // Available: Iron Palm 100, Spiritual Sense 300, Cloud-Parting Palm 5,000, Sunflower Manual 7,777.
     expect(affordableUpgrades(state).map((u) => u.id)).toEqual(['palm-1', 'sense-1', 'palm-2']);
     expect(buyAllUpgrades(state)).toBe(3);
@@ -103,9 +104,10 @@ describe('clicking and upgrades', () => {
   it('only sells unlocked upgrades', () => {
     const state = newGame({ qi: 1e6 });
     expect(buyUpgrade(state, 'palm-1')).toBe(false);
-    state.stats.totalClicks = 15;
+    const before = computeStats(state).moteValue;
+    state.stats.motesAbsorbed = 10;
     expect(buyUpgrade(state, 'palm-1')).toBe(true);
-    expect(computeStats(state).clickPower).toBe(2);
+    expect(computeStats(state).moteValue).toBe(before * 2);
   });
 });
 
@@ -120,9 +122,9 @@ describe('log messages', () => {
 
   it('describes what a technique does when you master it', () => {
     const state = newGame({ qi: 1e30, stage: firstStageOfRealm('daoSeeking') });
-    state.stats.totalClicks = 15;
+    state.stats.motesAbsorbed = 10;
     expect(logs(() => buyUpgrade(state, 'palm-1'))).toEqual([
-      'You master the Iron Palm technique (×2 cultivation (click) power).',
+      'You master the Iron Palm technique (×2 base qi mote value).',
     ]);
     expect(logs(() => buyUpgrade(state, 'scripture-5'))).toEqual([
       'You master the Wordless Sutra technique (×3 all qi gain).',
@@ -131,19 +133,19 @@ describe('log messages', () => {
 
   it('lists each technique bought with Buy all', () => {
     const state = newGame({ stage: firstStageOfRealm('qiCondensation'), qi: 500 });
-    state.stats.totalClicks = 15;
+    state.stats.motesAbsorbed = 10;
     expect(logs(() => buyAllUpgrades(state))).toEqual([
-      'You master 2 techniques: Iron Palm (×2 cultivation (click) power); Spiritual Sense (×1.5 qi mote frequency, ×1.5 qi mote value).',
+      'You master 2 techniques: Iron Palm (×2 base qi mote value); Spiritual Sense (×1.5 qi mote frequency, ×1.5 qi mote value).',
     ]);
   });
 
   it('describes treasures when found and when refined', () => {
     const state = newGame();
     expect(logs(() => grantTreasure(state, 'ring'))[0]).toBe(
-      'Obtained rare treasure: Ring of the Old Master! (×1.5 all qi gain, +1% of qi/s added to each click)',
+      'Obtained rare treasure: Ring of the Old Master! (×1.5 all qi gain)',
     );
     expect(logs(() => grantTreasure(state, 'ring'))[0]).toBe(
-      'Your Ring of the Old Master absorbs it and grows stronger. Level 2: ×1.75 all qi gain, +1.5% of qi/s added to each click.',
+      'Your Ring of the Old Master absorbs it and grows stronger. Level 2: ×1.75 all qi gain.',
     );
   });
 });

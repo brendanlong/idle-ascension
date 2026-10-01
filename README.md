@@ -13,7 +13,7 @@ It runs in the browser on desktop or phone, and can be added to your home screen
 
 ## Playing
 
-- **Cultivate**: click the dantian orb, and sweep your cursor through drifting qi motes to absorb them.
+- **Gather**: sweep your cursor (or finger) through drifting qi motes to absorb them, or press the dantian orb to draw in the nearest one. Gathering roughly doubles or triples what you'd earn idle; from Nascent Soul on, your soul gathers some motes for you.
 - **Resources**: meditation cushions, spirit herbs, pill furnaces, disciples, spirit veins, secret realms, all the way up to shards of primordial chaos. Each produces qi per second.
 - **Techniques**: one-off upgrades (palm techniques, scriptures, and ×2 upgrades for each resource at ownership milestones), with a Buy All button.
 - **Breakthroughs**: spend qi to advance through realms — Qi Condensation (9 layers), Foundation Establishment, Core Formation, Nascent Soul, Spirit Severing, Dao Seeking, Immortal Ascension, Godhood. Each stage multiplies all qi gain.
@@ -22,7 +22,7 @@ It runs in the browser on desktop or phone, and can be added to your home screen
 - **Cores**: from Core Formation you condense cores. Each is attuned to one of the Five Elements (its colour/effect) and refined through metal grades (Mud → Iron → Bronze → … → Primordial). Your realm limits how far you can refine. Cores adjacent in the generating cycle (Wood → Fire → Earth → Metal → Water → Wood) grant a bonus.
 - **Fortuitous encounters**: arrogant young masters, hidden caves, mysterious old beggars… click them for qi windfalls, buffs, or treasures.
 - **Treasures**: rarer finds from encounters, each with a permanent bonus. Finding a treasure again refines it to a higher level.
-- **Regression (prestige)**: once you've reached Core Formation, court death and let your mother's jade pendant send you back to age sixteen. You keep **Memories** (+2% qi each, forever; deeper regressions yield far more) and spend them on permanent insights, most of which can be levelled up indefinitely. Stages you've reached before cost a fraction as much and their tribulations let you pass, so you're soon back where you left off.
+- **Regression (prestige)**: once you've reached Core Formation, court death and let your mother's jade pendant send you back to age sixteen. You keep **Memories** (each multiplies qi by ×1.02, forever; deeper regressions yield more, and they settle over the first 20 minutes of each life) and spend them on permanent insights, most of which can be levelled up indefinitely. Stages you've reached before cost a fraction as much and their tribulations let you pass, so you're soon back where you left off.
 - **Closed-door cultivation**: offline progress (capped, reduced efficiency; both upgradeable). Leaving the tab in the background for over a minute counts too.
 
 ## Development
@@ -33,8 +33,8 @@ npm run dev        # Vite dev server
 npm test           # Vitest unit tests for the engine
 npm run typecheck
 npm run build
-npm run sim -- 1 72 45   # headless balance sim: clicks/sec, max hours, minutes stalled before regressing
-SIM_ACTIVE=0.2 SIM_IMPACT=1 npm run sim   # play actively 20% of the time (default: 80% early, down to 10% in the last realm); report each item's impact
+npm run sim -- 72 10     # headless balance sim: max hours, minutes without progress before regressing
+SIM_PLAYER=passive npm run sim   # also active, or taper (default); see scripts/sim.ts for SIM_TREASURES, SIM_IMPACT, SIM_TUNE
 npm run format
 npm run social-preview   # re-render public/social-preview.jpg from scripts/social-preview.html
 npm run icons            # re-render the favicon and install icons in public/
@@ -64,7 +64,7 @@ src/
              encounters, perks, lore text. Most new content is a new entry in one of these files.
   engine/    Pure game logic, no DOM. Mutates a single serializable GameState.
     effects.ts     Every bonus is an Effect that folds into one Modifiers object.
-    stats.ts       computeStats(): all derived numbers (qi/s, click power, …) in one place.
+    stats.ts       computeStats(): all derived numbers (qi/s, mote value, …) in one place.
     economy.ts     Qi, generators, upgrades, buffs, treasures.
     breakthrough.ts  Realm progression and tribulations.
     trials.ts      Optional trial offers and rewards.

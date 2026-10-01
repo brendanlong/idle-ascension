@@ -5,6 +5,7 @@ import {
   availableMemories,
   buyPerk,
   describeSpecialPerk,
+  MEMORY_SETTLE_SECONDS,
   memoriesForStage,
   pendingMemories,
   perkStatus,
@@ -18,10 +19,17 @@ import { newGame } from './helpers';
 
 const CORE_FORMATION = firstStageOfRealm('coreFormation');
 
+/** A game whose current life is long enough for Memories to have fully settled. */
+function settledGame(overrides: Parameters<typeof newGame>[0] = {}) {
+  const state = newGame(overrides);
+  state.stats.loopTime = MEMORY_SETTLE_SECONDS;
+  return state;
+}
+
 describe('regression', () => {
   it('is blocked before Core Formation', () => {
     expect(regressionBlocker(newGame({ stage: CORE_FORMATION - 1 }))).not.toBeNull();
-    expect(regressionBlocker(newGame({ stage: CORE_FORMATION }))).toBeNull();
+    expect(regressionBlocker(settledGame({ stage: CORE_FORMATION }))).toBeNull();
   });
 
   it('refuses to regress when blocked', () => {
@@ -38,23 +46,29 @@ describe('regression', () => {
     );
     expect(byRealm).toEqual({
       coreFormation: 3,
-      nascentSoul: 5,
-      spiritSevering: 16,
-      daoSeeking: 70,
-      immortalAscension: 261,
-      godhood: 1039,
+      nascentSoul: 13,
+      spiritSevering: 32,
+      daoSeeking: 57,
+      immortalAscension: 80,
+      godhood: 104,
     });
   });
 
+  it('settles Memories over the start of each life', () => {
+    const state = newGame({ stage: CORE_FORMATION + 4 });
+    state.stats.loopTime = MEMORY_SETTLE_SECONDS / 2;
+    expect(pendingMemories(state)).toBe(Math.floor(memoriesForStage(CORE_FORMATION + 4) / 2));
+  });
+
   it('awards more memories for deeper cultivation', () => {
-    const shallow = pendingMemories(newGame({ stage: CORE_FORMATION }));
-    const deep = pendingMemories(newGame({ stage: CORE_FORMATION + 4 }));
+    const shallow = pendingMemories(settledGame({ stage: CORE_FORMATION }));
+    const deep = pendingMemories(settledGame({ stage: CORE_FORMATION + 4 }));
     expect(shallow).toBeGreaterThan(0);
     expect(deep).toBeGreaterThan(shallow);
   });
 
   it('resets progress but keeps memories, perks, and lifetime stats', () => {
-    const state = newGame({ stage: CORE_FORMATION, qi: 1e9, qiEarnedTotal: 1e12 });
+    const state = settledGame({ stage: CORE_FORMATION, qi: 1e9, qiEarnedTotal: 1e12 });
     state.generators.herb = 50;
     state.treasures.ring = 3;
     state.prestige.perks.meridians = 1;
@@ -75,7 +89,7 @@ describe('regression', () => {
   });
 
   it('applies soul-bound treasures, buried stash, and Dao heart perks', () => {
-    const state = newGame({ stage: CORE_FORMATION });
+    const state = settledGame({ stage: CORE_FORMATION });
     state.treasures = { ring: 3, pendant: 1 };
     state.prestige.perks = { soulbound: 2, stash: 2, daoHeart: 1 };
     const next = regress(state, 0)!;

@@ -64,8 +64,8 @@ export function RegressionTab({ onRegressed }: { onRegressed: (story: string[]) 
         </dd>
       </dl>
       <p class="muted small">
-        Each Memory permanently grants +{Math.round(stats.mods.memoryBonus * 100)}% qi gain, even
-        after you spend it on insights below. Regressing resets your realm, qi, resources,
+        Each Memory permanently multiplies qi gain by ×{(1 + stats.mods.memoryBonus).toFixed(3)},
+        even after you spend it on insights below. Regressing resets your realm, qi, resources,
         techniques, cores and treasures (except what Soul-Bound Treasures keeps).
       </p>
 

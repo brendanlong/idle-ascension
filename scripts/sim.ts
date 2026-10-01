@@ -1,18 +1,23 @@
 /**
  * Headless balance simulation: a greedy bot plays the game and reports how
- * long each milestone takes. Run with `npm run sim -- [clicksPerSecond] [hours] [stallMinutes]`.
+ * long each milestone takes. Run with `npm run sim -- [hours] [stuckMinutes]`.
  * Environment variables:
- *   SIM_SEED=<n>      a different random seed
- *   SIM_ACTIVE=<0-1>  fraction of each 10 minutes spent actively playing: clicking, catching
- *                     motes, claiming encounters and trials, buying and breaking through. The
- *                     rest is idle. By default it depends on the furthest realm reached, from
- *                     80% in Qi Condensation to 10% in Immortal Ascension, like a player who
- *                     gets more passive as the game goes on. After regressing it stays
- *                     active while replaying stages it has reached before (up to 15 minutes).
- *   SIM_IMPACT=1      also print how much each resource, technique, core and treasure adds
- *                     to income when it first becomes available
+ *   SIM_SEED=<n>        a different random seed
+ *   SIM_PLAYER=<kind>   taper (default): gathers motes, claims encounters and checks in
+ *                       for a share of each 10 minutes that falls from 80% in Qi
+ *                       Condensation to 10% in Immortal Ascension (and stays while
+ *                       replaying after a regression).
+ *                       passive: gathers and claims encounters only in the first two
+ *                       realms and while replaying after a regression, but buys the moment
+ *                       anything is affordable, to show how the economy paces an idle player.
+ *                       active: gathers and checks in all the time.
+ *   SIM_ACTIVE=<0-1>    taper player with a fixed share instead
+ *   SIM_TREASURES=<x>   random (default), none (encounters never give treasures), or all
+ *                       (every treasure at level 1 as soon as its realm is reached)
+ *   SIM_IMPACT=1        also print how much each resource, technique, core and treasure adds
+ *                       to income when it first becomes available
  */
-import { CORE_GRADES, ELEMENTS, type ElementId } from '../src/content/cores';
+import { CORE_FORM_COSTS, CORE_GRADES, ELEMENTS, type ElementId } from '../src/content/cores';
 import { GENERATORS, generatorName } from '../src/content/generators';
 import { UPGRADES } from '../src/content/upgrades';
 import { PERKS } from '../src/content/perks';
@@ -20,6 +25,7 @@ import { REALMS, STAGES, stageName } from '../src/content/realms';
 import { MAX_TREASURE_LEVEL, TREASURES } from '../src/content/treasures';
 import {
   attemptBreakthrough,
+  breakthroughBlocker,
   breakthroughCost,
   nextStage,
   recordTribulationTrial,
@@ -37,7 +43,6 @@ import {
   availableUpgrades,
   buyGenerator,
   buyUpgrade,
-  click,
   generatorCost,
   isGeneratorVisible,
 } from '../src/engine/economy';
@@ -55,19 +60,103 @@ import { createInitialState, type GameState } from '../src/engine/state';
 import { computeStats } from '../src/engine/stats';
 import { tick } from '../src/engine/tick';
 
-const clicksPerSecond = Number(process.argv[2] ?? 3);
-const maxHours = Number(process.argv[3] ?? 48);
+const maxHours = Number(process.argv[2] ?? 48);
+/** Share of spawning motes an attentive player sweeps up. */
 const MOTE_CATCH_RATE = 0.4;
+const PLAYER = process.env.SIM_PLAYER ?? 'taper';
+const TREASURE_MODE = process.env.SIM_TREASURES ?? 'random';
 const FIXED_ACTIVE_FRACTION = process.env.SIM_ACTIVE ? Number(process.env.SIM_ACTIVE) : null;
+/** The passive player still gathers in these early realms (by index). */
+const PASSIVE_GATHERS_UNTIL_REALM = 2;
 const ACTIVE_CYCLE_SECONDS = 600;
 const printImpact = !!process.env.SIM_IMPACT;
 /** How well the bot plays elemental trials (0-1), for tribulations and optional offers. */
 const TRIBULATION_TRIAL_SCORE = 0.8;
 const OPTIONAL_TRIAL_SCORE = 0.7;
-const STALL_SECONDS = Number(process.argv[4] ?? 45) * 60;
-/** The bot regresses once that would multiply its Memory bonus by this much (or it's stalled). */
+/** With no progress step for this long, the bot is stuck and regresses if it can. */
+const STUCK_SECONDS = Number(process.argv[3] ?? 10) * 60;
+/** The bot also regresses once that would multiply its Memory bonus by this much. */
 const REGRESS_AT_MEMORY_GAIN = 1.5;
+/** A progress step: a breakthrough, a regression, or passive qi/s up this much since the last step. */
+const STEP_INCOME_GAIN = 1.1;
 const CORE_ORDER: ElementId[] = ['wood', 'fire', 'water', 'earth', 'metal'];
+
+/**
+ * SIM_TUNE='{"qps":0.5,"shift":{"daoSeeking":0.1},"stageGrowth":{"coreFormation":1.5}}'
+ * scales content before the run, for trying balance changes without editing
+ * src/content:
+ *   qps          multiplies every resource's output
+ *   shift        multiplies the cost jump into a realm: that realm's breakthroughs and
+ *                everything priced for it (gated resources, techniques, core grades and
+ *                slots), and so every later realm too
+ *   stageGrowth  multiplies a realm's stage cost growth
+ *   price        multiplies single prices: "up:<technique id>", "stage:<index>",
+ *                "form:<core number>", "grade:<core grade>"
+ * SIM_PRICES=1 prints, as JSON, each of those prices in seconds of passive qi/s
+ * when the bot first paid it.
+ */
+function applyTuning(): void {
+  if (!process.env.SIM_TUNE) return;
+  const tune = JSON.parse(process.env.SIM_TUNE) as {
+    qps?: number;
+    shift?: Record<string, number>;
+    stageGrowth?: Record<string, number>;
+    price?: Record<string, number>;
+  };
+  const priceMult: number[] = [];
+  REALMS.forEach((r, i) => (priceMult[i] = (priceMult[i - 1] ?? 1) * (tune.shift?.[r.id] ?? 1)));
+  const realmIndex = (id: string) => REALMS.findIndex((r) => r.id === id);
+  const scaled = <T>(item: T, key: keyof T, factor: number) => {
+    (item as Record<keyof T, number>)[key] *= factor;
+  };
+  for (const g of GENERATORS) {
+    scaled(g, 'baseQps', tune.qps ?? 1);
+    if (!g.minRealm) continue;
+    const factor = priceMult[realmIndex(g.minRealm)];
+    scaled(g, 'baseCost', factor);
+    for (const u of UPGRADES)
+      if (u.unlock.type === 'generator' && u.unlock.id === g.id) scaled(u, 'cost', factor);
+  }
+  for (const u of UPGRADES)
+    if (u.unlock.type === 'realm') scaled(u, 'cost', priceMult[realmIndex(u.unlock.realm)]);
+  for (const st of STAGES) {
+    const growth = tune.stageGrowth?.[REALMS[st.realmIndex].id] ?? 1;
+    scaled(st, 'cost', priceMult[st.realmIndex] * growth ** st.stageInRealm);
+  }
+  CORE_GRADES.forEach((grade, g) => {
+    const realm = REALMS.findIndex((r) => (r.coreGradeCap ?? -1) >= g);
+    if (g > 0) scaled(grade, 'refineCost', priceMult[realm]);
+  });
+  const coreFormation = realmIndex('coreFormation');
+  (CORE_FORM_COSTS as number[]).forEach((_, n, costs) => {
+    costs[n] *= priceMult[Math.min(coreFormation + n, REALMS.length - 1)];
+  });
+  for (const [key, factor] of Object.entries(tune.price ?? {})) {
+    const [kind, id] = key.split(':');
+    if (kind === 'up')
+      scaled(
+        UPGRADES.find((u) => u.id === id)!,
+        'cost',
+        factor,
+      );
+    if (kind === 'stage') scaled(STAGES[Number(id)], 'cost', factor);
+    if (kind === 'form') (CORE_FORM_COSTS as number[])[Number(id)] *= factor;
+    if (kind === 'grade') scaled(CORE_GRADES[Number(id)], 'refineCost', factor);
+  }
+}
+
+/** Seconds of passive qi/s each price cost when it was first paid (SIM_PRICES). */
+const firstPaid: Record<string, { seconds: number; realm: string }> = {};
+function recordPrice(key: string, cost: number): void {
+  if (!process.env.SIM_PRICES || firstPaid[key]) return;
+  const qps = computeStats(state, false).qps;
+  if (qps > 0) {
+    const realm = REALMS[STAGES[state.stage].realmIndex].id;
+    firstPaid[key] = { seconds: cost / qps, realm };
+  }
+}
+
+applyTuning();
 
 let seed = Number(process.env.SIM_SEED ?? 12345);
 const rng = () => {
@@ -78,16 +167,26 @@ const rng = () => {
 let state: GameState = createInitialState(0);
 state.flags.introSeen = true;
 let time = 0;
-let lastProgress = 0;
-let stalledRegressions = 0;
-/** Gaps between breakthroughs (or before regressing), the "sitting on your hands" time. */
-const waits: number[] = [];
-let loopLongestWait = { seconds: 0, stage: 0 };
-function recordWait(): void {
-  const gap = time - lastProgress;
-  waits.push(gap);
-  if (gap > loopLongestWait.seconds) loopLongestWait = { seconds: gap, stage: state.stage };
+/**
+ * Gaps between progress steps, by the realm the wait happened in: how long
+ * the player goes without anything meaningfully better.
+ */
+let lastStep = 0;
+let lastStepIncome = 0;
+const stepGaps: { seconds: number; realm: number }[] = [];
+function recordStep(): void {
+  stepGaps.push({ seconds: time - lastStep, realm: STAGES[state.stage].realmIndex });
+  lastStep = time;
+  lastStepIncome = computeStats(state, false).qps;
 }
+let stuckRegressions = 0;
+/** Stuck regressions whose next loop got no further: Memories didn't get the player over the hump. */
+let futileRegressions = 0;
+let loopBestStage = 0;
+let previousLoop: { best: number; stuck: boolean } | null = null;
+
+/** Active ÷ passive income, sampled each minute by realm. */
+const ratioSamples: number[][] = REALMS.map(() => []);
 
 /** Per-realm activity in the current loop, printed for the final loop. */
 interface RealmActivity {
@@ -120,23 +219,46 @@ function activeFraction(): number {
 const REPLAY_ATTENTION_SECONDS = 15 * 60;
 let lastRegression = -Infinity;
 
-function isActive(): boolean {
-  const replaying =
-    state.stage < state.stats.bestStage && time - lastRegression < REPLAY_ATTENTION_SECONDS;
-  return replaying || time % ACTIVE_CYCLE_SECONDS < ACTIVE_CYCLE_SECONDS * activeFraction();
+function isReplaying(): boolean {
+  return state.stage < state.stats.bestStage && time - lastRegression < REPLAY_ATTENTION_SECONDS;
 }
 
-/** Qi/s while idle (passive) and while actively playing (plus clicks and caught motes), buffs excluded. */
+function inTaperWindow(): boolean {
+  return isReplaying() || time % ACTIVE_CYCLE_SECONDS < ACTIVE_CYCLE_SECONDS * activeFraction();
+}
+
+/** Sweeping motes and claiming encounters and trials. */
+function isGathering(): boolean {
+  if (PLAYER === 'active') return true;
+  if (PLAYER === 'passive')
+    return isReplaying() || STAGES[state.stats.bestStage].realmIndex <= PASSIVE_GATHERS_UNTIL_REALM;
+  return inTaperWindow();
+}
+
+/** Buying, breaking through and regressing. */
+function isCheckedIn(): boolean {
+  return PLAYER === 'taper' ? inTaperWindow() : true;
+}
+
+/** Qi/s while idle (passive) and while gathering motes (active), buffs excluded. */
 function income(s: GameState): { passive: number; active: number } {
   const stats = computeStats(s, false);
-  const play =
-    clicksPerSecond * stats.clickPower +
-    stats.moteSpawnPerSecond * MOTE_CATCH_RATE * stats.moteValue;
-  return { passive: stats.qps, active: stats.qps + play };
+  const gathered = stats.moteSpawnPerSecond * MOTE_CATCH_RATE * stats.moteValue;
+  return { passive: stats.qps, active: stats.qps + gathered };
 }
 
 function averageIncome(i: { passive: number; active: number }): number {
-  return i.passive + activeFraction() * (i.active - i.passive);
+  const share = PLAYER === 'active' ? 1 : PLAYER === 'passive' ? 0 : activeFraction();
+  return i.passive + share * (i.active - i.passive);
+}
+
+/** Every treasure of the realms reached, at least at level 1 (SIM_TREASURES=all). */
+function grantAllTreasures(): void {
+  const realm = STAGES[state.stage].realmIndex;
+  for (const t of TREASURES) {
+    const reached = REALMS.findIndex((r) => r.id === t.minRealm) <= realm;
+    if (reached && !state.treasures[t.id]) state.treasures[t.id] = 1;
+  }
 }
 
 /** What something added to income at the moment it was first bought (or could first be found). */
@@ -250,86 +372,160 @@ function trackTreasures(): void {
   }
 }
 
-function spend(): void {
-  let bought = true;
-  while (bought) {
-    bought = false;
-    let stats = computeStats(state);
-    const next = nextStage(state);
-    const nextCost = next ? breakthroughCost(state, next.index) : Infinity;
-    if (next && state.qi >= nextCost) {
-      const result = attemptBreakthrough(state, stats.mods, rng);
-      if (result !== 'blocked') {
+interface Candidate {
+  key: string;
+  cost: number;
+  /** Applies the purchase's effect without paying, returning a function that undoes it. */
+  tryOn: () => () => void;
+  buy: () => boolean;
+}
+
+function candidates(): Candidate[] {
+  const stats = computeStats(state);
+  const list: Candidate[] = [];
+  const next = nextStage(state);
+  const blocker = breakthroughBlocker(state);
+  if (next && (blocker === null || blocker === 'Not enough qi.')) {
+    list.push({
+      key: `stage:${next.index}`,
+      cost: breakthroughCost(state, next.index),
+      tryOn: () => {
+        state.stage++;
+        return () => state.stage--;
+      },
+      buy: () => {
+        if (attemptBreakthrough(state, stats.mods, rng) === 'blocked') return false;
         while (state.tribulation) recordTribulationTrial(state, TRIBULATION_TRIAL_SCORE);
-        recordWait();
-        lastProgress = time;
-        bought = true;
-        continue;
-      }
-    }
-    for (const u of availableUpgrades(state)) {
-      if (u.cost <= state.qi && buyUpgrade(state, u.id)) {
-        bought = true;
+        if (state.stage > loopBestStage) loopBestStage = state.stage;
+        recordStep();
+        return true;
+      },
+    });
+  }
+  for (const u of availableUpgrades(state)) {
+    list.push({
+      key: `up:${u.id}`,
+      cost: u.cost,
+      tryOn: () => {
+        state.upgrades[u.id] = true;
+        return () => delete state.upgrades[u.id];
+      },
+      buy: () => {
+        if (!buyUpgrade(state, u.id)) return false;
         activity().techniques++;
         recordImpact(`upgrade:${u.id}`, 'technique', u.name, u.cost, (s) => {
           delete s.upgrades[u.id];
         });
-      }
-    }
-    stats = computeStats(state);
-    for (const element of CORE_ORDER) {
-      const cost = coreFormCost(stats.mods, state.cores.length);
-      if (canFormCore(state, stats.mods, element) && state.qi >= cost) {
-        formCore(state, stats.mods, element);
-        bought = true;
+        return true;
+      },
+    });
+  }
+  const element = CORE_ORDER.find((e) => canFormCore(state, stats.mods, e));
+  if (element) {
+    const cost = coreFormCost(stats.mods, state.cores.length);
+    list.push({
+      key: `form:${state.cores.length}`,
+      cost,
+      tryOn: () => {
+        state.cores.push({ element, grade: 0 });
+        return () => state.cores.pop();
+      },
+      buy: () => {
+        if (!formCore(state, stats.mods, element)) return false;
         recordImpact(`core:${element}`, 'core', `form ${element} core`, cost, (s) => {
           s.cores.pop();
         });
-      }
-    }
-    state.cores.forEach((core, i) => {
-      const cost = coreRefineCost(state, stats.mods, i);
-      if (canRefineCore(state, i) && state.qi >= cost * 2) {
-        refineCore(state, stats.mods, i);
-        bought = true;
-        const grade = CORE_GRADES[core.grade].name;
+        return true;
+      },
+    });
+  }
+  state.cores.forEach((core, i) => {
+    if (!canRefineCore(state, i)) return;
+    const cost = coreRefineCost(state, stats.mods, i);
+    list.push({
+      key: `grade:${core.grade + 1}`,
+      cost,
+      tryOn: () => {
+        core.grade++;
+        return () => core.grade--;
+      },
+      buy: () => {
+        if (!refineCore(state, stats.mods, i)) return false;
         recordImpact(
           `refine:${core.element}:${core.grade}`,
           'core',
-          `${core.element} → ${grade}`,
+          `${core.element} → ${CORE_GRADES[core.grade].name}`,
           cost,
           (s) => {
             s.cores[i].grade--;
           },
         );
-      }
+        return true;
+      },
     });
-    // Save up for a breakthrough if it's within a few minutes of income.
-    const reserve = nextCost < stats.qps * 180 ? nextCost : 0;
-    stats = computeStats(state);
-    let best: { id: string; ratio: number; cost: number } | null = null;
-    GENERATORS.forEach((g, i) => {
-      if (!isGeneratorVisible(state, i)) return;
-      const cost = generatorCost(state, stats.mods, g.id);
-      const ratio = stats.generatorUnitQps[g.id] / cost;
-      if (!best || ratio > best.ratio) best = { id: g.id, ratio, cost };
+  });
+  GENERATORS.forEach((g, i) => {
+    if (!isGeneratorVisible(state, i)) return;
+    const cost = generatorCost(state, stats.mods, g.id);
+    list.push({
+      key: `gen:${g.id}`,
+      cost,
+      tryOn: () => {
+        state.generators[g.id]++;
+        return () => state.generators[g.id]--;
+      },
+      buy: () => {
+        if (!buyGenerator(state, stats.mods, g.id)) return false;
+        activity().generatorsBought++;
+        if (state.generators[g.id] === 1) activity().firstBought.push(g.id);
+        recordImpact(
+          `generator:${g.id}`,
+          'resource',
+          generatorName(g.id),
+          cost,
+          (s) => {
+            s.generators[g.id]--;
+          },
+          g.id,
+        );
+        return true;
+      },
     });
-    const b = best as { id: string; cost: number } | null;
-    if (b && state.qi - b.cost >= reserve && buyGenerator(state, stats.mods, b.id)) {
-      bought = true;
-      activity().generatorsBought++;
-      if (state.generators[b.id] === 1) activity().firstBought.push(b.id);
-      recordImpact(
-        `generator:${b.id}`,
-        'resource',
-        generatorName(b.id),
-        b.cost,
-        (s) => {
-          s.generators[b.id]--;
-        },
-        b.id,
-      );
-    }
+  });
+  return list;
+}
+
+/**
+ * Picks the purchase that pays for itself soonest (time to afford it plus
+ * cost ÷ income gained), counting gathered motes as much as this player
+ * gathers. Purchases that don't raise income are bought once they're cheap.
+ */
+function choosePurchase(options: Candidate[]): Candidate | null {
+  const now = averageIncome(income(state));
+  let best: { c: Candidate; score: number } | null = null;
+  for (const c of options) {
+    const undo = c.tryOn();
+    const gain = averageIncome(income(state)) - now;
+    undo();
+    let score: number;
+    if (now <= 0) score = c.cost <= state.qi ? c.cost : Infinity;
+    else if (gain <= now * 1e-9) score = c.cost <= now * 60 ? 0 : Infinity;
+    else score = Math.max(0, c.cost - state.qi) / now + c.cost / gain;
+    if (!best || score < best.score) best = { c, score };
+  }
+  return best && Number.isFinite(best.score) ? best.c : null;
+}
+
+function spend(): void {
+  for (let purchases = 0; purchases < 10_000; purchases++) {
+    const all = candidates();
+    // Players break through as soon as they can.
+    const breakthrough = all.find((c) => c.key.startsWith('stage:') && c.cost <= state.qi);
+    const choice = breakthrough ?? choosePurchase(all);
+    if (!choice) return;
+    if (state.qi < choice.cost) return; // saving up for it
+    recordPrice(choice.key, choice.cost);
+    if (!choice.buy()) return;
   }
 }
 
@@ -357,43 +553,41 @@ function trackRealmVisits(): void {
   v.seconds.set(loop, (v.seconds.get(loop) ?? 0) + 1);
 }
 
-/** Where active-play income comes from: "gen 40% auto 10% gather 5% click 25% motes 20%". */
-function incomeSources(): string {
-  const stats = computeStats(state, false);
-  const sources = {
-    gen: stats.generatorQps,
-    auto: stats.autoClickQps,
-    gather: stats.autoMoteQps,
-    click: clicksPerSecond * stats.clickPower,
-    motes: stats.moteSpawnPerSecond * MOTE_CATCH_RATE * stats.moteValue,
-  };
-  const total = Object.values(sources).reduce((a, b) => a + b, 0);
-  return Object.entries(sources)
-    .map(([k, v]) => `${k} ${String(Math.round((v / total) * 100)).padStart(2)}%`)
-    .join(' ');
+/** Gathering's boost over idle income right now: "active ×2.4". */
+function activeRatio(): number {
+  const i = income(state);
+  return i.passive > 0 ? i.active / i.passive : Infinity;
+}
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)];
 }
 
 function report(label: string): void {
   const stats = computeStats(state);
   console.log(
-    `${formatDuration(time).padStart(8)}  loop ${state.prestige.loops}  ${label.padEnd(44)} qi/s ${formatNumber(stats.qps).padStart(9)}  mem ${String(state.prestige.memories).padStart(4)}  ${incomeSources()}`,
+    `${formatDuration(time).padStart(8)}  loop ${state.prestige.loops}  ${label.padEnd(60)} qi/s ${formatNumber(stats.qps).padStart(9)}  mem ${String(state.prestige.memories).padStart(5)}  active ×${activeRatio().toFixed(1)}`,
   );
 }
 
 while (time < maxHours * 3600) {
   const stats = computeStats(state);
-  if (isActive()) {
-    for (let i = 0; i < clicksPerSecond; i++) click(state, stats);
+  if (isGathering()) {
+    const treasuresBefore = { ...state.treasures };
     absorbMotes(state, stats, stats.moteSpawnPerSecond * MOTE_CATCH_RATE);
     if (state.encounter.active) claimEncounter(state, stats, rng);
     const trial = acceptTrial(state);
     if (trial) completeTrial(state, stats, trial, OPTIONAL_TRIAL_SCORE, rng);
+    if (TREASURE_MODE === 'none') state.treasures = treasuresBefore;
   }
   tick(state, 1, rng);
   time++;
   activity().seconds++;
-  // Idle players don't shop or face tribulations; they catch up when they check in.
-  if (isActive()) spend();
+  if (isCheckedIn()) spend();
+  if (TREASURE_MODE === 'all') grantAllTreasures();
+  if (computeStats(state, false).qps >= lastStepIncome * STEP_INCOME_GAIN) recordStep();
+  if (time % 60 === 0) ratioSamples[STAGES[state.stage].realmIndex].push(activeRatio());
   trackRealmVisits();
   if (printImpact) {
     trackLaterImpact();
@@ -411,23 +605,22 @@ while (time < maxHours * 3600) {
   }
 
   const pending = pendingMemories(state);
-  const stalled = time - lastProgress > STALL_SECONDS;
+  const stuck = time - lastStep > STUCK_SECONDS;
   const memoryMultBefore = computeStats(state).memoryMult;
-  const canRegress = isActive() && !regressionBlocker(state);
+  const canRegress = isCheckedIn() && !regressionBlocker(state);
   // Measured on the regressed state, which may have fewer treasures (and so a smaller Memory bonus).
   const memoryGain = canRegress
     ? computeStats(regress(structuredClone(state), 0)!).memoryMult / memoryMultBefore
     : 0;
-  if (canRegress && (stalled || memoryGain >= REGRESS_AT_MEMORY_GAIN)) {
-    if (stalled) stalledRegressions++;
-    recordWait();
-    const wait = `longest wait ${formatDuration(loopLongestWait.seconds)} at ${stageName(loopLongestWait.stage)}`;
-    loopLongestWait = { seconds: 0, stage: 0 };
-    const label = `regress (+${pending} memories${stalled ? ', stalled' : ''}`;
+  if (canRegress && (stuck || memoryGain >= REGRESS_AT_MEMORY_GAIN)) {
+    if (stuck) stuckRegressions++;
+    if (previousLoop?.stuck && loopBestStage <= previousLoop.best) futileRegressions++;
+    previousLoop = { best: loopBestStage, stuck };
+    const label = `regress (+${pending} memories${stuck ? `, stuck at ${stageName(state.stage)}` : ''}`;
     state = regress(state, 0)!;
     lastRegression = time;
+    loopBestStage = 0;
     realmActivity = {};
-    lastProgress = time;
     let boughtPerk = true;
     while (boughtPerk) {
       boughtPerk = false;
@@ -435,18 +628,35 @@ while (time < maxHours * 3600) {
         if (perkStatus(state, p.id) === 'available')
           boughtPerk = buyPerk(state, p.id) || boughtPerk;
     }
+    recordStep();
     report(`${label}, ×${(computeStats(state).memoryMult / memoryMultBefore).toFixed(2)})`);
-    console.log(`          ${wait}`);
   }
 }
 
 console.log(
   `\nFinal: ${stageName(state.stage)} after ${formatDuration(time)}, ${state.prestige.loops} regressions`,
 );
-const sortedWaits = [...waits].sort((a, b) => b - a);
+const lateGaps = stepGaps
+  .filter((g) => g.realm > PASSIVE_GATHERS_UNTIL_REALM)
+  .map((g) => g.seconds)
+  .sort((a, b) => b - a);
 console.log(
-  `Waits between breakthroughs: longest ${sortedWaits.slice(0, 3).map(formatDuration).join(', ')}; ${waits.filter((w) => w > 15 * 60).length} over 15m, ${waits.filter((w) => w > 30 * 60).length} over 30m; gave up and regressed ${stalledRegressions} times`,
+  `Gaps between progress steps after the early game: longest ${lateGaps.slice(0, 3).map(formatDuration).join(', ')}; ${lateGaps.filter((g) => g > 10 * 60).length} over 10m; stuck regressions ${stuckRegressions} (${futileRegressions} futile)`,
 );
+console.log(
+  'By realm: median and longest gap between progress steps; median active ÷ passive income (min-max):',
+);
+REALMS.forEach((realm, r) => {
+  const gaps = stepGaps.filter((g) => g.realm === r).map((g) => g.seconds);
+  const ratios = ratioSamples[r].filter(Number.isFinite);
+  if (!gaps.length && !ratios.length) return;
+  const ratio = ratios.length
+    ? `×${median(ratios).toFixed(1)} (${Math.min(...ratios).toFixed(1)}-${Math.max(...ratios).toFixed(1)})`
+    : '—';
+  console.log(
+    `  ${realm.name.padEnd(26)} gap ${formatDuration(gaps.length ? median(gaps) : 0).padStart(8)} / ${formatDuration(Math.max(0, ...gaps)).padStart(8)}   active ${ratio}`,
+  );
+});
 console.log('Final loop by realm:');
 for (const [realm, r] of Object.entries(realmActivity)) {
   console.log(
@@ -497,4 +707,5 @@ if (printImpact) {
   const unbought = UPGRADES.filter((u) => !impacts.has(`upgrade:${u.id}`)).map((u) => u.name);
   console.log(`Techniques never bought: ${unbought.join(', ') || 'none'}`);
 }
+if (process.env.SIM_PRICES) console.log(`PRICES ${JSON.stringify(firstPaid)}`);
 console.log(`Realms: ${REALMS.length}, stages: ${STAGES.length}, elements: ${ELEMENTS.length}`);

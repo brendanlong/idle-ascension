@@ -135,16 +135,8 @@ export function CultivationStats() {
           <dd>×{game.fmt(stats.cycleMult)}</dd>
         </>
       )}
-      <dt>Per click</dt>
-      <dd>{game.fmt(stats.clickPower)}</dd>
       <dt>Per qi mote</dt>
       <dd>{game.fmt(stats.moteValue)}</dd>
-      {stats.autoClickQps > 0 && (
-        <>
-          <dt>Nascent Soul</dt>
-          <dd>{game.fmt(stats.autoClickQps)}/s</dd>
-        </>
-      )}
       {stats.autoMoteQps > 0 && (
         <>
           <dt>Gathered motes</dt>

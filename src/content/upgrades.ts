@@ -35,66 +35,66 @@ const generatorUpgrades: UpgradeDef[] = GENERATORS.flatMap((gen) =>
   })),
 );
 
+/** Gathering techniques: your hands learn to pull qi motes out of the air. */
 const palmUpgrades: UpgradeDef[] = [
   {
     id: 'palm-1',
     name: 'Iron Palm',
-    description: 'Slap a wooden post ten thousand times. Your hands become weapons.',
+    description: 'Slap a wooden post ten thousand times. Qi sticks to your hardened palms.',
     cost: 100,
-    unlock: { type: 'clicks', count: 15 },
-    effects: [{ type: 'mult', stat: 'clickMult', value: 2 }],
+    unlock: { type: 'motes', count: 10 },
+    effects: [{ type: 'mult', stat: 'moteBaseMult', value: 2 }],
   },
   {
     id: 'palm-2',
     name: 'Cloud-Parting Palm',
-    description:
-      'Your strikes part the clouds. Well, small clouds. Each one carries some of what you cultivate.',
+    description: 'You part the clouds and gather what falls out. Well, small clouds.',
     cost: 5_000,
-    unlock: { type: 'clicks', count: 150 },
+    unlock: { type: 'motes', count: 100 },
     effects: [
-      { type: 'mult', stat: 'clickMult', value: 2 },
-      { type: 'add', stat: 'clickQpsFraction', value: 0.06 },
+      { type: 'mult', stat: 'moteBaseMult', value: 2 },
+      { type: 'mult', stat: 'moteValueMult', value: 1.25 },
     ],
   },
   {
     id: 'palm-3',
     name: 'Eighteen Dragon-Subduing Palms',
-    description: 'Each click channels a fraction of everything you cultivate.',
+    description: 'Each mote you seize carries more of everything you cultivate.',
     cost: 500_000,
-    unlock: { type: 'clicks', count: 500 },
-    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.05 }],
+    unlock: { type: 'motes', count: 400 },
+    effects: [{ type: 'mult', stat: 'moteValueMult', value: 1.25 }],
   },
   {
     id: 'palm-4',
     name: "Tathagata's Palm",
-    description: 'A palm so vast a monkey king could not escape it.',
+    description: 'A palm so vast no mote can escape it.',
     cost: 20_000_000,
-    unlock: { type: 'clicks', count: 1_500 },
-    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.05 }],
+    unlock: { type: 'motes', count: 1_500 },
+    effects: [{ type: 'mult', stat: 'moteSpawnMult', value: 1.25 }],
   },
   {
     id: 'palm-5',
     name: 'Heaven-Shattering Finger',
-    description: 'One finger. The sky cracks.',
+    description: 'One finger. The sky cracks, and qi pours through.',
     cost: 5e10,
-    unlock: { type: 'clicks', count: 4_000 },
-    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.04 }],
+    unlock: { type: 'motes', count: 4_000 },
+    effects: [{ type: 'mult', stat: 'moteValueMult', value: 1.25 }],
   },
   {
     id: 'palm-6',
     name: 'Palm That Covers the Sky',
-    description: 'You raise your hand and the sun goes dark.',
+    description: 'You raise your hand and the qi of the whole sky drifts toward it.',
     cost: 2e24,
     unlock: { type: 'realm', realm: 'daoSeeking' },
-    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.04 }],
+    effects: [{ type: 'mult', stat: 'moteSpawnMult', value: 1.25 }],
   },
   {
     id: 'palm-7',
     name: 'Finger That Ends Worlds',
-    description: 'Somewhere, a small world you never visited quietly ceases to exist.',
+    description: 'Somewhere, a small world you never visited quietly becomes qi for you.',
     cost: 2e30,
     unlock: { type: 'realm', realm: 'immortalAscension' },
-    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.05 }],
+    effects: [{ type: 'mult', stat: 'moteValueMult', value: 1.25 }],
   },
 ];
 
@@ -132,7 +132,7 @@ const senseUpgrades: UpgradeDef[] = [
     description: 'You see every mote of qi between here and the edge of the world.',
     cost: 5e24,
     unlock: { type: 'realm', realm: 'daoSeeking' },
-    effects: [{ type: 'add', stat: 'moteAutoCollect', value: 0.15 }],
+    effects: [{ type: 'add', stat: 'moteAutoCollect', value: 0.1 }],
   },
 ];
 
@@ -208,10 +208,10 @@ const soulUpgrades: UpgradeDef[] = [
   {
     id: 'soul-1',
     name: 'Soul Nourishing Wood',
-    description: 'Your Nascent Soul grows quicker at its practice.',
+    description: 'Your Nascent Soul grows quicker at its practice, and cultivates beside you.',
     cost: 1e12,
     unlock: { type: 'realm', realm: 'nascentSoul' },
-    effects: [{ type: 'add', stat: 'autoClicksPerSecond', value: 1 }],
+    effects: [{ type: 'mult', stat: 'globalMult', value: 1.5 }],
   },
   {
     id: 'soul-2',
@@ -219,7 +219,7 @@ const soulUpgrades: UpgradeDef[] = [
     description: 'Why have one Nascent Soul when you could have several?',
     cost: 1e15,
     unlock: { type: 'realm', realm: 'spiritSevering' },
-    effects: [{ type: 'add', stat: 'autoClicksPerSecond', value: 3 }],
+    effects: [{ type: 'mult', stat: 'globalMult', value: 2 }],
   },
   {
     id: 'soul-3',
@@ -227,7 +227,7 @@ const soulUpgrades: UpgradeDef[] = [
     description: 'Your avatars cultivate in ten thousand places at once.',
     cost: 5e25,
     unlock: { type: 'realm', realm: 'daoSeeking' },
-    effects: [{ type: 'add', stat: 'autoClicksPerSecond', value: 9 }],
+    effects: [{ type: 'mult', stat: 'globalMult', value: 2.5 }],
   },
 ];
 

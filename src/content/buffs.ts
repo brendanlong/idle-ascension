@@ -19,7 +19,7 @@ export const BUFFS: readonly BuffDef[] = [
     id: 'meridianSurge',
     name: 'Meridian Surge',
     duration: 15,
-    effects: [{ type: 'mult', stat: 'clickMult', value: 33 }],
+    effects: [{ type: 'mult', stat: 'moteValueMult', value: 5 }],
   },
   {
     id: 'qiTide',

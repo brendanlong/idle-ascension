@@ -34,11 +34,11 @@ export function spendQi(state: GameState, amount: number): boolean {
   return true;
 }
 
-export function click(state: GameState, stats: Stats): number {
-  gainQi(state, stats.clickPower);
+/** Pressing the orb draws in one waiting mote (the UI checks there is one). */
+export function drawInMote(state: GameState, stats: Stats): number {
   state.stats.totalClicks++;
   state.stats.loopClicks++;
-  return stats.clickPower;
+  return absorbMotes(state, stats, 1);
 }
 
 export function absorbMotes(state: GameState, stats: Stats, count: number): number {

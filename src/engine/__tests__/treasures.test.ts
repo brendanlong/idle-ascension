@@ -10,7 +10,7 @@ describe('treasures', () => {
   it('scales bonuses linearly and reductions multiplicatively', () => {
     // Level 3 has twice the level-1 bonus.
     expect(scaleEffect({ type: 'mult', stat: 'globalMult', value: 1.5 }, 3).value).toBe(2);
-    expect(scaleEffect({ type: 'add', stat: 'autoClicksPerSecond', value: 5 }, 3).value).toBe(10);
+    expect(scaleEffect({ type: 'add', stat: 'offlineCapHours', value: 5 }, 3).value).toBe(10);
     expect(scaleEffect({ type: 'mult', stat: 'coreCostMult', value: 0.5 }, 3).value).toBeCloseTo(
       1 / 3,
     );

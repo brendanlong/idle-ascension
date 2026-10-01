@@ -47,7 +47,7 @@ export const TREASURES: readonly TreasureDef[] = [
     description: 'A palm technique half-erased by time. The remaining half is plenty.',
     rarity: 'common',
     minRealm: 'qiCondensation',
-    effects: [{ type: 'mult', stat: 'clickMult', value: 3 }],
+    effects: [{ type: 'mult', stat: 'moteBaseMult', value: 3 }],
   },
   {
     id: 'pendant',
@@ -100,10 +100,7 @@ export const TREASURES: readonly TreasureDef[] = [
       'An ancient soul dwells within. He is rude, lazy, and knows ten thousand techniques.',
     rarity: 'rare',
     minRealm: 'foundation',
-    effects: [
-      { type: 'mult', stat: 'globalMult', value: 1.5 },
-      { type: 'add', stat: 'clickQpsFraction', value: 0.01 },
-    ],
+    effects: [{ type: 'mult', stat: 'globalMult', value: 1.5 }],
   },
   {
     id: 'cauldron',
@@ -161,7 +158,7 @@ export const TREASURES: readonly TreasureDef[] = [
     description: 'It shows your past lives. There are more of them than you remembered.',
     rarity: 'rare',
     minRealm: 'spiritSevering',
-    effects: [{ type: 'add', stat: 'memoryBonus', value: 0.01 }],
+    effects: [{ type: 'add', stat: 'memoryBonus', value: 0.002 }],
   },
   {
     id: 'lamp',
@@ -189,10 +186,10 @@ export const TREASURES: readonly TreasureDef[] = [
     id: 'whisk',
     name: "Immortal's Horsetail Whisk",
     icon: '🪶',
-    description: 'Every flick carries a trace of everything you cultivate.',
+    description: 'Every flick sweeps drifting qi your way.',
     rarity: 'uncommon',
     minRealm: 'daoSeeking',
-    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.05 }],
+    effects: [{ type: 'mult', stat: 'moteValueMult', value: 1.5 }],
   },
   {
     id: 'seal',
@@ -230,7 +227,7 @@ export const TREASURES: readonly TreasureDef[] = [
     description: "From the Queen Mother's own orchard. It ripens once every three thousand years.",
     rarity: 'rare',
     minRealm: 'immortalAscension',
-    effects: [{ type: 'add', stat: 'autoClicksPerSecond', value: 5 }],
+    effects: [{ type: 'mult', stat: 'globalMult', value: 1.5 }],
   },
   {
     id: 'chaosStone',
