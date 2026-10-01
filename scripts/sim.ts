@@ -46,6 +46,7 @@ import {
   buyGenerator,
   buyUpgrade,
   generatorCost,
+  isGeneratorUnlocked,
   isGeneratorVisible,
 } from '../src/engine/economy';
 import { claimEncounter } from '../src/engine/encounters';
@@ -472,12 +473,14 @@ function trackResourceEfficiency(): void {
   if (efficiencyCheckedRealms.has(realm)) return;
   efficiencyCheckedRealms.add(realm);
   const stats = computeStats(state, false);
+  // Every unlocked resource, even ones not shown yet, against the best visible one.
   const efficiency: Record<string, number> = {};
+  let best = 0;
   GENERATORS.forEach((g, i) => {
-    if (!isGeneratorVisible(state, i)) return;
+    if (!isGeneratorUnlocked(state, g)) return;
     efficiency[g.id] = stats.generatorUnitQps[g.id] / generatorCost(state, stats.mods, g.id);
+    if (isGeneratorVisible(state, i)) best = Math.max(best, efficiency[g.id]);
   });
-  const best = Math.max(...Object.values(efficiency));
   const byGenerator = Object.fromEntries(
     Object.entries(efficiency).map(([id, e]) => [id, best / e]),
   );

@@ -3,10 +3,10 @@
 Schedule tuner. Runs the idle bot (scripts/sim.ts, SIM_PLAYER=passive) that
 regresses only when stuck, over a few seeds, and:
 - moves each breakthrough, core and realm-gated resource price toward its realm's target wait
+  (realm-gated resources' output is set separately: SIM_IMPACT=1 reports how far behind the
+  best resource each is when its realm is reached, and genQps makes it about twice the best);
   (time since the previous first-time purchase, including regressing),
   with longer waits at the realms where we want a regression (walls);
-- moves each realm-gated resource's output so its first unit is about
-  TARGET_EFFICIENCY times better value than the best existing resource;
 - cuts the price of anything no seed bought (except techniques unlocked by
   gathering, which the idle bot never unlocks).
 In log space each price is its own linear equation; this is a damped
@@ -24,7 +24,6 @@ TARGET = {'qiCondensation': 45, 'foundation': 75, 'coreFormation': 120, 'nascent
           'spiritSevering': 200, 'daoSeeking': 260, 'immortalAscension': 320, 'godhood': 320}
 WALL_WAIT = 15 * 60
 WALL_STAGES = {'stage:22', 'stage:26', 'stage:30', 'stage:34'}  # Spirit Severing, Dao Seeking, Immortal Ascension, Godhood
-TARGET_EFFICIENCY = 2
 REGRESSION_GAIN = 2.5
 SEEDS = [1, 2, 3, 4]
 DAMPING = float(os.environ.get('DAMPING', 0.5))
@@ -77,7 +76,7 @@ def main():
         history.append({'regressions': regs, 'futile': futile, 'done': sum(r['done'] for r in res),
                         'hours': statistics.median(r['time'] for r in res) / 3600, 'params': json.loads(json.dumps(params))})
         json.dump(history, open(path + '.history', 'w'))
-        price, gen_qps = params.setdefault('price', {}), params.setdefault('genQps', {})
+        price = params.setdefault('price', {})
         errs, by_realm, long_waits = [], {}, []
         for key in set().union(*(r['buys'].keys() for r in res)):
             seen = [r['buys'][key] for r in res if key in r['buys']]
@@ -95,16 +94,12 @@ def main():
             extra = regs - (1 if key in WALL_STAGES else 0)
             if extra > 0: step = min(step, REGRESSION_GAIN ** -extra)
             price[key] = price.get(key, 1) * min(MAX_STEP, max(1 / MAX_STEP ** 2, step))
-            effs = [b['efficiency'] for b in seen if b.get('efficiency')]
-            if key.startswith('gen:') and effs:
-                gid = key[4:]
-                e = statistics.median(effs)
-                gen_qps[gid] = gen_qps.get(gid, 1) * min(MAX_STEP, max(1 / MAX_STEP, (TARGET_EFFICIENCY / e) ** DAMPING))
         # Never bought by any seed: too expensive to matter, so cheaper until it's bought.
         bought = set().union(*(r['buys'].keys() for r in res))
         unbought = sorted(keys - bought)
         for key in unbought:
             price[key] = price.get(key, 1) / MAX_STEP
+
         med = lambda xs: statistics.median(xs)
         print(f"#{it} total {med([r['time'] for r in res]) / 3600:.1f}h regressions {med([r['loops'] for r in res])} "
               f"futile {med([r['futile'] for r in res])} done {sum(r['done'] for r in res)}/4 bursts {med([r['bursts'] for r in res])} "
