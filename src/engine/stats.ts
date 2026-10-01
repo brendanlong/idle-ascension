@@ -43,6 +43,19 @@ export const MAX_MOTES = 60;
  */
 const MOTE_EMPTY_FIELD_BOOST = 3;
 
+/**
+ * An attentive gatherer catches about this share of motes while keeping about
+ * MOTES_LEFT_WHILE_GATHERING waiting on the field (so it refills faster).
+ */
+const ATTENTIVE_MOTE_CATCH = 0.4;
+const MOTES_LEFT_WHILE_GATHERING = 5;
+
+/** Qi/s while actively gathering motes: what qi events are measured in. */
+export function activeQps(stats: Stats): number {
+  const motes = moteSpawnRate(stats.moteSpawnPerSecond, MOTES_LEFT_WHILE_GATHERING);
+  return stats.qps + motes * ATTENTIVE_MOTE_CATCH * stats.moteValue;
+}
+
 export function moteSpawnRate(spawnPerSecond: number, motesOnField: number): number {
   const room = Math.log((MAX_MOTES + 1) / (Math.min(motesOnField, MAX_MOTES) + 1));
   return (spawnPerSecond * MOTE_EMPTY_FIELD_BOOST * room) / Math.log(MAX_MOTES + 1);

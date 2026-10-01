@@ -61,14 +61,10 @@ import {
   regressionBlocker,
 } from '../src/engine/prestige';
 import { createInitialState, type GameState } from '../src/engine/state';
-import { computeStats, moteSpawnRate } from '../src/engine/stats';
+import { activeQps, computeStats } from '../src/engine/stats';
 import { tick } from '../src/engine/tick';
 
 const maxHours = Number(process.argv[2] ?? 48);
-/** Share of spawning motes an attentive player sweeps up... */
-const MOTE_CATCH_RATE = 0.4;
-/** ...keeping about this many waiting on the field, so it refills faster (see moteSpawnRate). */
-const MOTES_LEFT_WHILE_GATHERING = 5;
 const PLAYER = process.env.SIM_PLAYER ?? 'taper';
 const TREASURE_MODE = process.env.SIM_TREASURES ?? 'random';
 const FIXED_ACTIVE_FRACTION = process.env.SIM_ACTIVE ? Number(process.env.SIM_ACTIVE) : null;
@@ -358,15 +354,10 @@ function isCheckedIn(): boolean {
   return PLAYER === 'taper' ? inTaperWindow() : true;
 }
 
-function gatheredPerSecond(spawnPerSecond: number): number {
-  return moteSpawnRate(spawnPerSecond, MOTES_LEFT_WHILE_GATHERING) * MOTE_CATCH_RATE;
-}
-
 /** Qi/s while idle (passive) and while gathering motes (active), buffs excluded. */
 function income(s: GameState): { passive: number; active: number } {
   const stats = computeStats(s, false);
-  const gathered = gatheredPerSecond(stats.moteSpawnPerSecond) * stats.moteValue;
-  return { passive: stats.qps, active: stats.qps + gathered };
+  return { passive: stats.qps, active: activeQps(stats) };
 }
 
 function averageIncome(i: { passive: number; active: number }): number {
@@ -759,7 +750,7 @@ while (time < maxHours * 3600) {
   const stats = computeStats(state);
   if (isGathering()) {
     const treasuresBefore = { ...state.treasures };
-    absorbMotes(state, stats, gatheredPerSecond(stats.moteSpawnPerSecond));
+    absorbMotes(state, stats, (activeQps(stats) - stats.qps) / stats.moteValue);
     if (state.encounter.active) claimEncounter(state, stats, rng);
     const trial = acceptTrial(state);
     if (trial) completeTrial(state, stats, trial, OPTIONAL_TRIAL_SCORE, rng);

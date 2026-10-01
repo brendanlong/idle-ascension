@@ -37,6 +37,15 @@ export function isFamiliarStage(state: GameState, stage: number): boolean {
   return stage <= state.stats.bestStage;
 }
 
+/**
+ * A single qi event (an encounter windfall or a trial) can be worth at most
+ * the next breakthrough's full price, so luck carries you a stage at most.
+ */
+export function qiEventCap(state: GameState): number {
+  const next = nextStage(state);
+  return next ? next.cost : Infinity;
+}
+
 export function breakthroughCost(state: GameState, stage: number): number {
   return STAGES[stage].cost * (isFamiliarStage(state, stage) ? FAMILIAR_STAGE_COST_MULT : 1);
 }

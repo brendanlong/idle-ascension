@@ -13,10 +13,12 @@
 
 export interface WindfallReward {
   weight: number;
-  /** Seconds of qi/s granted, rolled uniformly in this range... */
-  qpsSeconds: readonly [number, number];
-  /** ...but capped at this fraction of banked qi, so it can't be farmed by saving up. */
-  bankFraction: number;
+  /**
+   * Seconds of active-gathering income granted (idle qi/s plus what an
+   * attentive gatherer earns), rolled uniformly in this range. Capped at the
+   * next breakthrough's price (see qiEventCap).
+   */
+  activeSeconds: readonly [number, number];
   texts: readonly string[];
 }
 
@@ -64,8 +66,7 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
     rewards: {
       windfall: {
         weight: 55,
-        qpsSeconds: [600, 1500],
-        bankFraction: 0.15,
+        activeSeconds: [40, 100],
         texts: [
           'Inside, a skeleton still clutches a pouch of spirit stones. It will not be needing them.',
           'The walls are veined with raw spirit crystal. You absorb every last drop.',
@@ -114,8 +115,7 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
     rewards: {
       windfall: {
         weight: 80,
-        qpsSeconds: [300, 900],
-        bankFraction: 0.1,
+        activeSeconds: [20, 60],
         texts: [
           'One slap later, he is embedded in a wall. His storage ring is surprisingly full.',
           'Before he can say another word, you strike. The crowd gasps. His storage ring is yours.',
@@ -158,8 +158,7 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
     rewards: {
       windfall: {
         weight: 70,
-        qpsSeconds: [300, 900],
-        bankFraction: 0.1,
+        activeSeconds: [25, 70],
         texts: [
           'You eat the herb raw. Probably not how alchemists would do it, but it works.',
           'A hundred-year spirit herb! You refine it on the spot.',
@@ -200,8 +199,7 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
     rewards: {
       windfall: {
         weight: 15,
-        qpsSeconds: [200, 600],
-        bankFraction: 0.08,
+        activeSeconds: [15, 45],
         texts: ['Your qi settles and condenses, a little denser than before.'],
       },
       buff: {
@@ -241,8 +239,7 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
     rewards: {
       windfall: {
         weight: 25,
-        qpsSeconds: [400, 1000],
-        bankFraction: 0.12,
+        activeSeconds: [30, 80],
         texts: [
           'He presses a pouch into your hands. It is heavier than it looks.',
           'He taps your forehead. Blocked meridians burst open, spilling qi.',
@@ -289,8 +286,7 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
     rewards: {
       windfall: {
         weight: 60,
-        qpsSeconds: [600, 1200],
-        bankFraction: 0.15,
+        activeSeconds: [40, 100],
         texts: [
           'You win every match without drawing your sword. The prize pool is yours.',
           'You make a {elderTitle} stand up from their seat. The prize is generous.',
@@ -330,8 +326,7 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
     rewards: {
       windfall: {
         weight: 40,
-        qpsSeconds: [900, 1800],
-        bankFraction: 0.2,
+        activeSeconds: [60, 150],
         texts: [
           'Young Master {surname} outbids everyone out of spite, for junk you consigned. You laugh all the way home.',
           'You sell a pill you refined last week. Three sects start a bidding war.',
@@ -370,8 +365,7 @@ export const ENCOUNTERS: readonly EncounterDef[] = [
     rewards: {
       windfall: {
         weight: 15,
-        qpsSeconds: [900, 1800],
-        bankFraction: 0.2,
+        activeSeconds: [60, 150],
         texts: ['Heavenly qi pours down like rain.'],
       },
       buff: {

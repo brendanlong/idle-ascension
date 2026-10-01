@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_TREASURE_LEVEL, TREASURES } from '../../content/treasures';
 import { onLog, type LogEntry } from '../events';
-import { claimEncounter, rewardOdds, tickEncounters } from '../encounters';
+import { claimEncounter, rewardOdds, tickEncounters, windfallAmount } from '../encounters';
 import { ENCOUNTERS_BY_ID } from '../../content/encounters';
-import { firstStageOfRealm } from '../../content/realms';
-import { computeStats } from '../stats';
+import { STAGES, firstStageOfRealm } from '../../content/realms';
+import { activeQps, computeStats } from '../stats';
 import { fillTemplate } from '../text';
 import { newGame, seqRng } from './helpers';
 
@@ -18,6 +18,20 @@ function claim(state: ReturnType<typeof newGame>, id: string, rng: () => number)
 }
 
 describe('encounters', () => {
+  it('pays windfalls in seconds of active-gathering income, at most the next breakthrough', () => {
+    const reward = ENCOUNTERS_BY_ID.get('cave')!.rewards.windfall!;
+    const state = newGame({ stage: firstStageOfRealm('nascentSoul') });
+    state.generators.herb = 10;
+    const stats = computeStats(state);
+    const [low] = reward.activeSeconds;
+    // Rolling 0 gives the low end of the range, here well under a breakthrough.
+    expect(windfallAmount(state, stats, reward, () => 0)).toBeCloseTo(activeQps(stats) * low);
+    // A huge income still only pays for the next stage.
+    state.generators.dao = 1e6;
+    const rich = computeStats(state);
+    expect(windfallAmount(state, rich, reward, () => 0)).toBe(STAGES[state.stage + 1].cost);
+  });
+
   it('reuses one pick per placeholder within a message', () => {
     const vars = {};
     const rng = seqRng(0, 0.5, 0.9);
