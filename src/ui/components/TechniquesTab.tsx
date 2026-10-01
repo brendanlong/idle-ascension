@@ -6,6 +6,7 @@ import {
   buyAllUpgrades,
   buyUpgrade,
 } from '../../engine/economy';
+import { upgradeEffects } from '../../engine/stats';
 import { game } from '../game';
 
 export function TechniquesTab() {
@@ -37,7 +38,7 @@ export function TechniquesTab() {
               <span class="cost">{game.fmt(u.cost)} qi</span>
             </div>
             <p class="flavor">{u.description}</p>
-            <p class="effect">{describeEffects(u.effects)}</p>
+            <p class="effect">{describeEffects(upgradeEffects(state, u))}</p>
             <button
               class="primary"
               disabled={state.qi < u.cost}
@@ -54,7 +55,8 @@ export function TechniquesTab() {
           <ul>
             {mastered.map((u) => (
               <li key={u.id}>
-                <strong>{u.name}</strong> <span class="muted">{describeEffects(u.effects)}</span>
+                <strong>{u.name}</strong>{' '}
+                <span class="muted">{describeEffects(upgradeEffects(state, u))}</span>
               </li>
             ))}
           </ul>

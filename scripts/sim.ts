@@ -62,7 +62,7 @@ import {
   regressionBlocker,
 } from '../src/engine/prestige';
 import { createInitialState, type GameState } from '../src/engine/state';
-import { activeQps, computeStats } from '../src/engine/stats';
+import { activeQps, computeStats, revivalMult } from '../src/engine/stats';
 import { tick } from '../src/engine/tick';
 
 const maxHours = Number(process.argv[2] ?? 48);
@@ -506,29 +506,6 @@ const treasureCheckedStages = new Set<number>();
 const resourceEfficiency: { realm: string; byGenerator: Record<string, number> }[] = [];
 const efficiencyCheckedRealms = new Set<number>();
 /**
- * SIM_REVIVAL=1: for each resource, the first time you own REVIVAL_NEWER_COUNT
- * of the resource two tiers newer, how many times its total output trails the best resource's
- * total, and average income then. Used to size and price revival techniques.
- */
-const REVIVAL_NEWER_COUNT = 10;
-const revivalPoints: Record<string, { behind: number; income: number; realm: string }> = {};
-function trackRevivalPoints(): void {
-  const stats = computeStats(state, false);
-  const total = (id: string) => stats.generatorUnitQps[id] * state.generators[id];
-  const best = Math.max(...GENERATORS.map((g) => total(g.id)));
-  GENERATORS.forEach((g, i) => {
-    const newer = GENERATORS[i + 2];
-    if (!newer || revivalPoints[g.id] || !state.generators[g.id]) return;
-    if (state.generators[newer.id] < REVIVAL_NEWER_COUNT) return;
-    revivalPoints[g.id] = {
-      behind: best / total(g.id),
-      income: averageIncome(income(state)),
-      realm: REALMS[STAGES[state.stage].realmIndex].id,
-    };
-  });
-}
-
-/**
  * SIM_CALIBRATE=1: on first reaching a realm, prices the resources it unlocks
  * from the economy there and uses them for the rest of the run: the first
  * costs CALIBRATE_SECONDS of income and its first unit is CALIBRATE_EFFICIENCY
@@ -648,6 +625,7 @@ function candidates(): Candidate[] {
       key: `up:${u.id}`,
       cost: u.cost,
       tryOn: () => {
+        if (u.revives) state.revivals[u.revives] = revivalMult(state, u.revives);
         state.upgrades[u.id] = true;
         return () => delete state.upgrades[u.id];
       },
@@ -839,7 +817,6 @@ while (time < maxHours * 3600) {
   time++;
   activity().seconds++;
   if (isCheckedIn()) spend();
-  if (process.env.SIM_REVIVAL) trackRevivalPoints();
   if (replayTarget !== null && state.stage >= replayTarget) {
     replayTimes.push(time - lastRegression);
     replayTarget = null;
@@ -999,5 +976,4 @@ if (printImpact) {
 }
 if (process.env.SIM_CALIBRATE) console.log(`CALIBRATION ${JSON.stringify(calibration)}`);
 if (process.env.SIM_PRICES) console.log(`PRICES ${JSON.stringify(firstBuys)}`);
-if (process.env.SIM_REVIVAL) console.log(`REVIVAL ${JSON.stringify(revivalPoints)}`);
 console.log(`Realms: ${REALMS.length}, stages: ${STAGES.length}, elements: ${ELEMENTS.length}`);

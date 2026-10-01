@@ -11,11 +11,9 @@ export interface GeneratorDef {
   upgradeName: string;
   /**
    * A late technique that makes this resource briefly the best again, unlocked
-   * once you own a few of the resource two tiers newer. `mult` is about 1.5 times
-   * how far this resource's total trails the best one by then (measured with
-   * SIM_REVIVAL=1 in scripts/sim.ts).
+   * once you own a few of the resource two tiers newer (see revivalMult).
    */
-  revival?: { name: string; mult: number };
+  revival?: { name: string };
 }
 
 export const GENERATOR_COST_GROWTH = 1.15;
@@ -29,7 +27,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     baseCost: 15,
     baseQps: 0.1,
     upgradeName: 'Lotus Posture',
-    revival: { name: 'Sitting Through Kalpas', mult: 100 },
+    revival: { name: 'Sitting Through Kalpas' },
   },
   {
     id: 'herb',
@@ -39,7 +37,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     baseCost: 100,
     baseQps: 1,
     upgradeName: 'Spirit Soil',
-    revival: { name: 'Garden of the Queen Mother', mult: 40 },
+    revival: { name: 'Garden of the Queen Mother' },
   },
   {
     id: 'array',
@@ -49,7 +47,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     baseCost: 1_100,
     baseQps: 8,
     upgradeName: 'Gathering Sigils',
-    revival: { name: 'Array Embracing the Stars', mult: 25 },
+    revival: { name: 'Array Embracing the Stars' },
   },
   {
     id: 'furnace',
@@ -59,7 +57,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     baseCost: 12_000,
     baseQps: 47,
     upgradeName: 'Pill Recipes',
-    revival: { name: 'Eight Trigrams Furnace', mult: 25 },
+    revival: { name: 'Eight Trigrams Furnace' },
   },
   {
     id: 'disciple',
@@ -69,7 +67,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     baseCost: 130_000,
     baseQps: 260,
     upgradeName: 'Sect Entrance Exam',
-    revival: { name: 'Ten Thousand Disciples Bow', mult: 25 },
+    revival: { name: 'Ten Thousand Disciples Bow' },
   },
   {
     id: 'beast',
@@ -79,7 +77,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     baseCost: 1_400_000,
     baseQps: 1_400,
     upgradeName: 'Beast-Taming Collar',
-    revival: { name: 'Qilin Descendant', mult: 25 },
+    revival: { name: 'Qilin Descendant' },
   },
   {
     id: 'vein',
@@ -89,7 +87,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     baseCost: 2e7,
     baseQps: 7_800,
     upgradeName: 'Mining Rights',
-    revival: { name: 'Heart of the Continent', mult: 25 },
+    revival: { name: 'Heart of the Continent' },
   },
   {
     id: 'secretRealm',
@@ -99,7 +97,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     baseCost: 3.3e8,
     baseQps: 44_000,
     upgradeName: 'Realm Key',
-    revival: { name: 'A Realm of Your Own', mult: 25 },
+    revival: { name: 'A Realm of Your Own' },
   },
   {
     id: 'inheritance',
@@ -109,7 +107,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     baseCost: 5.1e9,
     baseQps: 260_000,
     upgradeName: 'Trial of Worthiness',
-    revival: { name: 'Heir of the Ancients', mult: 25 },
+    revival: { name: 'Heir of the Ancients' },
   },
   {
     id: 'dao',
@@ -119,7 +117,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     baseCost: 7.5e10,
     baseQps: 1_600_000,
     upgradeName: 'Glimpse of the Dao',
-    revival: { name: 'One With the Dao', mult: 25 },
+    revival: { name: 'One With the Dao' },
   },
   {
     id: 'sect',
@@ -130,7 +128,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     baseCost: 2.4e17,
     baseQps: 1.8e9,
     upgradeName: 'Sect Charter',
-    revival: { name: 'The Sect That Rules the Continent', mult: 25 },
+    revival: { name: 'The Sect That Rules the Continent' },
   },
   {
     id: 'dragon',
@@ -141,7 +139,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     baseCost: 3.5e18,
     baseQps: 1.3e10,
     upgradeName: 'Dragon Pearl',
-    revival: { name: 'Ancestor of Dragons', mult: 25 },
+    revival: { name: 'Ancestor of Dragons' },
   },
   {
     id: 'smallWorld',
@@ -152,7 +150,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     baseCost: 4.8e21,
     baseQps: 2e13,
     upgradeName: 'World Seed',
-    revival: { name: 'A World That Cultivates', mult: 25 },
+    revival: { name: 'A World That Cultivates' },
   },
   {
     id: 'starRiver',
@@ -163,7 +161,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     baseCost: 7.1e22,
     baseQps: 1.5e14,
     upgradeName: 'Star Map',
-    revival: { name: 'Master of the Firmament', mult: 25 },
+    revival: { name: 'Master of the Firmament' },
   },
   {
     id: 'faith',
@@ -174,7 +172,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     baseCost: 1.9e25,
     baseQps: 7.4e16,
     upgradeName: 'Wayside Shrines',
-    revival: { name: 'Worshipped Across Eternity', mult: 25 },
+    revival: { name: 'Worshipped Across Eternity' },
   },
   {
     id: 'court',

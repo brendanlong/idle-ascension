@@ -160,4 +160,17 @@ describe('log messages', () => {
       'Your Ring of the Old Master absorbs it and grows stronger. Level 2: ×1.75 all qi gain.',
     );
   });
+
+  it('sizes a revival when learned so its resource leads the best one by half again', () => {
+    const state = newGame({ qi: 1e12 });
+    Object.assign(state.generators, { cushion: 20, herb: 40, array: 30 });
+    expect(buyUpgrade(state, 'cushion-5')).toBe(true);
+    const stats = computeStats(state, false);
+    const total = (id: string) => stats.generatorUnitQps[id] * state.generators[id];
+    expect(total('cushion') / Math.max(total('herb'), total('array'))).toBeCloseTo(1.5, 1);
+    // Later growth doesn't resize it.
+    const mult = state.revivals.cushion;
+    state.generators.array = 300;
+    expect(computeStats(state, false).mods.generatorMult.cushion).toBe(mult);
+  });
 });

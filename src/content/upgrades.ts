@@ -8,6 +8,11 @@ export interface UpgradeDef {
   name: string;
   description: string;
   cost: number;
+  /**
+   * A revival of this resource: its multiplier is sized when learned (see
+   * revivalMult in engine/stats.ts), so `effects` is empty.
+   */
+  revives?: string;
   /** For a realm's techniques: the stage of the realm whose breakthrough prices it. */
   realmStage?: number;
   unlock: Condition;
@@ -48,7 +53,8 @@ const generatorUpgrades: UpgradeDef[] = GENERATORS.flatMap((gen, i) => {
     description: `Old foundations, new understanding. Your ${gen.name} matters again.`,
     cost: gen.baseCost * REVIVAL_COST_MULT,
     unlock: { type: 'generator', id: newer.id, count: REVIVAL_NEWER_COUNT },
-    effects: [{ type: 'generatorMult', generator: gen.id, value: gen.revival.mult }],
+    revives: gen.id,
+    effects: [],
   };
   return [early, revival];
 });

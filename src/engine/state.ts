@@ -57,6 +57,8 @@ export interface GameState {
   stage: number;
   generators: Record<string, number>;
   upgrades: Record<string, true>;
+  /** Resource id → the multiplier its revival technique was sized to when learned. */
+  revivals: Record<string, number>;
   cores: CoreState[];
   /** Treasure id → level (1 when first found). */
   treasures: Record<string, number>;
@@ -109,6 +111,7 @@ export function createInitialState(now = Date.now()): GameState {
     stage: 0,
     generators: emptyGenerators(),
     upgrades: {},
+    revivals: {},
     cores: [],
     treasures: {},
     buffs: [],
