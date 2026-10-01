@@ -48,6 +48,8 @@ const MOTE_FLUSH_MS = 150;
  * missed on another phone tab or a hidden browser tab can be caught up.
  */
 let lastFrameAt: number | null = null;
+/** game.freshStarts as of that frame: motes from a game that's since been reset are gone. */
+let lastFrameFreshStarts = 0;
 /** A gap between frames longer than this means the field wasn't being shown. */
 const MISSED_FRAME_GAP_MS = 1000;
 
@@ -55,6 +57,12 @@ const MISSED_FRAME_GAP_MS = 1000;
 class FieldSim {
   motes: Mote[] = [];
   floats: FloatText[] = [];
+
+  clear(): void {
+    this.motes = [];
+    this.floats = [];
+    this.spawnAccumulator = 0;
+  }
   pointer: { x: number; y: number } | null = null;
   width = 0;
   height = 0;
@@ -280,12 +288,17 @@ export function QiField({ overlay }: { overlay?: ComponentChildren } = {}) {
     observer.observe(container);
 
     let last = performance.now();
-    if (lastFrameAt !== null)
+    if (lastFrameAt !== null && lastFrameFreshStarts === game.freshStarts)
       sim.catchUp((last - lastFrameAt) / 1000, game.stats.moteSpawnPerSecond);
     let lastFlush = last;
     let pendingMotes = 0;
     let frame = 0;
     const loop = (now: number) => {
+      if (game.freshStarts !== lastFrameFreshStarts) {
+        sim.clear();
+        pendingMotes = 0;
+        lastFrameFreshStarts = game.freshStarts;
+      }
       // Browsers stop animating hidden tabs; bring back what was missed.
       if (now - last > MISSED_FRAME_GAP_MS) {
         sim.catchUp((now - last) / 1000, game.stats.moteSpawnPerSecond);
