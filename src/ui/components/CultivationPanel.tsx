@@ -54,7 +54,7 @@ export function BreakthroughBox() {
       </div>
       {familiar && (
         <div class="muted small">
-          You've walked this path before: it costs far less, and its tribulation won't stop you.
+          You've walked this path before: it costs far less, and nothing will stand in your way.
         </div>
       )}
       {eta > 0 && eta < 86400 * 30 && (

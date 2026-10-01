@@ -24,7 +24,7 @@ const MIN_TRIAL_SPEED = 0.5;
 
 /**
  * Stages you've reached in an earlier loop cost this much of their usual
- * price, and their tribulations pass on their own, so realms you've already
+ * price, and their tribulations and requirements are waived, so realms you've already
  * finished go quickly after a regression while new ones still take their full time.
  */
 export const FAMILIAR_STAGE_COST_MULT = 0.001;
@@ -56,8 +56,10 @@ export function breakthroughBlocker(state: GameState): string | null {
   if (!next) return 'You stand at the peak of all cultivation.';
   if (state.tribulation) return 'The tribulation is underway!';
   if (state.trial.active) return 'Finish your trial first.';
+  // Like tribulations, requirements are waived for stages you've reached before.
   const requirement = REALMS[next.realmIndex].requirement;
-  if (next.isMajor && requirement && !meetsCondition(state, requirement)) {
+  const familiar = isFamiliarStage(state, next.index);
+  if (next.isMajor && requirement && !familiar && !meetsCondition(state, requirement)) {
     return describeCondition(requirement);
   }
   if (state.qi < breakthroughCost(state, next.index)) return 'Not enough qi.';

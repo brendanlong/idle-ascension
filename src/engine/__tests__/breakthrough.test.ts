@@ -44,6 +44,12 @@ describe('breakthroughs', () => {
     expect(breakthroughBlocker(state)).toBeNull();
   });
 
+  it('waives the pill furnace on a stage reached before', () => {
+    const state = newGame({ qi: 1e12, stage: firstStageOfRealm('foundation') - 1 });
+    state.stats.bestStage = firstStageOfRealm('foundation');
+    expect(breakthroughBlocker(state)).toBeNull();
+  });
+
   function startTribulation(realm = 'coreFormation') {
     const target = firstStageOfRealm(realm);
     const state = newGame({ qi: STAGES[target].cost, stage: target - 1 });
