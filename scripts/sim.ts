@@ -12,6 +12,8 @@
  *                       anything is affordable, to show how the economy paces an idle player.
  *                       active: gathers and checks in all the time.
  *   SIM_ACTIVE=<0-1>    taper player with a fixed share instead
+ *   SIM_REGRESS=eager  regress once nothing new has been bought for 3 minutes (default:
+ *                       [stuckMinutes]), always waiting for Memories to settle
  *   SIM_TREASURES=<x>   random (default), none (encounters never give treasures), or all
  *                       (every treasure at level 1 as soon as its realm is reached)
  *   SIM_IMPACT=1        also print how much each resource, technique, core and treasure adds
@@ -51,6 +53,7 @@ import { acceptTrial, completeTrial } from '../src/engine/trials';
 import { formatDuration, formatNumber } from '../src/engine/format';
 import {
   buyPerk,
+  memorySettledFraction,
   pendingMemories,
   perkStatus,
   regress,
@@ -74,9 +77,13 @@ const printImpact = !!process.env.SIM_IMPACT;
 const TRIBULATION_TRIAL_SCORE = 0.8;
 const OPTIONAL_TRIAL_SCORE = 0.7;
 /** With no progress step for this long, the bot is stuck and regresses if it can. */
-const STUCK_SECONDS = Number(process.argv[3] ?? 10) * 60;
-/** The bot also regresses once that would multiply its Memory bonus by this much. */
-const REGRESS_AT_MEMORY_GAIN = 4;
+const STUCK_SECONDS =
+  process.env.SIM_REGRESS === 'eager' ? 3 * 60 : Number(process.argv[3] ?? 10) * 60;
+/**
+ * SIM_REGRESS: stuck (default) regresses only when nothing new has been bought
+ * for [stuckMinutes], the fewest regressions a player gets by with; eager
+ * regresses as soon as progress slows, after 3 minutes.
+ */
 /** When stuck, the bot regresses if that would multiply its Memory bonus by at least this. */
 const REGRESS_WHEN_STUCK_AT_GAIN = 1.1;
 /**
@@ -96,7 +103,8 @@ const CORE_ORDER: ElementId[] = ['wood', 'fire', 'water', 'earth', 'metal'];
  *                slots), and so every later realm too
  *   stageGrowth  multiplies a realm's stage cost growth
  *   price        multiplies single prices: "up:<technique id>", "stage:<index>",
- *                "form:<core number>", "grade:<core grade>"
+ *                "form:<core number>", "grade:<core grade>", "gen:<resource>" (base cost)
+ *   genQps       multiplies a resource's output"
  * SIM_PRICES=1 prints, as JSON, each of those prices the first time the bot
  * paid it: the wait since its previous purchase, and its price in seconds of
  * passive qi/s.
@@ -108,6 +116,7 @@ function applyTuning(): void {
     shift?: Record<string, number>;
     stageGrowth?: Record<string, number>;
     price?: Record<string, number>;
+    genQps?: Record<string, number>;
   };
   const priceMult: number[] = [];
   REALMS.forEach((r, i) => (priceMult[i] = (priceMult[i - 1] ?? 1) * (tune.shift?.[r.id] ?? 1)));
@@ -137,8 +146,20 @@ function applyTuning(): void {
   (CORE_FORM_COSTS as number[]).forEach((_, n, costs) => {
     costs[n] *= priceMult[Math.min(coreFormation + n, REALMS.length - 1)];
   });
+  for (const [id, factor] of Object.entries(tune.genQps ?? {}))
+    scaled(
+      GENERATORS.find((g) => g.id === id)!,
+      'baseQps',
+      factor,
+    );
   for (const [key, factor] of Object.entries(tune.price ?? {})) {
     const [kind, id] = key.split(':');
+    if (kind === 'gen')
+      scaled(
+        GENERATORS.find((g) => g.id === id)!,
+        'baseCost',
+        factor,
+      );
     if (kind === 'up')
       scaled(
         UPGRADES.find((u) => u.id === id)!,
@@ -161,9 +182,20 @@ function applyTuning(): void {
  * including any regressing and replaying in between), and its price in
  * seconds of passive qi/s. Printed as JSON with SIM_PRICES, for tuning.
  */
-const firstBuys: Record<string, { wait: number; seconds: number; realm: string; loop: number }> =
-  {};
+const firstBuys: Record<
+  string,
+  {
+    wait: number;
+    seconds: number;
+    realm: string;
+    loop: number;
+    efficiency?: number;
+    /** Regressions since the previous first-time purchase: how many it took to reach this. */
+    regressions: number;
+  }
+> = {};
 let lastNewPurchaseAt = 0;
+let loopAtLastNewPurchase = 0;
 /** First-time techniques bought in the same moment: "you can buy several at once". */
 const bursts: { realm: number; count: number }[] = [];
 let techniquesThisTick = 0;
@@ -176,6 +208,7 @@ if (process.env.SIM_DUMP_PRICES) {
       up: Object.fromEntries(UPGRADES.map((u) => [u.id, u.cost])),
       stage: STAGES.map((st) => st.cost),
       form: CORE_FORM_COSTS,
+      gen: Object.fromEntries(GENERATORS.map((g) => [g.id, [g.baseCost, g.baseQps]])),
       grade: CORE_GRADES.map((g) => g.refineCost),
     }),
   );
@@ -192,8 +225,21 @@ let state: GameState = createInitialState(0);
 state.flags.introSeen = true;
 let time = 0;
 
-function recordPurchase(key: string, cost: number): void {
-  if (key.startsWith('gen:')) return;
+/** A resource's next unit's qi/s per qi, relative to the best other visible resource. */
+function relativeEfficiency(id: string): number {
+  const stats = computeStats(state, false);
+  const efficiency = (gid: string) =>
+    stats.generatorUnitQps[gid] / generatorCost(state, stats.mods, gid);
+  const others = GENERATORS.filter((g, i) => g.id !== id && isGeneratorVisible(state, i));
+  return efficiency(id) / Math.max(...others.map((g) => efficiency(g.id)));
+}
+
+function recordPurchase(key: string, cost: number, efficiency?: number): void {
+  if (key.startsWith('gen:')) {
+    // Resources: only the first unit of a realm-gated one is a new purchase.
+    const def = GENERATORS.find((g) => `gen:${g.id}` === key)!;
+    if (!def.minRealm || firstBuys[key]) return;
+  }
   if (!firstBuys[key]) {
     const qps = computeStats(state, false).qps;
     firstBuys[key] = {
@@ -201,9 +247,13 @@ function recordPurchase(key: string, cost: number): void {
       seconds: qps > 0 ? cost / qps : Infinity,
       realm: REALMS[STAGES[state.stage].realmIndex].id,
       loop: state.prestige.loops,
+      efficiency,
+      regressions: state.prestige.loops - loopAtLastNewPurchase,
     };
     if (key.startsWith('up:')) techniquesThisTick++;
     lastNewPurchaseAt = time;
+    loopAtLastNewPurchase = state.prestige.loops;
+    newPurchasesThisLoop++;
   }
   recordStep();
 }
@@ -220,10 +270,14 @@ function recordStep(): void {
   lastStepIncome = computeStats(state, false).qps;
 }
 let stuckRegressions = 0;
-/** Stuck regressions whose next loop got no further: Memories didn't get the player over the hump. */
+/** Stuck regressions whose next life bought nothing new: Memories didn't get the player over the hump. */
 let futileRegressions = 0;
 let loopBestStage = 0;
-let previousLoop: { best: number; stuck: boolean } | null = null;
+let newPurchasesThisLoop = 0;
+/** How long each regression took to get back to the previous life's furthest stage. */
+const replayTimes: number[] = [];
+let replayTarget: number | null = null;
+let previousLoopStuck = false;
 
 /** Active ÷ passive income, sampled each minute by realm. */
 const ratioSamples: number[][] = REALMS.map(() => []);
@@ -600,8 +654,9 @@ function buyWhatsWorthIt(): void {
     if (state.qi < choice.cost) return; // saving up for it
     const key = choice.key;
     const cost = choice.cost;
+    const efficiency = key.startsWith('gen:') ? relativeEfficiency(key.slice(4)) : undefined;
     if (!choice.buy()) return;
-    recordPurchase(key, cost);
+    recordPurchase(key, cost, efficiency);
   }
 }
 
@@ -661,6 +716,10 @@ while (time < maxHours * 3600) {
   time++;
   activity().seconds++;
   if (isCheckedIn()) spend();
+  if (replayTarget !== null && state.stage >= replayTarget) {
+    replayTimes.push(time - lastRegression);
+    replayTarget = null;
+  }
   if (TREASURE_MODE === 'all') grantAllTreasures();
   if (computeStats(state, false).qps >= lastStepIncome * STEP_INCOME_GAIN) recordStep();
   if (time % 60 === 0) ratioSamples[STAGES[state.stage].realmIndex].push(activeRatio());
@@ -692,11 +751,16 @@ while (time < maxHours * 3600) {
     : 0;
   if (
     canRegress &&
-    ((stuck && memoryGain >= REGRESS_WHEN_STUCK_AT_GAIN) || memoryGain >= REGRESS_AT_MEMORY_GAIN)
+    // When stuck, wait for Memories to settle so the regression is worth its full amount.
+    stuck &&
+    memorySettledFraction(state) >= 1 &&
+    memoryGain >= REGRESS_WHEN_STUCK_AT_GAIN
   ) {
     if (stuck) stuckRegressions++;
-    if (previousLoop?.stuck && loopBestStage <= previousLoop.best) futileRegressions++;
-    previousLoop = { best: loopBestStage, stuck };
+    if (previousLoopStuck && newPurchasesThisLoop === 0) futileRegressions++;
+    replayTarget = loopBestStage;
+    previousLoopStuck = stuck;
+    newPurchasesThisLoop = 0;
     const label = `regress (+${pending} memories${stuck ? `, stuck at ${stageName(state.stage)}` : ''}`;
     state = regress(state, 0)!;
     lastRegression = time;
@@ -722,7 +786,7 @@ const lateGaps = stepGaps
   .map((g) => g.seconds)
   .sort((a, b) => b - a);
 console.log(
-  `Gaps between actions after the early game: longest ${lateGaps.slice(0, 3).map(formatDuration).join(', ')}; ${lateGaps.filter((g) => g > 10 * 60).length} over 10m; stuck regressions ${stuckRegressions} (${futileRegressions} futile)`,
+  `Gaps between actions after the early game: longest ${lateGaps.slice(0, 3).map(formatDuration).join(', ')}; ${lateGaps.filter((g) => g > 10 * 60).length} over 10m; stuck regressions ${stuckRegressions} (${futileRegressions} futile); median replay ${formatDuration(replayTimes.length ? median(replayTimes) : 0)}`,
 );
 console.log(
   'By realm: gap between actions (median / longest); wait for each new technique, core or breakthrough since the last new one (median / longest); times several new techniques were affordable at once; gathering ÷ idle income:',

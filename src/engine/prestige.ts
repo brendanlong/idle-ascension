@@ -13,7 +13,7 @@ const BASE_MEMORIES = 3;
  * worth a power of how far you got: mild early, strong late, and the same
  * every time you regress from the same wall (so walls always fall).
  */
-const MEMORIES_PER_DECADE = 4;
+const MEMORIES_PER_DECADE = 5;
 
 /** Memories gained by regressing from a given stage. */
 export function memoriesForStage(stage: number): number {
@@ -27,7 +27,7 @@ export function memoriesForStage(stage: number): number {
  * Memories settle over the first part of each life: regressing sooner gives
  * that share of them, so repeated quick regressions can't compound.
  */
-export const MEMORY_SETTLE_SECONDS = 20 * 60;
+export const MEMORY_SETTLE_SECONDS = 10 * 60;
 
 export function memorySettledFraction(state: GameState): number {
   return Math.min(1, state.stats.loopTime / MEMORY_SETTLE_SECONDS);

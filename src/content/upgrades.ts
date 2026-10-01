@@ -227,7 +227,64 @@ const soulUpgrades: UpgradeDef[] = [
   },
 ];
 
+/**
+ * Late techniques that make an old resource worth buying again for a while:
+ * the classic resources stay within a few times of the best deal, so ×10
+ * puts one on top until its rising price catches up.
+ */
+const revivalUpgrades: UpgradeDef[] = [
+  {
+    id: 'revive-herb',
+    name: 'Severed-Spirit Herbs',
+    description: 'Herbs grown in soil you have cut free of the mortal world. They remember you.',
+    cost: 1e17,
+    unlock: { type: 'realm', realm: 'spiritSevering' },
+    effects: [{ type: 'generatorMult', generator: 'herb', value: 10 }],
+  },
+  {
+    id: 'revive-array',
+    name: 'Array of Severed Bonds',
+    description: 'You redraw your first gathering array with a hand that no longer trembles.',
+    cost: 1e19,
+    unlock: { type: 'realm', realm: 'spiritSevering' },
+    effects: [{ type: 'generatorMult', generator: 'array', value: 10 }],
+  },
+  {
+    id: 'revive-furnace',
+    name: 'Furnace of the Dao',
+    description: 'You understand at last what the furnace was trying to tell you.',
+    cost: 1e23,
+    unlock: { type: 'realm', realm: 'daoSeeking' },
+    effects: [{ type: 'generatorMult', generator: 'furnace', value: 10 }],
+  },
+  {
+    id: 'revive-disciple',
+    name: 'Disciples Glimpse the Dao',
+    description: 'Your outer disciples overhear one sentence of your meditation. It changes them.',
+    cost: 1e25,
+    unlock: { type: 'realm', realm: 'daoSeeking' },
+    effects: [{ type: 'generatorMult', generator: 'disciple', value: 10 }],
+  },
+  {
+    id: 'revive-beast',
+    name: 'Beasts Ascend With You',
+    description: 'Your old fox kit has grown nine tails and an opinion about the heavens.',
+    cost: 1e29,
+    unlock: { type: 'realm', realm: 'immortalAscension' },
+    effects: [{ type: 'generatorMult', generator: 'beast', value: 10 }],
+  },
+  {
+    id: 'revive-vein',
+    name: 'Veins of the Heavens',
+    description: 'The spirit veins you mined as a youth run all the way up to heaven.',
+    cost: 1e31,
+    unlock: { type: 'realm', realm: 'immortalAscension' },
+    effects: [{ type: 'generatorMult', generator: 'vein', value: 10 }],
+  },
+];
+
 export const UPGRADES: readonly UpgradeDef[] = [
+  ...revivalUpgrades,
   ...palmUpgrades,
   ...senseUpgrades,
   ...scriptureUpgrades,
