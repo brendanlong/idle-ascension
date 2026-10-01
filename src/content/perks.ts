@@ -134,7 +134,7 @@ export const PERKS: readonly PerkDef[] = [
     description:
       'Your treasures follow your soul back through time. Each level lets them keep one more level of refinement.',
     maxLevel: MAX_TREASURE_LEVEL,
-    share: 0.7,
+    share: 0.6,
     firstRealm: 'spiritSevering',
     requires: ['foresight'],
     effects: [],
@@ -146,7 +146,7 @@ export const PERKS: readonly PerkDef[] = [
     description:
       'A phantom of a core you once formed. +1 core slot, available from Core Formation.',
     maxLevel: 1,
-    share: 0.8,
+    share: 0.7,
     firstRealm: 'spiritSevering',
     requires: ['lightning'],
     minRealm: 'spiritSevering',

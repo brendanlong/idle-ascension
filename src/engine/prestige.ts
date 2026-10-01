@@ -123,7 +123,7 @@ export function describeSpecialPerk(perk: PerkDef, level: number): string | null
  * much more a regression yields one realm deeper, so regressing once per realm
  * buys about a level of each perk.
  */
-const PERK_LEVEL_GROWTH = 2.4;
+const PERK_LEVEL_GROWTH = 2.2;
 
 /**
  * Perks are priced from the Memories a regression yields, so at any depth the

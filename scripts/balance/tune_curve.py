@@ -18,14 +18,19 @@ REALMS = ['Qi Condensation', 'Foundation Establishment', 'Core Formation', 'Nasc
 TARGET_MINUTES = {
     # Active early, idle late: the player the game is paced for.
     'taper': dict(zip(REALMS, [6, 6, 7, 9, 12, 15, 18])),
-    # Idle throughout. Fitting both at once oscillates, so this is opt-in (PLAYERS=taper,passive).
+    # Gathering throughout. Late on the tapering bot only checks in every 10 minutes, so its
+    # times there stop depending on prices; this keeps the late realms from collapsing.
+    'active': dict(zip(REALMS, [5, 3, 4, 4, 5, 6, 7])),
+    # Idle throughout. Fitting both at once oscillates, so this is opt-in (PLAYERS=taper,active,passive).
     'passive': dict(zip(REALMS[3:], [25, 28, 32, 36])),
 }
 REALM_IDS = dict(zip(REALMS, ['qiCondensation', 'foundation', 'coreFormation', 'nascentSoul',
                               'spiritSevering', 'daoSeeking', 'immortalAscension']))
 NEXT_REALM = dict(zip(REALM_IDS.values(), list(REALM_IDS.values())[1:] + ['godhood']))
 DECADES_PER_DOUBLING = 1
-MIN_REALM_DECADES = 1
+MAX_SLOPE_CHANGE = 1.5
+STAGES_IN = {'foundation': 4, 'coreFormation': 4, 'nascentSoul': 4, 'spiritSevering': 4,
+             'daoSeeking': 4, 'immortalAscension': 4}
 SEEDS = [1, 2, 3, 4]
 DAMPING = float(os.environ.get('DAMPING', 0.4))
 
@@ -39,12 +44,24 @@ def run(params, player, seed):
     times = {m.group(1): dur(m.group(2)) / 60 for m in re.finditer(r'^  (\S.*?)\s{2,}(\S.*?) over \d+ loops?', out, re.M)}
     return {'hours': dur(final.group(2)) / 3600, 'regressions': int(final.group(3)), 'times': times}
 
+def smooth(entries):
+    # Each realm's average step (decades per stage, up to the next realm's entry) is
+    # within MAX_SLOPE_CHANGE of the previous realm's, so no realm races or walls.
+    slope = None
+    for rid, nxt in list(NEXT_REALM.items())[1:]:
+        start = entries[rid]
+        s = (entries[nxt] - start) / STAGES_IN[rid]
+        if slope is not None:
+            s = min(slope * MAX_SLOPE_CHANGE, max(slope / MAX_SLOPE_CHANGE, s))
+        entries[nxt] = start + s * STAGES_IN[rid]
+        slope = s
+
 def main():
     iterations, path = int(sys.argv[1]), sys.argv[2]
     params = json.load(open(path))
     history_path = path + '.history'
     history = json.load(open(history_path)) if os.path.exists(history_path) else []
-    players = os.environ.get('PLAYERS', 'taper').split(',')
+    players = os.environ.get('PLAYERS', 'taper,active').split(',')
     jobs = [(p, s) for p in players for s in SEEDS]
     for it in range(iterations):
         with ThreadPoolExecutor(len(jobs)) as ex:
@@ -71,11 +88,7 @@ def main():
         for r, errs_r in changes.items():
             change = DAMPING * DECADES_PER_DOUBLING * statistics.mean(errs_r)
             entries[NEXT_REALM[REALM_IDS[r]]] += min(1, max(-1, change))
-        # Each realm's entry stays at least MIN_REALM_DECADES above the previous one.
-        previous = 0
-        for rid in NEXT_REALM.values():
-            entries[rid] = max(entries[rid], previous + MIN_REALM_DECADES)
-            previous = entries[rid]
+        smooth(entries)
         json.dump(params, open(path, 'w'), indent=1)
 
 main()
