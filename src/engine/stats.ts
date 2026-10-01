@@ -122,10 +122,13 @@ export function computeModifiers(state: GameState, includeBuffs = true): Modifie
   return mods;
 }
 
+/** How much each Memory adds to qi gain, before memoryPower. */
+export const MEMORY_WEIGHT = 0.3;
+
 export function computeStats(state: GameState, includeBuffs = true): Stats {
   const mods = computeModifiers(state, includeBuffs);
   const realmMult = realmMultiplier(state.stage);
-  const memoryMult = (1 + mods.memoryBonus) ** state.prestige.memories;
+  const memoryMult = (1 + MEMORY_WEIGHT * state.prestige.memories) ** mods.memoryPower;
   const cycleMult =
     GENERATING_CYCLE_BONUS ** generatingPairs(new Set(state.cores.map((c) => c.element)));
   const coreMult = state.cores.reduce((m, c) => m * CORE_GRADES[c.grade].mult, 1);

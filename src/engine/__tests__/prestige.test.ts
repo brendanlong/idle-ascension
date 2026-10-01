@@ -45,12 +45,12 @@ describe('regression', () => {
       ]),
     );
     expect(byRealm).toEqual({
-      coreFormation: 3,
-      nascentSoul: 22,
-      spiritSevering: 35,
-      daoSeeking: 54,
-      immortalAscension: 65,
-      godhood: 79,
+      coreFormation: 10,
+      nascentSoul: 24,
+      spiritSevering: 59,
+      daoSeeking: 119,
+      immortalAscension: 299,
+      godhood: 459,
     });
   });
 
@@ -143,6 +143,15 @@ describe('regression', () => {
     expect(buyPerk(state, 'foresight')).toBe(false);
     expect(buyPerk(state, 'meridians')).toBe(true);
     expect(buyPerk(state, 'foresight')).toBe(true);
-    expect(availableMemories(state)).toBe(10 - 1 - 3);
+    expect(availableMemories(state)).toBe(10 - 3 - 7);
+  });
+
+  it('keeps realm-gated insights locked until you have reached the realm', () => {
+    const state = newGame();
+    state.prestige.memories = 1e9;
+    state.prestige.perks.lightning = 1;
+    expect(perkStatus(state, 'echoCore')).toBe('locked');
+    state.stats.bestStage = firstStageOfRealm('spiritSevering');
+    expect(perkStatus(state, 'echoCore')).toBe('available');
   });
 });

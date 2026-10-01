@@ -26,7 +26,7 @@ export interface Modifiers {
   offlineEfficiency: number;
   coreSlots: number;
   coreCostMult: number;
-  memoryBonus: number;
+  memoryPower: number;
   startingStage: number;
 }
 
@@ -46,7 +46,7 @@ export type AddStat =
   | 'offlineCapHours'
   | 'offlineEfficiency'
   | 'coreSlots'
-  | 'memoryBonus'
+  | 'memoryPower'
   | 'startingStage';
 
 export type Effect =
@@ -70,7 +70,7 @@ export function baseModifiers(): Modifiers {
     offlineEfficiency: 0.5,
     coreSlots: 0,
     coreCostMult: 1,
-    memoryBonus: 0.04,
+    memoryPower: 1,
     startingStage: 0,
   };
 }
@@ -108,15 +108,11 @@ const STAT_LABELS: Record<MultStat | AddStat, string> = {
   offlineCapHours: 'hours of closed-door cultivation (offline cap)',
   offlineEfficiency: 'closed-door cultivation efficiency',
   coreSlots: 'core slot',
-  memoryBonus: 'qi gain per Memory (compounding)',
+  memoryPower: 'power of Memories over qi gain',
   startingStage: 'starting cultivation stage after regression',
 };
 
-const PERCENT_ADD_STATS: ReadonlySet<AddStat> = new Set([
-  'moteAutoCollect',
-  'offlineEfficiency',
-  'memoryBonus',
-]);
+const PERCENT_ADD_STATS: ReadonlySet<AddStat> = new Set(['moteAutoCollect', 'offlineEfficiency']);
 
 function trimNumber(n: number): string {
   return Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)));

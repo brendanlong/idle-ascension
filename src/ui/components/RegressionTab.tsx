@@ -2,7 +2,7 @@ import { useState } from 'preact/hooks';
 import { REGRESSION_STORY } from '../../content/lore';
 import { PERKS, perkCost } from '../../content/perks';
 import { describeEffects } from '../../engine/effects';
-import { perkEffects } from '../../engine/stats';
+import { MEMORY_WEIGHT, perkEffects } from '../../engine/stats';
 import {
   availableMemories,
   buyPerk,
@@ -64,9 +64,11 @@ export function RegressionTab({ onRegressed }: { onRegressed: (story: string[]) 
         </dd>
       </dl>
       <p class="muted small">
-        Each Memory permanently multiplies qi gain by ×{(1 + stats.mods.memoryBonus).toFixed(3)},
-        even after you spend it on insights below. Regressing resets your realm, qi, resources,
-        techniques, cores and treasures (except what Soul-Bound Treasures keeps).
+        Memories permanently multiply qi gain by (1 + {MEMORY_WEIGHT} × Memories)
+        <sup>{stats.mods.memoryPower.toFixed(2)}</sup>, even after you spend them on insights below.
+        Returning from deeper than ever before is worth far more than returning from the same place
+        again. Regressing resets your realm, qi, resources, techniques, cores and treasures (except
+        what Soul-Bound Treasures keeps).
       </p>
 
       {!confirming ? (

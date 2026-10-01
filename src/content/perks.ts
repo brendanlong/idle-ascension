@@ -11,6 +11,8 @@ export interface PerkDef {
   baseCost: number;
   costGrowth: number;
   requires?: readonly string[];
+  /** Can't be learned (and stays hidden) until you've reached this realm. */
+  minRealm?: string;
   /** Level-1 effects; `scaling` decides how they grow. */
   effects: readonly Effect[];
   /**
@@ -39,8 +41,8 @@ export const PERKS: readonly PerkDef[] = [
     name: 'Remembered Meridian Paths',
     description: 'You know exactly which meridians to open, and in what order.',
     maxLevel: Infinity,
-    baseCost: 1,
-    costGrowth: 3,
+    baseCost: 3,
+    costGrowth: 2,
     scaling: 'diminishing',
     effects: [{ type: 'mult', stat: 'moteBaseMult', value: 2 }],
   },
@@ -49,8 +51,8 @@ export const PERKS: readonly PerkDef[] = [
     name: 'Buried Stash',
     description: 'You remember where a dead man buried his savings.',
     maxLevel: STASH_GENERATORS.length,
-    baseCost: 2,
-    costGrowth: 4,
+    baseCost: 7,
+    costGrowth: 2.5,
     effects: [],
     special: 'startingResources',
   },
@@ -59,8 +61,8 @@ export const PERKS: readonly PerkDef[] = [
     name: 'Foresight of Fortune',
     description: 'You know which cliffs to fall off.',
     maxLevel: Infinity,
-    baseCost: 3,
-    costGrowth: 3,
+    baseCost: 7,
+    costGrowth: 2,
     requires: ['meridians'],
     scaling: 'diminishing',
     effects: [{ type: 'mult', stat: 'encounterRateMult', value: 1.5 }],
@@ -70,8 +72,8 @@ export const PERKS: readonly PerkDef[] = [
     name: 'Memory of Lightning',
     description: 'You have died to these tribulations before. You know what the heavens will test.',
     maxLevel: Infinity,
-    baseCost: 5,
-    costGrowth: 4,
+    baseCost: 10,
+    costGrowth: 2.5,
     scaling: 'diminishing',
     effects: [
       { type: 'add', stat: 'tribulationLeniency', value: 0.05 },
@@ -83,8 +85,8 @@ export const PERKS: readonly PerkDef[] = [
     name: 'Knowing the True Price',
     description: 'Merchants cannot fool someone who has already lived this day.',
     maxLevel: Infinity,
-    baseCost: 4,
-    costGrowth: 2.5,
+    baseCost: 10,
+    costGrowth: 2,
     requires: ['stash'],
     effects: [{ type: 'mult', stat: 'generatorCostMult', value: 0.95 }],
   },
@@ -93,18 +95,18 @@ export const PERKS: readonly PerkDef[] = [
     name: 'Karmic Insight',
     description: 'Each Memory weighs more heavily on the scales of fate.',
     maxLevel: Infinity,
-    baseCost: 10,
-    costGrowth: 3,
+    baseCost: 30,
+    costGrowth: 2.5,
     requires: ['foresight'],
-    effects: [{ type: 'add', stat: 'memoryBonus', value: 0.004 }],
+    effects: [{ type: 'add', stat: 'memoryPower', value: 0.05 }],
   },
   {
     id: 'patience',
     name: "Old Monster's Patience",
     description: 'You have waited lifetimes. A few more hours is nothing.',
     maxLevel: Infinity,
-    baseCost: 5,
-    costGrowth: 3,
+    baseCost: 10,
+    costGrowth: 2.5,
     scaling: 'diminishing',
     effects: [
       { type: 'add', stat: 'offlineCapHours', value: 4 },
@@ -116,8 +118,8 @@ export const PERKS: readonly PerkDef[] = [
     name: 'Unshaken Dao Heart',
     description: 'Your cultivation base recovers swiftly after each return.',
     maxLevel: 3,
-    baseCost: 15,
-    costGrowth: 4,
+    baseCost: 25,
+    costGrowth: 3,
     requires: ['bargain'],
     effects: [{ type: 'add', stat: 'startingStage', value: 3 }],
   },
@@ -127,8 +129,8 @@ export const PERKS: readonly PerkDef[] = [
     description:
       'Your treasures follow your soul back through time. Each level lets them keep one more level of refinement.',
     maxLevel: MAX_TREASURE_LEVEL,
-    baseCost: 40,
-    costGrowth: 3,
+    baseCost: 80,
+    costGrowth: 2.5,
     requires: ['foresight'],
     effects: [],
     special: 'keepTreasures',
@@ -139,9 +141,10 @@ export const PERKS: readonly PerkDef[] = [
     description:
       'A phantom of a core you once formed. +1 core slot, available from Core Formation.',
     maxLevel: 1,
-    baseCost: 75,
+    baseCost: 80,
     costGrowth: 1,
     requires: ['lightning'],
+    minRealm: 'spiritSevering',
     effects: [{ type: 'add', stat: 'coreSlots', value: 1 }],
   },
 ];

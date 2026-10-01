@@ -6,21 +6,22 @@ import { createInitialState, type GameState } from './state';
 import { computeModifiers } from './stats';
 
 const REGRESSION_REALM = 'coreFormation';
-const BASE_MEMORIES = 3;
+const BASE_MEMORIES = 10;
 /**
- * Memories grow by this much for each factor of 10 in breakthrough cost
- * beyond Core Formation. Each Memory multiplies qi gain, so a regression is
- * worth a power of how far you got: mild early, strong late, and the same
- * every time you regress from the same wall (so walls always fall).
+ * Memories grow as this power of how far the breakthrough cost has climbed
+ * beyond Core Formation, so the deepest regression dominates your total. Qi
+ * gain grows as a power of the total (memoryPower), so a regression from
+ * somewhere new is a big boost, while regressing again from the same depth
+ * only adds a little.
  */
-const MEMORIES_PER_DECADE = 5;
+const MEMORY_GROWTH = 0.1;
 
 /** Memories gained by regressing from a given stage. */
 export function memoriesForStage(stage: number): number {
   const first = firstStageOfRealm(REGRESSION_REALM);
   if (stage < first) return 0;
   const ratio = STAGES[Math.min(stage, FINAL_STAGE)].cost / STAGES[first].cost;
-  return Math.floor(BASE_MEMORIES + MEMORIES_PER_DECADE * Math.log10(ratio));
+  return Math.floor(BASE_MEMORIES * ratio ** MEMORY_GROWTH);
 }
 
 /**
@@ -137,6 +138,7 @@ export function perkStatus(state: GameState, perkId: string): PerkStatus {
   const level = state.prestige.perks[perkId] ?? 0;
   if (level >= perk.maxLevel) return 'maxed';
   if (perk.requires?.some((r) => !(state.prestige.perks[r] ?? 0))) return 'locked';
+  if (perk.minRealm && state.stats.bestStage < firstStageOfRealm(perk.minRealm)) return 'locked';
   if (availableMemories(state) < perkCost(perk, level)) return 'unaffordable';
   return 'available';
 }

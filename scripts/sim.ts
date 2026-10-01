@@ -88,6 +88,13 @@ const STUCK_SECONDS =
 /** When stuck, the bot regresses if that would multiply its Memory bonus by at least this. */
 const REGRESS_WHEN_STUCK_AT_GAIN = 1.1;
 /**
+ * Like a player tempted by a big number on the Regression tab, the bot also
+ * regresses when the next breakthrough is more than SLOW_SECONDS away at its
+ * income and that would multiply its Memory bonus by at least this.
+ */
+const REGRESS_WHEN_SLOW_AT_GAIN = 4;
+const SLOW_SECONDS = 3 * 60;
+/**
  * An action: buying a technique, core or breakthrough, regressing, or buying
  * resources worth this much more passive qi/s since the last action.
  */
@@ -387,6 +394,11 @@ function isCheckedIn(): boolean {
 function income(s: GameState): { passive: number; active: number } {
   const stats = computeStats(s, false);
   return { passive: stats.qps, active: activeQps(stats) };
+}
+
+function secondsToNextStage(): number {
+  const next = STAGES[state.stage + 1];
+  return next ? (next.cost - state.qi) / averageIncome(income(state)) : 0;
 }
 
 function averageIncome(i: { passive: number; active: number }): number {
@@ -863,10 +875,10 @@ while (time < maxHours * 3600) {
     : 0;
   if (
     canRegress &&
-    // When stuck, wait for Memories to settle so the regression is worth its full amount.
-    stuck &&
+    // Wait for Memories to settle so the regression is worth its full amount.
     memorySettledFraction(state) >= 1 &&
-    memoryGain >= REGRESS_WHEN_STUCK_AT_GAIN
+    ((stuck && memoryGain >= REGRESS_WHEN_STUCK_AT_GAIN) ||
+      (secondsToNextStage() > SLOW_SECONDS && memoryGain >= REGRESS_WHEN_SLOW_AT_GAIN))
   ) {
     if (stuck) stuckRegressions++;
     if (previousLoopStuck && newPurchasesThisLoop === 0) futileRegressions++;
@@ -878,6 +890,7 @@ while (time < maxHours * 3600) {
     lastRegression = time;
     loopBestStage = 0;
     realmActivity = {};
+    const perksBefore = { ...state.prestige.perks };
     let boughtPerk = true;
     while (boughtPerk) {
       boughtPerk = false;
@@ -887,6 +900,10 @@ while (time < maxHours * 3600) {
     }
     recordStep();
     report(`${label}, ×${(computeStats(state).memoryMult / memoryMultBefore).toFixed(2)})`);
+    const learned = PERKS.filter((p) => state.prestige.perks[p.id] !== perksBefore[p.id]).map(
+      (p) => `${p.id} ${perksBefore[p.id] ?? 0}→${state.prestige.perks[p.id]}`,
+    );
+    if (learned.length) console.log(`${' '.repeat(10)}insights: ${learned.join(', ')}`);
   }
 }
 
