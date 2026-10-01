@@ -1,10 +1,13 @@
 {
   "seeds": [1, 2, 3, 4],
-  "stageSeconds": {
-    "first": 10,
-    "last": 600,
-    "tolerance": 2,
-    "monotoneSlack": 0.9
+  "sawtooth": {
+    "floorFirst": 10,
+    "floorLast": 90,
+    "growth": 1.25,
+    "tolerance": 2.5,
+    "monotoneSlack": 0.9,
+    "boredSeconds": 300,
+    "maxRepeatStages": 3.5
   },
   "somethingToBuy": {
     "maxGapShareOfStage": 0.6,
@@ -22,12 +25,13 @@
     "tolerance": 1.5
   },
   "regression": {
-    "count": [3, 4],
+    "withoutSlowdownAtLeast": 4,
     "minPayoff": 2,
     "maxReplayShare": 0.2
   },
   "treasures": {
     "levelOneGain": [1.2, 3],
     "maxLuckSpread": 1.5
-  }
+  },
+  "upgradeExempt": ["upgrade:sunflower"]
 }

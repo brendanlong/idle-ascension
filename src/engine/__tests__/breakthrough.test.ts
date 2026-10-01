@@ -21,7 +21,7 @@ describe('breakthroughs', () => {
 
   it('lets you through tribulations you have survived before', () => {
     const target = firstStageOfRealm('coreFormation');
-    const state = newGame({ qi: 1e12, stage: target - 1 });
+    const state = newGame({ qi: STAGES[target].cost, stage: target - 1 });
     state.stats.bestStage = target;
     expect(attemptBreakthrough(state, computeStats(state).mods)).toBe('advanced');
     expect(state.tribulation).toBeNull();

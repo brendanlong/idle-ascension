@@ -22,7 +22,7 @@ It runs in the browser on desktop or phone, and can be added to your home screen
 - **Cores**: from Core Formation you condense cores. Each is attuned to one of the Five Elements (its colour/effect) and refined through metal grades (Mud → Iron → Bronze → … → Primordial). Your realm limits how far you can refine. Cores adjacent in the generating cycle (Wood → Fire → Earth → Metal → Water → Wood) grant a bonus.
 - **Fortuitous encounters**: arrogant young masters, hidden caves, mysterious old beggars… click them for qi windfalls, buffs, or treasures.
 - **Treasures**: rarer finds from encounters, each with a permanent bonus. Finding a treasure again refines it to a higher level.
-- **Regression (prestige)**: once you've reached Core Formation, court death and let your mother's jade pendant send you back to age sixteen. You keep **Memories** (each adds 30% to qi gain, forever; regressing from deeper yields many more, and they settle over the first 10 minutes of each life) and spend them on permanent insights, most of which can be levelled up indefinitely. Tribulations you've survived before let you pass.
+- **Regression (prestige)**: once you've reached Core Formation, court death and let your mother's jade pendant send you back to age sixteen. You keep **Memories** (the deeper you regress from, the more you get, and they multiply qi gain forever, and they settle over the first 10 minutes of each life) and spend them on permanent insights, most of which can be levelled up indefinitely. Tribulations you've survived before let you pass.
 - **Closed-door cultivation**: offline progress (capped, reduced efficiency; both upgradeable). Leaving the tab in the background for over a minute counts too.
 
 ## Development
@@ -33,7 +33,7 @@ npm run dev        # Vite dev server
 npm test           # Vitest unit tests for the engine
 npm run typecheck
 npm run build
-npm run sim -- 72 10     # headless balance sim: max hours, minutes without progress before regressing
+npm run sim -- 72        # headless balance sim: max hours
 SIM_PLAYER=passive npm run sim   # also active, or taper (default); see scripts/sim.ts for SIM_TREASURES, SIM_IMPACT, SIM_TUNE
 scripts/balance/eval.sh <(echo '{}') SIM_PLAYER=passive   # 6 seeds; see scripts/balance/ for the price tuner
 python3 scripts/balance/spec.py   # grade the game against the balance spec (docs/balance-spec.md)

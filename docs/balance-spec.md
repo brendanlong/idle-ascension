@@ -14,18 +14,19 @@ python3 scripts/balance/spec.py params.json # grade a SIM_TUNE candidate
 
 - A short game full of content beats a long, boring one. A few hours is fine;
   if it feels too short, add content rather than stretching waits.
-- Early stages are fast, and every stage takes a bit longer than the last.
+- Early stages are fast. Within a life every stage takes longer than the last,
+  until it gets boring and regressing resets the climb (the sawtooth, below).
 - Being active (gathering motes) always feels worthwhile. It's much stronger
   than idling early on and only a little stronger late.
 - Idling still makes sense, and the game never strands an idle player.
-- Progress plateaus a few times, and regressing gets you past each plateau.
+- Regressing at any point dramatically speeds the game back up; regressing
+  again from the same point barely helps.
 - No bursts where you can suddenly buy everything at once.
 
 ## Reference players
 
 Checks are measured on bots that buy whatever pays for itself soonest, and
-regress when stuck or when regressing is clearly worth it (see
-`scripts/sim.ts`):
+regress once bored, if it pays off (see `SIM_REGRESS` in `scripts/sim.ts`):
 
 - **active**: gathers motes the whole time. Pacing targets are set for this
   player, because its progress depends only on prices.
@@ -38,16 +39,43 @@ times there stop depending on prices.
 
 ## Checks
 
-### 1. Every stage takes longer than the last (`stageSeconds`)
+### 1. The sawtooth (`sawtooth`)
 
-Measured on the reference player: the time from first reaching a stage to
-first reaching the next, including any regressions in between. That includes
-everything the player has bought and remembered by then.
+Stages climb steeply within a life, and regressing knocks them back down:
 
-- Active stage times follow a smooth curve, from `first` (10s for the first
-  breakthrough) to `last` (10 minutes for Godhood), each within `tolerance`×.
-- For both players, each stage takes at least `monotoneSlack`× as long as the
-  previous one.
+> stage time = floor × growth ^ (stages past your reach)
+
+- **Floor:** how long a stage takes right after regressing just below it.
+  Rises linearly from `floorFirst` (10s at the first stage) to `floorLast`
+  (at Godhood), so later climbs start a bit slower.
+- **Growth:** each stage past your reach takes `growth`× longer than the one
+  before (about ×1.25).
+- **Reach:** the deepest stage you've regressed from, i.e. where your Memories
+  carry you. It starts at 0.
+
+So the first life speeds through the early realms and starts to drag around
+Core Formation, where regression unlocks. Regressing at stage X resets stage
+X+1 to the floor. A player who never regresses faces ever-longer stages (the
+last would take hours), while regressing again from the same place barely
+helps.
+
+This is measured on the reference player: the time from first reaching a
+stage to first reaching the next, including any regressions in between. Its
+reach is the deepest stage it regressed from before reaching that stage.
+
+- Every stage's time is within `tolerance`× of floor × growth ^ (stages past
+  reach).
+- Within a life, each stage takes at least `monotoneSlack`× as long as the
+  previous one (both players).
+- Players regress once they're bored: when the next stage is more than
+  `boredSeconds` away and regressing pays off. The reference bot does this.
+- A second regression from the same place moves reach by at most
+  `maxRepeatStages` stages.
+
+For this to work, Memories are exponential in stage index
+(`src/content/memories.ts`): each stage deeper you regress from yields
+`growthPerStage` times as many, matching `growth`, and `weight` sets how far
+the reset knocks stage times down.
 
 ### 2. Always something to buy (`somethingToBuy`)
 
@@ -66,7 +94,8 @@ upgrades that don't earn their place.
 
 - Each technique and core adds at least `minUpgradeGain`× income when the
   reference player buys it. Gathering upgrades are judged by gathering
-  income, and the others by whichever income they raise more.
+  income, and the others by whichever income they raise more. Deliberate
+  jokes (the Sunflower Manual) are listed in `upgradeExempt`.
 - A new resource, with its first technique and `spendSeconds` of income spent
   on it, makes about as much as all your other resources combined (within
   `shareOfOthers`). This is measured at its first purchase.
@@ -82,11 +111,16 @@ slides smoothly from `first` (about 20× in Qi Condensation) to `last` (about
 - Idle income is weak, so temporary buffs to it (encounters, events) can be
   generous. Buffs should multiply idle income only, not mote value.
 
-### 5. Plateaus that regression fixes (`regression`)
+### 5. Regression (`regression`)
 
-- The active player regresses `count` times over the game.
-- Each regression reaches the next new stage at least `minPayoff`× sooner
-  than waiting would have (estimated from income when regressing).
+Regression is how the climb resets, so not regressing should be tedious.
+Constantly regressing is a fine strategy too, as long as it isn't the only one.
+
+- An active player who never regresses is at least `withoutSlowdownAtLeast`×
+  slower than the reference player (or doesn't finish within the cap).
+- The reference player regresses only when it pays off. Each regression
+  reaches the next new stage at least `minPayoff`× sooner than waiting would
+  have (estimated from income at the time of regressing).
 - Replaying a finished realm takes at most `maxReplayShare` of the time its
   first visit took.
 
@@ -102,5 +136,9 @@ slides smoothly from `first` (about 20× in Qi Condensation) to `last` (about
 
 - **Idle and offline time.** Nothing stops a player from leaving the game for
   4+ hours. We might cap offline gains to match the target game length.
-- **Total length.** It follows from the stage curve: about 1.5h of active
-  play if every stage hits its target. Adjust `stageSeconds` to change it.
+- **Total length.** It follows from the sawtooth: roughly the number of climbs
+  times how long each takes before it gets boring. Adjust the floor, growth
+  and boredom threshold to change it.
+- **A separate curve before regression unlocks.** The first life might want
+  its own growth rate, so the early realms feel right and the first plateau
+  lands near Core Formation.

@@ -1,6 +1,6 @@
 /**
  * Headless balance simulation: a greedy bot plays the game and reports how
- * long each milestone takes. Run with `npm run sim -- [hours] [stuckMinutes]`.
+ * long each milestone takes. Run with `npm run sim -- [hours]`.
  * Environment variables:
  *   SIM_SEED=<n>        a different random seed
  *   SIM_PLAYER=<kind>   taper (default): gathers motes, claims encounters and checks in
@@ -12,8 +12,8 @@
  *                       anything is affordable, to show how the economy paces an idle player.
  *                       active: gathers and checks in all the time.
  *   SIM_ACTIVE=<0-1>    taper player with a fixed share instead
- *   SIM_REGRESS=eager  regress once nothing new has been bought for 3 minutes (default:
- *                       [stuckMinutes]), always waiting for Memories to settle
+ *   SIM_REGRESS=<mode>  efficient (default), never or eager: see REGRESS_MODE
+ *   SIM_SPEC=1          print measurements for scripts/balance/spec.py
  *   SIM_TREASURES=<x>   random (default), none (encounters never give treasures), or all
  *                       (every treasure at level 1 as soon as its realm is reached)
  *   SIM_IMPACT=1        also print how much each resource, technique, core and treasure adds
@@ -23,6 +23,7 @@ import { readFileSync } from 'node:fs';
 import { CORE_GRADES, CORE_SLOT_REALMS, ELEMENTS, type ElementId } from '../src/content/cores';
 import { baseModifiers } from '../src/engine/effects';
 import { GENERATORS, generatorName, type GeneratorDef } from '../src/content/generators';
+import { MEMORIES } from '../src/content/memories';
 import { UPGRADES, realmTechniqueCost } from '../src/content/upgrades';
 import { PERKS, type PerkDef } from '../src/content/perks';
 import { REALMS, STAGES, firstStageOfRealm, stageName } from '../src/content/realms';
@@ -81,27 +82,34 @@ const specMode = !!process.env.SIM_SPEC;
 const trackImpact = printImpact || specMode;
 const BALANCE_SPEC = JSON.parse(
   readFileSync(new URL('./balance/spec.json', import.meta.url), 'utf8'),
-) as { newResource: { spendSeconds: number } };
+) as {
+  newResource: { spendSeconds: number };
+  sawtooth: { growth: number; boredSeconds: number };
+};
 /** How well the bot plays elemental trials (0-1), for tribulations and optional offers. */
 const TRIBULATION_TRIAL_SCORE = 0.8;
 const OPTIONAL_TRIAL_SCORE = 0.7;
-/** With no progress step for this long, the bot is stuck and regresses if it can. */
-const STUCK_SECONDS =
-  process.env.SIM_REGRESS === 'eager' ? 3 * 60 : Number(process.argv[3] ?? 10) * 60;
 /**
- * SIM_REGRESS: stuck (default) regresses only when nothing new has been bought
- * for [stuckMinutes], the fewest regressions a player gets by with; eager
- * regresses as soon as progress slows, after 3 minutes.
+ * SIM_REGRESS: when the bot regresses.
+ *   efficient (default)  once bored (the next stage is more than the spec's
+ *                        sawtooth.boredSeconds away) and regressing pays:
+ *                        replaying this life and then reaching the next stage
+ *                        with the new Memories would be REGRESS_PAYOFF times
+ *                        sooner than waiting
+ *   never                never, to check regression is optional
+ *   eager                also whenever nothing new has been bought for
+ *                        STUCK_SECONDS (3 minutes), for any gain
  */
-/** When stuck, the bot regresses if that would multiply its Memory bonus by at least this. */
+const REGRESS_MODE = process.env.SIM_REGRESS ?? 'efficient';
+const STUCK_SECONDS = 3 * 60;
 const REGRESS_WHEN_STUCK_AT_GAIN = 1.1;
 /**
- * Like a player tempted by a big number on the Regression tab, the bot also
- * regresses when the next breakthrough is more than SLOW_SECONDS away at its
- * income and that would multiply its Memory bonus by at least this.
+ * After regressing with the Memory bonus multiplied by G, replaying this life
+ * takes about its length ÷ G (but no less than the last replay did) and the
+ * wait for the next stage about wait ÷ G. The bot regresses when that's this
+ * many times sooner than waiting.
  */
-const REGRESS_WHEN_SLOW_AT_GAIN = 4;
-const SLOW_SECONDS = 3 * 60;
+const REGRESS_PAYOFF = 2;
 /**
  * An action: buying a technique, core or breakthrough, regressing, or buying
  * resources worth this much more passive qi/s since the last action.
@@ -120,7 +128,11 @@ const CORE_ORDER: ElementId[] = ['wood', 'fire', 'water', 'earth', 'metal'];
  *   stageGrowth  multiplies a realm's stage cost growth
  *   price        multiplies single prices: "up:<technique id>", "stage:<index>",
  *                "gen:<resource>" (base cost)
- *   genQps       multiplies a resource's output"
+ *   genQps       multiplies a resource's output
+ *   entries      log10 of realm entry costs; every breakthrough lies on a smooth curve
+ *                through them (see applyStageCurve)
+ *   stageCosts   log10 of every breakthrough's cost, by stage (see setStageCosts)
+ *   memory       overrides MEMORIES (src/content/memories.ts)
  * SIM_PRICES=1 prints, as JSON, each of those prices the first time the bot
  * paid it: the wait since its previous purchase, and its price in seconds of
  * passive qi/s.
@@ -134,7 +146,12 @@ function applyTuning(): void {
     price?: Record<string, number>;
     genQps?: Record<string, number>;
     entries?: Record<string, number>;
+    stageCosts?: number[];
+    memory?: Partial<typeof MEMORIES>;
   };
+  if (tune.stageCosts)
+    setStageCosts(STAGES.map((st, i) => 10 ** (tune.stageCosts![i] ?? Math.log10(st.cost))));
+  Object.assign(MEMORIES, tune.memory);
   if (tune.entries) applyStageCurve(tune.entries);
   const priceMult: number[] = [];
   REALMS.forEach((r, i) => (priceMult[i] = (priceMult[i - 1] ?? 1) * (tune.shift?.[r.id] ?? 1)));
@@ -193,8 +210,17 @@ function applyStageCurve(entries: Record<string, number>): void {
   for (const [id, y] of Object.entries(entries)) knots.push({ x: firstStageOfRealm(id), y });
   knots.sort((p, q) => p.x - q.x);
   const logCost = monotoneSpline(knots);
+  setStageCosts(STAGES.map((st, i) => (i < 2 ? st.cost : 10 ** logCost(i))));
+}
+
+/**
+ * Sets every breakthrough cost, moving what's priced for a realm with it: its
+ * gated resources (at the same output per qi) with its entry cost, and realm
+ * techniques from their stages.
+ */
+function setStageCosts(costs: number[]): void {
   const oldEntry = REALMS.map((r) => r.stageCosts[0]);
-  for (let i = 2; i < STAGES.length; i++) (STAGES[i] as { cost: number }).cost = 10 ** logCost(i);
+  STAGES.forEach((st, i) => ((st as { cost: number }).cost = costs[i]));
   for (const st of STAGES)
     (REALMS[st.realmIndex].stageCosts as number[])[st.stageInRealm] = st.cost;
   const entryChange = (realmId: string) => {
@@ -264,8 +290,19 @@ const newThings: { t: number; key: string }[] = [];
 const newThingKeys = new Set<string>();
 /** SIM_SPEC: when each stage was first reached, in any life. */
 const stageReached: number[] = [0];
-/** SIM_SPEC: each regression, and how long waiting would have taken instead. */
-const regressions: { t: number; from: number; wait: number }[] = [];
+/**
+ * SIM_SPEC: for each stage, how long the life that first reached it took to
+ * get there from the previous stage (so a regression's replay isn't counted).
+ */
+const stageSeconds: number[] = [0];
+/** When the current life reached each stage. */
+let lifeStageAt: number[] = [];
+/**
+ * SIM_SPEC: each regression, how long waiting would have taken instead, and
+ * how many stages further a second regression from the same place would
+ * carry the player (its Memory gain in stages of sawtooth growth).
+ */
+const regressions: { t: number; from: number; wait: number; repeatStages: number }[] = [];
 /** SIM_SPEC: gathering ÷ idle income each minute at the frontier (not replaying), by realm. */
 const frontierRatios: number[][] = REALMS.map(() => []);
 /**
@@ -422,6 +459,24 @@ function isCheckedIn(): boolean {
 function income(s: GameState): { passive: number; active: number } {
   const stats = computeStats(s, false);
   return { passive: stats.qps, active: activeQps(stats) };
+}
+
+function repeatRegressionStages(pending: number): number {
+  const memoryMult = (extra: number) => {
+    const s = structuredClone(state);
+    s.prestige.memories += extra;
+    return computeStats(s, false).memoryMult;
+  };
+  return (
+    Math.log(memoryMult(2 * pending) / memoryMult(pending)) / Math.log(BALANCE_SPEC.sawtooth.growth)
+  );
+}
+
+function regressionPays(memoryGain: number): boolean {
+  const life = time - Math.max(0, lastRegression);
+  const replay = Math.max(life / memoryGain, replayTimes.at(-1) ?? 0);
+  const wait = secondsToNextStage();
+  return wait > REGRESS_PAYOFF * (replay + wait / memoryGain);
 }
 
 function secondsToNextStage(): number {
@@ -882,7 +937,11 @@ while (time < maxHours * 3600) {
     trackResourceEfficiency();
   }
   if (specMode) {
-    while (stageReached.length <= state.stats.bestStage) stageReached.push(time);
+    for (let s = lifeStageAt.length; s <= state.stage; s++) lifeStageAt.push(time);
+    while (stageReached.length <= state.stats.bestStage) {
+      stageSeconds.push(time - lifeStageAt[stageReached.length - 1]);
+      stageReached.push(time);
+    }
     if (time % 60 === 0 && state.stage >= state.stats.bestStage)
       frontierRatios[STAGES[state.stage].realmIndex].push(activeRatio());
     trackNewResources();
@@ -910,19 +969,28 @@ while (time < maxHours * 3600) {
   if (
     canRegress &&
     // Wait for Memories to settle so the regression is worth its full amount.
+    REGRESS_MODE !== 'never' &&
     memorySettledFraction(state) >= 1 &&
-    ((stuck && memoryGain >= REGRESS_WHEN_STUCK_AT_GAIN) ||
-      (secondsToNextStage() > SLOW_SECONDS && memoryGain >= REGRESS_WHEN_SLOW_AT_GAIN))
+    ((REGRESS_MODE === 'eager' && stuck && memoryGain >= REGRESS_WHEN_STUCK_AT_GAIN) ||
+      (memoryGain > REGRESS_PAYOFF &&
+        secondsToNextStage() > BALANCE_SPEC.sawtooth.boredSeconds &&
+        regressionPays(memoryGain)))
   ) {
     if (stuck) stuckRegressions++;
     if (previousLoopStuck && newPurchasesThisLoop === 0) futileRegressions++;
     replayTarget = loopBestStage;
     previousLoopStuck = stuck;
     newPurchasesThisLoop = 0;
-    regressions.push({ t: time, from: state.stats.bestStage, wait: secondsToNextStage() });
+    regressions.push({
+      t: time,
+      from: state.stats.bestStage,
+      wait: secondsToNextStage(),
+      repeatStages: repeatRegressionStages(pending),
+    });
     const label = `regress (+${pending} memories${stuck ? `, stuck at ${stageName(state.stage)}` : ''}`;
     state = regress(state, 0)!;
     lastRegression = time;
+    lifeStageAt = [];
     loopBestStage = 0;
     realmActivity = {};
     const perksBefore = { ...state.prestige.perks };
@@ -1045,6 +1113,7 @@ if (specMode) {
       done: !!state.flags.ascended,
       seconds: time,
       stageReached,
+      stageSeconds,
       newThings,
       bursts,
       regressions,

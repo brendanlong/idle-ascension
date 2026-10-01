@@ -37,8 +37,8 @@ describe('regression', () => {
     expect(regress(newGame({ stage: CORE_FORMATION - 1 }), 0)).toBeNull();
   });
 
-  it('awards Memories by realm as tuned, so changing breakthrough costs is a deliberate choice', () => {
-    // memoriesForStage follows breakthrough costs; re-run the sim if these move.
+  it('awards Memories by realm as tuned, so changing the Memory curve is a deliberate choice', () => {
+    // MEMORIES (content/memories.ts) sets these; re-run scripts/balance/spec.py if they move.
     const byRealm = Object.fromEntries(
       REALMS.filter((r) => firstStageOfRealm(r.id) >= CORE_FORMATION).map((r) => [
         r.id,
@@ -47,11 +47,11 @@ describe('regression', () => {
     );
     expect(byRealm).toEqual({
       coreFormation: 10,
-      nascentSoul: 23,
-      spiritSevering: 43,
-      daoSeeking: 106,
-      immortalAscension: 199,
-      godhood: 498,
+      nascentSoul: 24,
+      spiritSevering: 59,
+      daoSeeking: 145,
+      immortalAscension: 355,
+      godhood: 867,
     });
   });
 

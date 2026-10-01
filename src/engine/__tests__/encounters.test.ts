@@ -27,7 +27,7 @@ describe('encounters', () => {
     // Rolling 0 gives the low end of the range, here well under a breakthrough.
     expect(windfallAmount(state, stats, reward, () => 0)).toBeCloseTo(activeQps(stats) * low);
     // A huge income still only pays for the next stage.
-    state.generators.dao = 1e6;
+    state.generators.dao = 1e15;
     const rich = computeStats(state);
     expect(windfallAmount(state, rich, reward, () => 0)).toBe(STAGES[state.stage + 1].cost);
   });

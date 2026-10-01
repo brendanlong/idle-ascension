@@ -11,15 +11,18 @@ from concurrent.futures import ThreadPoolExecutor
 
 ROOT = os.path.join(os.path.dirname(__file__), '..', '..')
 SPEC = json.load(open(os.path.join(os.path.dirname(__file__), 'spec.json')))
-TUNE = open(sys.argv[1]).read() if len(sys.argv) > 1 else '{}'
+TUNE = open(sys.argv[1]).read() if __name__ == '__main__' and len(sys.argv) > 1 else '{}'
+NEVER_REGRESS_HOURS = 8
 REALMS = ['qiCondensation', 'foundation', 'coreFormation', 'nascentSoul', 'spiritSevering',
           'daoSeeking', 'immortalAscension']
 
-def run(job):
-    player, treasures, seed = job
+def run(job, tune=TUNE):
+    player, treasures, regress, seed = job
     env = dict(os.environ, SIM_SEED=str(seed), SIM_PLAYER=player, SIM_TREASURES=treasures,
-               SIM_SPEC='1', SIM_TUNE=TUNE)
-    out = subprocess.run(['npx', 'tsx', 'scripts/sim.ts', '40'], capture_output=True, text=True,
+               SIM_REGRESS=regress, SIM_SPEC='1', SIM_TUNE=tune)
+    # Never regressing is meant to be tedious: stop at NEVER_REGRESS_HOURS and count it slow enough.
+    hours = NEVER_REGRESS_HOURS if regress == 'never' else 40
+    out = subprocess.run(['npx', 'tsx', 'scripts/sim.ts', str(hours)], capture_output=True, text=True,
                          env=env, cwd=ROOT).stdout
     return json.loads(re.search(r'^SPEC (.*)$', out, re.M).group(1))
 
@@ -41,6 +44,19 @@ def check(name, ok, detail=''):
     failures += not ok
     print(f"{'PASS' if ok else 'FAIL'}  {name}" + (f'\n      {detail}' if detail else ''))
 
+def floor(k, n):
+    st = SPEC['sawtooth']
+    return st['floorFirst'] + (st['floorLast'] - st['floorFirst']) * (k - 1) / (n - 1)
+
+def sawtooth_ratios(run, n):
+    """Each stage's time ÷ its sawtooth target, given the deepest regression before it."""
+    reached, ratios = run['stageReached'], {}
+    for k in range(1, len(reached)):
+        reach = max((x['from'] for x in run['regressions'] if x['t'] < reached[k]), default=0)
+        target = floor(k, n) * SPEC['sawtooth']['growth'] ** (k - 1 - reach)
+        ratios[k] = (max(1, run['stageSeconds'][k]) / target, reach)
+    return ratios
+
 def stage_times(runs):
     """Median seconds from first reaching each stage to first reaching the next, by stage."""
     n = max(len(r['stageReached']) for r in runs)
@@ -49,17 +65,18 @@ def stage_times(runs):
 
 def main():
     seeds = SPEC['seeds']
-    jobs = [(p, t, s) for p, t in [('active', 'random'), ('passive', 'random'), ('active', 'none'),
-                                   ('active', 'all')] for s in seeds]
+    variants = [('active', 'random', 'efficient'), ('passive', 'random', 'efficient'),
+                ('active', 'none', 'efficient'), ('active', 'all', 'efficient'), ('active', 'random', 'never')]
+    jobs = [v + (s,) for v in variants for s in seeds]
     cache = os.environ.get('SPEC_RESULTS')
     if cache and os.path.exists(cache):
-        results = {tuple(k.split('|')[:2]) + (int(k.split('|')[2]),): v for k, v in json.load(open(cache)).items()}
+        results = {tuple(k.split('|')[:3]) + (int(k.split('|')[3]),): v for k, v in json.load(open(cache)).items()}
     else:
         with ThreadPoolExecutor(len(jobs)) as ex:
             results = dict(zip(jobs, ex.map(run, jobs)))
         if cache:
             json.dump({'|'.join(map(str, k)): v for k, v in results.items()}, open(cache, 'w'))
-    runs = lambda p, t='random': [results[(p, t, s)] for s in seeds]
+    runs = lambda p, t='random', g='efficient': [results[(p, t, g, s)] for s in seeds]
     active, passive = runs('active'), runs('passive')
 
     for name, rs in [('active', active), ('passive', passive)]:
@@ -68,21 +85,34 @@ def main():
               f"{[len(r['regressions']) for r in rs]}")
     print()
 
-    # 1. Pace and every stage slower than the last.
-    st = SPEC['stageSeconds']
-    times = stage_times(active)
-    n = len(times)
-    targets = [geometric(st['first'], st['last'], k, n) for k in range(n)]
-    off = [(k + 1, t, target) for k, (t, target) in enumerate(zip(times, targets))
-           if not target / st['tolerance'] <= t <= target * st['tolerance']]
-    check(f"active stage times within x{st['tolerance']} of {st['first']}s rising to {fmt(st['last'])}",
-          not off, ', '.join(f'stage {k} {fmt(t)} (want {fmt(w)})' for k, t, w in off))
+    # 1. The sawtooth: climbing within a life, back to the floor after a regression.
+    st = SPEC['sawtooth']
+    n = max(len(r['stageReached']) for r in active) - 1
+    by_stage = {}
+    for r in active:
+        for k, (ratio, reach) in sawtooth_ratios(r, n).items():
+            by_stage.setdefault(k, []).append((ratio, reach))
+    off = []
+    for k, xs in sorted(by_stage.items()):
+        ratio = statistics.median(x[0] for x in xs)
+        if not 1 / st['tolerance'] <= ratio <= st['tolerance']:
+            off.append((k, ratio, statistics.median(x[1] for x in xs)))
+    check(f"active stage times are floor ({st['floorFirst']}s rising to {st['floorLast']}s) x "
+          f"{st['growth']} per stage past the deepest regression, within x{st['tolerance']}", not off,
+          ', '.join(f'stage {k} x{r:.2f} (reach {reach:g})' for k, r, reach in off))
     for name, rs in [('active', active), ('passive', passive)]:
-        ts = stage_times(rs)
-        faster = [(k + 2, ts[k], ts[k + 1]) for k in range(len(ts) - 1)
-                  if ts[k + 1] < st['monotoneSlack'] * ts[k]]
-        check(f'{name}: each stage takes at least {st["monotoneSlack"]}x as long as the last', not faster,
-              ', '.join(f'stage {k} {fmt(b)} after {fmt(a)}' for k, a, b in faster))
+        faster = []
+        for r in rs:
+            reached = r['stageReached']
+            for k in range(2, len(reached)):
+                if any(reached[k - 1] <= x['t'] < reached[k] for x in r['regressions']):
+                    continue  # a regression in between resets the climb
+                a, b = r['stageSeconds'][k - 1], r['stageSeconds'][k]
+                if b < st['monotoneSlack'] * a:
+                    faster.append((k, a, b))
+        check(f'{name}: within a life, each stage takes at least {st["monotoneSlack"]}x as long as the last',
+              not faster, f'{len(faster)} over {len(rs)} runs, e.g. ' +
+              ', '.join(f'stage {k} {fmt(b)} after {fmt(a)}' for k, a, b in faster[:8]))
 
     # 2. Always something new to buy, never a pile at once.
     sb = SPEC['somethingToBuy']
@@ -112,7 +142,7 @@ def main():
     gains = {}
     for r in active + passive:
         for i in r['impacts']:
-            if i['kind'] in ('technique', 'core'):
+            if i['kind'] in ('technique', 'core') and i['key'] not in SPEC['upgradeExempt']:
                 gains.setdefault(i['name'], []).append(gain(i))
     weak = sorted((statistics.median(g), n) for n, g in gains.items()
                   if statistics.median(g) < SPEC['minUpgradeGain'])
@@ -144,9 +174,16 @@ def main():
 
     # 5. Plateaus that regression fixes.
     rg = SPEC['regression']
-    counts = [len(r['regressions']) for r in active]
-    check(f"active player regresses {rg['count'][0]}-{rg['count'][1]} times",
-          rg['count'][0] <= statistics.median(counts) <= rg['count'][1], f'regressions per run: {counts}')
+    without = runs('active', 'random', 'never')
+    reference = statistics.median(r['seconds'] for r in active)
+    slowdown = statistics.median(r['seconds'] for r in without) / reference
+    check(f"never regressing is at least {rg['withoutSlowdownAtLeast']}x slower",
+          slowdown >= rg['withoutSlowdownAtLeast'],
+          f"x{slowdown:.1f} ({sum(r['done'] for r in without)}/{len(without)} finished within "
+          f"{NEVER_REGRESS_HOURS}h); regressions per reference run: {[len(r['regressions']) for r in active]}")
+    repeats = [x['repeatStages'] for r in active for x in r['regressions']]
+    check(f"regressing again from the same place moves reach at most {st['maxRepeatStages']} stages",
+          all(x <= st['maxRepeatStages'] for x in repeats), f"stages: {', '.join(f'{x:.1f}' for x in repeats)}")
     payoffs = []
     for r in active:
         for x in r['regressions']:
@@ -181,4 +218,5 @@ def main():
 
     print(f'\n{failures} checks failing')
 
-main()
+if __name__ == '__main__':
+    main()

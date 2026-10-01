@@ -1,6 +1,7 @@
 import { BUFFS_BY_ID } from '../content/buffs';
 import { CORE_GRADES, ELEMENTS, ELEMENTS_BY_ID, GENERATING_CYCLE_BONUS } from '../content/cores';
 import { GENERATORS } from '../content/generators';
+import { MEMORIES } from '../content/memories';
 import { PERKS, type PerkDef } from '../content/perks';
 import { REALMS, STAGES, firstStageOfRealm } from '../content/realms';
 import { TREASURES_BY_ID, type TreasureDef } from '../content/treasures';
@@ -149,13 +150,10 @@ export function upgradeEffects(state: GameState, u: UpgradeDef): readonly Effect
   return [{ type: 'generatorMult', generator: u.revives, value: mult }];
 }
 
-/** How much each Memory adds to qi gain, before memoryPower. */
-export const MEMORY_WEIGHT = 0.3;
-
 export function computeStats(state: GameState, includeBuffs = true): Stats {
   const mods = computeModifiers(state, includeBuffs);
   const realmMult = realmMultiplier(state.stage);
-  const memoryMult = (1 + MEMORY_WEIGHT * state.prestige.memories) ** mods.memoryPower;
+  const memoryMult = (1 + MEMORIES.weight * state.prestige.memories) ** mods.memoryPower;
   const cycleMult =
     GENERATING_CYCLE_BONUS ** generatingPairs(new Set(state.cores.map((c) => c.element)));
   const coreMult = state.cores.reduce((m, c) => m * CORE_GRADES[c.grade].mult, 1);
