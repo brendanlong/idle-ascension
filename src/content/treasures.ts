@@ -53,11 +53,11 @@ export const TREASURES: readonly TreasureDef[] = [
     id: 'pendant',
     name: 'Qi-Drawing Pendant',
     icon: '📿',
-    description: 'Wandering qi finds its way to you, and follows wherever your hand moves.',
+    description: 'Wandering qi finds its way to you.',
     rarity: 'common',
     minRealm: 'qiCondensation',
     effects: [
-      { type: 'mult', stat: 'clickMult', value: 1.5 },
+      { type: 'mult', stat: 'globalMult', value: 1.2 },
       { type: 'mult', stat: 'moteSpawnMult', value: 1.25 },
     ],
   },
