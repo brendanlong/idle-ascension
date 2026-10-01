@@ -107,17 +107,19 @@ describe('content integrity', () => {
     expect(share.buff).toBeGreaterThan(share.treasure);
   });
 
+  it('has a breakthrough cost for every stage', () => {
+    for (const realm of REALMS) expect(realm.stageCosts.length).toBe(realm.stageNames.length);
+  });
+
   it('has strictly increasing breakthrough costs', () => {
     for (let i = 2; i < STAGES.length; i++) {
       expect(STAGES[i].cost).toBeGreaterThan(STAGES[i - 1].cost);
     }
   });
 
-  it('prices each core grade above the entry cost of the realm that unlocks it', () => {
-    CORE_GRADES.forEach((grade, i) => {
-      if (i === 0) return;
-      const realm = REALMS.find((r) => (r.coreGradeCap ?? -1) >= i)!;
-      expect(grade.refineCost).toBeGreaterThan(realm.firstStageCost);
-    });
+  it('makes each core grade cost more than the last', () => {
+    for (let i = 2; i < CORE_GRADES.length; i++) {
+      expect(CORE_GRADES[i].refineCost).toBeGreaterThan(CORE_GRADES[i - 1].refineCost);
+    }
   });
 });

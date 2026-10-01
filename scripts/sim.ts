@@ -76,9 +76,12 @@ const OPTIONAL_TRIAL_SCORE = 0.7;
 /** With no progress step for this long, the bot is stuck and regresses if it can. */
 const STUCK_SECONDS = Number(process.argv[3] ?? 10) * 60;
 /** The bot also regresses once that would multiply its Memory bonus by this much. */
-const REGRESS_AT_MEMORY_GAIN = 1.5;
-/** A progress step: a breakthrough, a regression, or passive qi/s up this much since the last step. */
-const STEP_INCOME_GAIN = 1.1;
+const REGRESS_AT_MEMORY_GAIN = 2;
+/**
+ * An action: buying a technique, core or breakthrough, regressing, or buying
+ * resources worth this much more passive qi/s since the last action.
+ */
+const STEP_INCOME_GAIN = 1.05;
 const CORE_ORDER: ElementId[] = ['wood', 'fire', 'water', 'earth', 'metal'];
 
 /**
@@ -92,8 +95,9 @@ const CORE_ORDER: ElementId[] = ['wood', 'fire', 'water', 'earth', 'metal'];
  *   stageGrowth  multiplies a realm's stage cost growth
  *   price        multiplies single prices: "up:<technique id>", "stage:<index>",
  *                "form:<core number>", "grade:<core grade>"
- * SIM_PRICES=1 prints, as JSON, each of those prices in seconds of passive qi/s
- * when the bot first paid it.
+ * SIM_PRICES=1 prints, as JSON, each of those prices the first time the bot
+ * paid it: the wait since its previous purchase, and its price in seconds of
+ * passive qi/s.
  */
 function applyTuning(): void {
   if (!process.env.SIM_TUNE) return;
@@ -143,20 +147,37 @@ function applyTuning(): void {
     if (kind === 'form') (CORE_FORM_COSTS as number[])[Number(id)] *= factor;
     if (kind === 'grade') scaled(CORE_GRADES[Number(id)], 'refineCost', factor);
   }
+  // Breakthroughs must keep getting more expensive.
+  STAGES.forEach((st, i) => {
+    if (i > 1) (st as { cost: number }).cost = Math.max(st.cost, STAGES[i - 1].cost * 1.3);
+  });
 }
 
-/** Seconds of passive qi/s each price cost when it was first paid (SIM_PRICES). */
-const firstPaid: Record<string, { seconds: number; realm: string }> = {};
-function recordPrice(key: string, cost: number): void {
-  if (!process.env.SIM_PRICES || firstPaid[key]) return;
-  const qps = computeStats(state, false).qps;
-  if (qps > 0) {
-    const realm = REALMS[STAGES[state.stage].realmIndex].id;
-    firstPaid[key] = { seconds: cost / qps, realm };
-  }
-}
+/**
+ * Each technique, core and breakthrough the first time it's bought: how long
+ * since the previous such purchase (the wait for it), and its price in
+ * seconds of passive qi/s. Printed as JSON with SIM_PRICES, for tuning.
+ */
+const firstBuys: Record<string, { wait: number; seconds: number; realm: string; loop: number }> =
+  {};
+let lastPurchaseAt = 0;
+/** First-time techniques bought in the same moment: "you can buy several at once". */
+const bursts: { realm: number; count: number }[] = [];
+let techniquesThisTick = 0;
 
 applyTuning();
+if (process.env.SIM_DUMP_PRICES) {
+  // Prices after SIM_TUNE, for writing tuned values back into src/content.
+  console.log(
+    JSON.stringify({
+      up: Object.fromEntries(UPGRADES.map((u) => [u.id, u.cost])),
+      stage: STAGES.map((st) => st.cost),
+      form: CORE_FORM_COSTS,
+      grade: CORE_GRADES.map((g) => g.refineCost),
+    }),
+  );
+  process.exit(0);
+}
 
 let seed = Number(process.env.SIM_SEED ?? 12345);
 const rng = () => {
@@ -167,6 +188,22 @@ const rng = () => {
 let state: GameState = createInitialState(0);
 state.flags.introSeen = true;
 let time = 0;
+
+function recordPurchase(key: string, cost: number): void {
+  if (key.startsWith('gen:')) return;
+  if (!firstBuys[key]) {
+    const qps = computeStats(state, false).qps;
+    firstBuys[key] = {
+      wait: time - lastPurchaseAt,
+      seconds: qps > 0 ? cost / qps : Infinity,
+      realm: REALMS[STAGES[state.stage].realmIndex].id,
+      loop: state.prestige.loops,
+    };
+    if (key.startsWith('up:')) techniquesThisTick++;
+  }
+  lastPurchaseAt = time;
+  recordStep();
+}
 /**
  * Gaps between progress steps, by the realm the wait happened in: how long
  * the player goes without anything meaningfully better.
@@ -517,6 +554,16 @@ function choosePurchase(options: Candidate[]): Candidate | null {
 }
 
 function spend(): void {
+  techniquesThisTick = 0;
+  try {
+    buyWhatsWorthIt();
+  } finally {
+    if (techniquesThisTick > 1)
+      bursts.push({ realm: STAGES[state.stage].realmIndex, count: techniquesThisTick });
+  }
+}
+
+function buyWhatsWorthIt(): void {
   for (let purchases = 0; purchases < 10_000; purchases++) {
     const all = candidates();
     // Players break through as soon as they can.
@@ -524,8 +571,10 @@ function spend(): void {
     const choice = breakthrough ?? choosePurchase(all);
     if (!choice) return;
     if (state.qi < choice.cost) return; // saving up for it
-    recordPrice(choice.key, choice.cost);
+    const key = choice.key;
+    const cost = choice.cost;
     if (!choice.buy()) return;
+    recordPurchase(key, cost);
   }
 }
 
@@ -629,6 +678,7 @@ while (time < maxHours * 3600) {
           boughtPerk = buyPerk(state, p.id) || boughtPerk;
     }
     recordStep();
+    lastPurchaseAt = time;
     report(`${label}, ×${(computeStats(state).memoryMult / memoryMultBefore).toFixed(2)})`);
   }
 }
@@ -641,10 +691,10 @@ const lateGaps = stepGaps
   .map((g) => g.seconds)
   .sort((a, b) => b - a);
 console.log(
-  `Gaps between progress steps after the early game: longest ${lateGaps.slice(0, 3).map(formatDuration).join(', ')}; ${lateGaps.filter((g) => g > 10 * 60).length} over 10m; stuck regressions ${stuckRegressions} (${futileRegressions} futile)`,
+  `Gaps between actions after the early game: longest ${lateGaps.slice(0, 3).map(formatDuration).join(', ')}; ${lateGaps.filter((g) => g > 10 * 60).length} over 10m; stuck regressions ${stuckRegressions} (${futileRegressions} futile)`,
 );
 console.log(
-  'By realm: median and longest gap between progress steps; median active ÷ passive income (min-max):',
+  'By realm: gap between actions (median / longest); wait before each new technique, core or breakthrough (median / longest); times several new techniques were affordable at once; gathering ÷ idle income:',
 );
 REALMS.forEach((realm, r) => {
   const gaps = stepGaps.filter((g) => g.realm === r).map((g) => g.seconds);
@@ -653,8 +703,12 @@ REALMS.forEach((realm, r) => {
   const ratio = ratios.length
     ? `×${median(ratios).toFixed(1)} (${Math.min(...ratios).toFixed(1)}-${Math.max(...ratios).toFixed(1)})`
     : '—';
+  const waits = Object.values(firstBuys)
+    .filter((b) => b.realm === realm.id)
+    .map((b) => b.wait);
+  const burstCount = bursts.filter((b) => b.realm === r).length;
   console.log(
-    `  ${realm.name.padEnd(26)} gap ${formatDuration(gaps.length ? median(gaps) : 0).padStart(8)} / ${formatDuration(Math.max(0, ...gaps)).padStart(8)}   active ${ratio}`,
+    `  ${realm.name.padEnd(26)} gap ${formatDuration(gaps.length ? median(gaps) : 0).padStart(7)} / ${formatDuration(Math.max(0, ...gaps)).padStart(7)}   wait ${formatDuration(waits.length ? median(waits) : 0).padStart(7)} / ${formatDuration(Math.max(0, ...waits)).padStart(7)}   bursts ${String(burstCount).padStart(3)}   active ${ratio}`,
   );
 });
 console.log('Final loop by realm:');
@@ -707,5 +761,5 @@ if (printImpact) {
   const unbought = UPGRADES.filter((u) => !impacts.has(`upgrade:${u.id}`)).map((u) => u.name);
   console.log(`Techniques never bought: ${unbought.join(', ') || 'none'}`);
 }
-if (process.env.SIM_PRICES) console.log(`PRICES ${JSON.stringify(firstPaid)}`);
+if (process.env.SIM_PRICES) console.log(`PRICES ${JSON.stringify(firstBuys)}`);
 console.log(`Realms: ${REALMS.length}, stages: ${STAGES.length}, elements: ${ELEMENTS.length}`);

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { onLog } from '../events';
 import { GENERATORS } from '../../content/generators';
 import { firstStageOfRealm } from '../../content/realms';
+import { UPGRADES_BY_ID } from '../../content/upgrades';
 import {
   affordableUpgrades,
   buyAllUpgrades,
@@ -91,13 +92,14 @@ describe('gathering and upgrades', () => {
   });
 
   it('buys all affordable techniques, cheapest first', () => {
-    const state = newGame({ stage: firstStageOfRealm('qiCondensation'), qi: 8_500 });
-    state.stats.motesAbsorbed = 100;
-    // Available: Iron Palm 100, Spiritual Sense 300, Cloud-Parting Palm 5,000, Sunflower Manual 7,777.
-    expect(affordableUpgrades(state).map((u) => u.id)).toEqual(['palm-1', 'sense-1', 'palm-2']);
-    expect(buyAllUpgrades(state)).toBe(3);
-    expect(state.qi).toBe(8_500 - 100 - 300 - 5_000);
-    expect(state.upgrades.sunflower).toBeUndefined();
+    const cost = (id: string) => UPGRADES_BY_ID.get(id)!.cost;
+    const [cheap, dear] = ['palm-1', 'sense-1'].sort((a, b) => cost(a) - cost(b));
+    const qi = cost(cheap) + cost(dear) + 1;
+    const state = newGame({ stage: firstStageOfRealm('qiCondensation'), qi });
+    state.stats.motesAbsorbed = 10;
+    expect(affordableUpgrades(state).map((u) => u.id)).toEqual([cheap, dear]);
+    expect(buyAllUpgrades(state)).toBe(2);
+    expect(state.qi).toBe(1);
     expect(buyAllUpgrades(state)).toBe(0);
   });
 
@@ -132,11 +134,14 @@ describe('log messages', () => {
   });
 
   it('lists each technique bought with Buy all', () => {
-    const state = newGame({ stage: firstStageOfRealm('qiCondensation'), qi: 500 });
+    const cost = (id: string) => UPGRADES_BY_ID.get(id)!.cost;
+    const qi = cost('palm-1') + cost('sense-1');
+    const state = newGame({ stage: firstStageOfRealm('qiCondensation'), qi });
     state.stats.motesAbsorbed = 10;
-    expect(logs(() => buyAllUpgrades(state))).toEqual([
-      'You master 2 techniques: Iron Palm (×2 base qi mote value); Spiritual Sense (×1.5 qi mote frequency, ×1.5 qi mote value).',
-    ]);
+    const [log] = logs(() => buyAllUpgrades(state));
+    expect(log).toMatch(/^You master 2 techniques: /);
+    expect(log).toContain('Iron Palm (×2 base qi mote value)');
+    expect(log).toContain('Spiritual Sense (×1.5 qi mote frequency, ×1.5 qi mote value)');
   });
 
   it('describes treasures when found and when refined', () => {

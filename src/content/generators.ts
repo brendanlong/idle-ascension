@@ -8,7 +8,9 @@ export interface GeneratorDef {
   /** Realm (by id) required before it can be bought. */
   minRealm?: string;
   /** Names of the technique upgrades unlocked at each ownership milestone. */
-  upgradeNames: readonly [string, string, string, string, string];
+  upgradeNames: readonly [string, string];
+  /** Prices of those techniques, if not the default multiples of baseCost. */
+  upgradeCosts?: readonly [number, number];
 }
 
 export const GENERATOR_COST_GROWTH = 1.15;
@@ -21,13 +23,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     description: 'A worn straw cushion. Sit, breathe, and let qi seep in.',
     baseCost: 15,
     baseQps: 0.1,
-    upgradeNames: [
-      'Lotus Posture',
-      'Cold Jade Cushion',
-      'Thousand-Year Bodhi Mat',
-      'Breath of the Tortoise',
-      'Sitting Through Kalpas',
-    ],
+    upgradeNames: ['Lotus Posture', 'Sitting Through Kalpas'],
+    upgradeCosts: [2.8e9, 5.4e10],
   },
   {
     id: 'herb',
@@ -36,13 +33,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     description: 'Spirit grass that drinks moonlight and exhales qi.',
     baseCost: 100,
     baseQps: 1,
-    upgradeNames: [
-      'Spirit Soil',
-      'Moonlight Irrigation',
-      'Thousand-Year Ginseng',
-      'Herb-Nurturing Formation',
-      'Garden of the Queen Mother',
-    ],
+    upgradeNames: ['Spirit Soil', 'Garden of the Queen Mother'],
+    upgradeCosts: [6.8e10, 5.6e12],
   },
   {
     id: 'array',
@@ -51,13 +43,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     description: 'Carved flags and spirit stones that pull qi from the land.',
     baseCost: 1_100,
     baseQps: 8,
-    upgradeNames: [
-      'Gathering Sigils',
-      'Five-Element Flags',
-      'Nine Palaces Layout',
-      'Grand Heaven-Earth Array',
-      'Array Embracing the Stars',
-    ],
+    upgradeNames: ['Gathering Sigils', 'Array Embracing the Stars'],
+    upgradeCosts: [1.4e11, 6.1e13],
   },
   {
     id: 'furnace',
@@ -66,13 +53,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     description: 'Refines herbs into pills. Occasionally explodes. Mostly worth it.',
     baseCost: 12_000,
     baseQps: 47,
-    upgradeNames: [
-      'Pill Recipes',
-      'Earth Fire Vent',
-      'Pill Tribulation',
-      'Nine-Revolution Refining',
-      'Eight Trigrams Furnace',
-    ],
+    upgradeNames: ['Pill Recipes', 'Eight Trigrams Furnace'],
+    upgradeCosts: [2.7e12, 6.4e14],
   },
   {
     id: 'disciple',
@@ -81,13 +63,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     description: 'Hopeful juniors who tithe qi for your "guidance."',
     baseCost: 130_000,
     baseQps: 260,
-    upgradeNames: [
-      'Sect Entrance Exam',
-      'Contribution Points',
-      'Inner Sect Promotion',
-      'Grand Sect Tournament',
-      'Ten Thousand Disciples Bow',
-    ],
+    upgradeNames: ['Sect Entrance Exam', 'Ten Thousand Disciples Bow'],
+    upgradeCosts: [3.5e14, 2.7e15],
   },
   {
     id: 'beast',
@@ -96,13 +73,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     description: 'A nine-tailed fox kit. It hunts qi and brings it home.',
     baseCost: 1_400_000,
     baseQps: 1_400,
-    upgradeNames: [
-      'Beast-Taming Collar',
-      'Blood Contract',
-      'Bloodline Awakening',
-      'Beast Tide',
-      'Qilin Descendant',
-    ],
+    upgradeNames: ['Beast-Taming Collar', 'Qilin Descendant'],
+    upgradeCosts: [5.6e14, 2.1e16],
   },
   {
     id: 'vein',
@@ -111,13 +83,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     description: 'A river of crystallized qi running beneath a mountain.',
     baseCost: 20_000_000,
     baseQps: 7_800,
-    upgradeNames: [
-      'Mining Rights',
-      'Vein Nourishment',
-      'Merging Veins',
-      'Dragon Vein',
-      'Heart of the Continent',
-    ],
+    upgradeNames: ['Mining Rights', 'Heart of the Continent'],
+    upgradeCosts: [3.2e16, 1.3e17],
   },
   {
     id: 'secretRealm',
@@ -126,13 +93,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     description: 'A pocket world sealed since antiquity. Now it is yours.',
     baseCost: 330_000_000,
     baseQps: 44_000,
-    upgradeNames: [
-      'Realm Key',
-      'Map of Hidden Paths',
-      'Seal-Breaking Talisman',
-      'Folded Space',
-      'A Realm of Your Own',
-    ],
+    upgradeNames: ['Realm Key', 'A Realm of Your Own'],
+    upgradeCosts: [2.7e17, 8e17],
   },
   {
     id: 'inheritance',
@@ -141,13 +103,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     description: 'The legacy of a fallen immortal, waiting for a worthy heir.',
     baseCost: 5_100_000_000,
     baseQps: 260_000,
-    upgradeNames: [
-      'Trial of Worthiness',
-      "Old Master's Remnant Soul",
-      'Inheritance Crystal',
-      'Bloodline Inheritance',
-      'Heir of the Ancients',
-    ],
+    upgradeNames: ['Trial of Worthiness', 'Heir of the Ancients'],
+    upgradeCosts: [1.1e15, 4.1e16],
   },
   {
     id: 'dao',
@@ -156,13 +113,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     description: 'A shard of the law that governs heaven and earth.',
     baseCost: 75_000_000_000,
     baseQps: 1_600_000,
-    upgradeNames: [
-      'Glimpse of the Dao',
-      'Dao Comprehension',
-      'Dao Heart',
-      'Dao Domain',
-      'One With the Dao',
-    ],
+    upgradeNames: ['Glimpse of the Dao', 'One With the Dao'],
+    upgradeCosts: [8.7e15, 9.8e18],
   },
   {
     id: 'sect',
@@ -172,13 +124,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     minRealm: 'spiritSevering',
     baseCost: 2e16,
     baseQps: 1e7,
-    upgradeNames: [
-      'Sect Charter',
-      'Scripture Pavilion',
-      'Protective Mountain Array',
-      'Branch Sects',
-      'The Sect That Rules the Continent',
-    ],
+    upgradeNames: ['Sect Charter', 'The Sect That Rules the Continent'],
+    upgradeCosts: [4.7e18, 4e19],
   },
   {
     id: 'dragon',
@@ -188,13 +135,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     minRealm: 'spiritSevering',
     baseCost: 3e17,
     baseQps: 6.5e7,
-    upgradeNames: [
-      'Dragon Pearl',
-      'Dragon Blood Pact',
-      'Scales of Heaven',
-      'Dragon Transformation',
-      'Ancestor of Dragons',
-    ],
+    upgradeNames: ['Dragon Pearl', 'Ancestor of Dragons'],
+    upgradeCosts: [7.2e19, 6e20],
   },
   {
     id: 'smallWorld',
@@ -204,13 +146,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     minRealm: 'daoSeeking',
     baseCost: 2e22,
     baseQps: 1.7e9,
-    upgradeNames: [
-      'World Seed',
-      'Heaven and Earth Separate',
-      'Four Seasons Turn',
-      'Mortals Are Born',
-      'A World That Cultivates',
-    ],
+    upgradeNames: ['World Seed', 'A World That Cultivates'],
+    upgradeCosts: [1e24, 4e25],
   },
   {
     id: 'starRiver',
@@ -220,13 +157,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     minRealm: 'daoSeeking',
     baseCost: 8e22,
     baseQps: 2.9e9,
-    upgradeNames: [
-      'Star Map',
-      'Constellation Array',
-      'Swallowing the Sun',
-      'River of Stars Reversed',
-      'Master of the Firmament',
-    ],
+    upgradeNames: ['Star Map', 'Master of the Firmament'],
+    upgradeCosts: [4e24, 1.6e26],
   },
   {
     id: 'faith',
@@ -236,13 +168,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     minRealm: 'immortalAscension',
     baseCost: 5e26,
     baseQps: 3e10,
-    upgradeNames: [
-      'Wayside Shrines',
-      'Golden Statues',
-      'Pilgrimage Routes',
-      'State Religion',
-      'Worshipped Across Eternity',
-    ],
+    upgradeNames: ['Wayside Shrines', 'Worshipped Across Eternity'],
+    upgradeCosts: [2.5e28, 1e30],
   },
   {
     id: 'court',
@@ -252,13 +179,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     minRealm: 'immortalAscension',
     baseCost: 3e28,
     baseQps: 3e11,
-    upgradeNames: [
-      'Jade Tablet of Office',
-      'Celestial Bureaucracy',
-      'Peach Banquet Invitation',
-      'Minister of Heaven',
-      'The Jade Emperor Consults You',
-    ],
+    upgradeNames: ['Jade Tablet of Office', 'The Jade Emperor Consults You'],
+    upgradeCosts: [1.5e30, 6e31],
   },
   {
     id: 'primordial',
@@ -268,13 +190,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     minRealm: 'immortalAscension',
     baseCost: 2e30,
     baseQps: 8e12,
-    upgradeNames: [
-      'Touching the Void',
-      'Chaos Qi',
-      'Before the First Dawn',
-      'Unmaking and Remaking',
-      'Pangu Stirs',
-    ],
+    upgradeNames: ['Touching the Void', 'Pangu Stirs'],
+    upgradeCosts: [1e32, 4e33],
   },
 ];
 
