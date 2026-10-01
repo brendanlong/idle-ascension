@@ -19,6 +19,7 @@
  *   SIM_IMPACT=1        also print how much each resource, technique, core and treasure adds
  *                       to income when it first becomes available
  */
+import { readFileSync } from 'node:fs';
 import { CORE_GRADES, CORE_SLOT_REALMS, ELEMENTS, type ElementId } from '../src/content/cores';
 import { baseModifiers } from '../src/engine/effects';
 import { GENERATORS, generatorName, type GeneratorDef } from '../src/content/generators';
@@ -75,6 +76,12 @@ const EARLY_GAME_UNTIL_REALM = 2;
 const PASSIVE_STARTUP_QPS = 1;
 const ACTIVE_CYCLE_SECONDS = 600;
 const printImpact = !!process.env.SIM_IMPACT;
+/** SIM_SPEC=1 prints raw measurements as SPEC {json}, for scripts/balance/spec.py to grade. */
+const specMode = !!process.env.SIM_SPEC;
+const trackImpact = printImpact || specMode;
+const BALANCE_SPEC = JSON.parse(
+  readFileSync(new URL('./balance/spec.json', import.meta.url), 'utf8'),
+) as { newResource: { spendSeconds: number } };
 /** How well the bot plays elemental trials (0-1), for tribulations and optional offers. */
 const TRIBULATION_TRIAL_SCORE = 0.8;
 const OPTIONAL_TRIAL_SCORE = 0.7;
@@ -252,6 +259,22 @@ const firstBuys: Record<
     regressions: number;
   }
 > = {};
+/** SIM_SPEC: the first time each technique, core grade, resource, stage and insight level was bought. */
+const newThings: { t: number; key: string }[] = [];
+const newThingKeys = new Set<string>();
+/** SIM_SPEC: when each stage was first reached, in any life. */
+const stageReached: number[] = [0];
+/** SIM_SPEC: each regression, and how long waiting would have taken instead. */
+const regressions: { t: number; from: number; wait: number }[] = [];
+/** SIM_SPEC: gathering ÷ idle income each minute at the frontier (not replaying), by realm. */
+const frontierRatios: number[][] = REALMS.map(() => []);
+/**
+ * SIM_SPEC: for each resource when it's first bought, its total output after
+ * learning its first technique and spending newResource.spendSeconds of
+ * income on it, as a share of all the other resources' output (none when
+ * nothing else produces yet).
+ */
+const newResourceShares: { id: string; realm: string; share: number | null }[] = [];
 let lastNewPurchaseAt = 0;
 let loopAtLastNewPurchase = 0;
 /** First-time techniques bought in the same moment: "you can buy several at once". */
@@ -292,6 +315,10 @@ function relativeEfficiency(id: string): number {
 }
 
 function recordPurchase(key: string, cost: number, efficiency?: number): void {
+  if (!newThingKeys.has(key)) {
+    newThingKeys.add(key);
+    newThings.push({ t: time, key });
+  }
   if (key.startsWith('gen:')) {
     // Resources: only the first unit of a realm-gated one is a new purchase.
     const def = GENERATORS.find((g) => `gen:${g.id}` === key)!;
@@ -458,7 +485,7 @@ function recordImpact(
   undo: (s: GameState) => void,
   generatorId?: string,
 ): void {
-  if (!printImpact || impacts.has(key)) return;
+  if (!trackImpact || impacts.has(key)) return;
   const without = structuredClone(state);
   undo(without);
   const impact: Impact = {
@@ -539,6 +566,29 @@ function calibrateGatedResources(): void {
     def.baseQps =
       (CALIBRATE_EFFICIENCY * CALIBRATE_TIER_EFFICIENCY ** tier * best * tierCost) / qpsPerBase;
     calibration[g.id] = [def.baseCost, def.baseQps];
+  });
+}
+
+function trackNewResources(): void {
+  GENERATORS.forEach((g, i) => {
+    if (i === 0 || !state.generators[g.id] || newResourceShares.some((r) => r.id === g.id)) return;
+    const s = structuredClone(state);
+    s.generators[g.id] = 0;
+    const budget = averageIncome(income(s)) * BALANCE_SPEC.newResource.spendSeconds;
+    if (UPGRADES.some((u) => u.id === `${g.id}-1`)) s.upgrades[`${g.id}-1`] = true;
+    for (let spent = 0; ; s.generators[g.id]++) {
+      const cost = generatorCost(s, computeStats(s, false).mods, g.id);
+      if (spent + cost > budget) break;
+      spent += cost;
+    }
+    const stats = computeStats(s, false);
+    const total = (id: string) => stats.generatorUnitQps[id] * s.generators[id];
+    const others = GENERATORS.filter((o) => o.id !== g.id).reduce((t, o) => t + total(o.id), 0);
+    newResourceShares.push({
+      id: g.id,
+      realm: REALMS[STAGES[state.stage].realmIndex].id,
+      share: others > 0 ? total(g.id) / others : null,
+    });
   });
 }
 
@@ -826,10 +876,16 @@ while (time < maxHours * 3600) {
   if (time % 60 === 0) ratioSamples[STAGES[state.stage].realmIndex].push(activeRatio());
   trackRealmVisits();
   if (process.env.SIM_CALIBRATE) calibrateGatedResources();
-  if (printImpact) {
+  if (trackImpact) {
     trackLaterImpact();
     trackTreasures();
     trackResourceEfficiency();
+  }
+  if (specMode) {
+    while (stageReached.length <= state.stats.bestStage) stageReached.push(time);
+    if (time % 60 === 0 && state.stage >= state.stats.bestStage)
+      frontierRatios[STAGES[state.stage].realmIndex].push(activeRatio());
+    trackNewResources();
   }
 
   const realmIndex = STAGES[state.stage].realmIndex;
@@ -863,6 +919,7 @@ while (time < maxHours * 3600) {
     replayTarget = loopBestStage;
     previousLoopStuck = stuck;
     newPurchasesThisLoop = 0;
+    regressions.push({ t: time, from: state.stats.bestStage, wait: secondsToNextStage() });
     const label = `regress (+${pending} memories${stuck ? `, stuck at ${stageName(state.stage)}` : ''}`;
     state = regress(state, 0)!;
     lastRegression = time;
@@ -876,6 +933,8 @@ while (time < maxHours * 3600) {
       const level = (p: PerkDef) => state.prestige.perks[p.id] ?? 0;
       affordable.sort((p, q) => perkCost(q, level(q)) - perkCost(p, level(p)));
       buyPerk(state, affordable[0].id);
+      const key = `perk:${affordable[0].id}:${level(affordable[0])}`;
+      newThings.push({ t: time, key });
     }
     recordStep();
     report(`${label}, ×${(computeStats(state).memoryMult / memoryMultBefore).toFixed(2)})`);
@@ -973,6 +1032,43 @@ if (printImpact) {
   }
   const unbought = UPGRADES.filter((u) => !impacts.has(`upgrade:${u.id}`)).map((u) => u.name);
   console.log(`Techniques never bought: ${unbought.join(', ') || 'none'}`);
+}
+if (specMode) {
+  const firstVisitSeconds = (v: RealmVisits) =>
+    [...v.seconds]
+      .filter(([l]) => l <= (v.completedLoop ?? Infinity))
+      .reduce((t, [, s]) => t + s, 0);
+  const replaySeconds = (v: RealmVisits) =>
+    median([...v.seconds].filter(([l]) => l > (v.completedLoop ?? Infinity)).map(([, s]) => s));
+  console.log(
+    `SPEC ${JSON.stringify({
+      done: !!state.flags.ascended,
+      seconds: time,
+      stageReached,
+      newThings,
+      bursts,
+      regressions,
+      frontierRatios: frontierRatios.map((r) => (r.length ? median(r) : null)),
+      newResourceShares,
+      impacts: [...impacts].map(([key, i]) => ({
+        key,
+        kind: i.kind,
+        name: i.name,
+        stage: i.stage,
+        passive: i.passiveMult,
+        active: i.activeMult,
+      })),
+      realms: realmVisits.map((v, r) =>
+        v && r > 0
+          ? {
+              id: REALMS[r].id,
+              firstVisit: firstVisitSeconds(v),
+              replay: replaySeconds(v) ?? null,
+            }
+          : null,
+      ),
+    })}`,
+  );
 }
 if (process.env.SIM_CALIBRATE) console.log(`CALIBRATION ${JSON.stringify(calibration)}`);
 if (process.env.SIM_PRICES) console.log(`PRICES ${JSON.stringify(firstBuys)}`);

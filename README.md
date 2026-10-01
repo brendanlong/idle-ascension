@@ -36,6 +36,7 @@ npm run build
 npm run sim -- 72 10     # headless balance sim: max hours, minutes without progress before regressing
 SIM_PLAYER=passive npm run sim   # also active, or taper (default); see scripts/sim.ts for SIM_TREASURES, SIM_IMPACT, SIM_TUNE
 scripts/balance/eval.sh <(echo '{}') SIM_PLAYER=passive   # 6 seeds; see scripts/balance/ for the price tuner
+python3 scripts/balance/spec.py   # grade the game against the balance spec (docs/balance-spec.md)
 npm run format
 npm run social-preview   # re-render public/social-preview.jpg from scripts/social-preview.html
 npm run icons            # re-render the favicon and install icons in public/
@@ -84,7 +85,7 @@ scripts/     The balance sim (a greedy bot) and the image generators.
 - **New bonus type**: add a field to `Modifiers` in `engine/effects.ts` (plus its label), then read it in `stats.ts` or wherever it applies. Realms, upgrades, treasures, perks, cores and buffs can all grant it immediately.
 - **New upgrade / treasure / encounter / perk**: add an entry to the relevant `content/` file. `content.test.ts` checks ids and cross-references.
 - **Changing the save shape**: players' saves must keep loading. New fields in `GameState` (including nested objects) are filled from `createInitialState()` on load, and `sanitize()` drops references to content that no longer exists. Anything else (fields in array items or nullable objects, renames, changed meanings) needs `SAVE_VERSION` bumped, a migration in `engine/save.ts`, and a new frozen save in `engine/__tests__/fixtures/`. The fixture test loads every old save and fails if the current version has none.
-- **Rebalancing**: run `npm run sim` before and after.
+- **Rebalancing**: say what you want in [docs/balance-spec.md](docs/balance-spec.md) and `scripts/balance/spec.json`, then run `scripts/balance/spec.py` before and after.
 
 ## Design notes
 
