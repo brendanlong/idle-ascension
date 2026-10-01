@@ -40,6 +40,14 @@ const FLOAT_LIFETIME = 1.1;
 /** Absorbed motes are credited in batches to avoid re-rendering every animation frame. */
 const MOTE_FLUSH_MS = 150;
 
+/**
+ * When the field last drew a frame. It outlives the component, so motes
+ * missed on another phone tab or a hidden browser tab can be caught up.
+ */
+let lastFrameAt: number | null = null;
+/** A gap between frames longer than this means the field wasn't being shown. */
+const MISSED_FRAME_GAP_MS = 1000;
+
 /** Visual-only simulation: motes live here, but the qi they grant goes through the engine. */
 class FieldSim {
   motes: Mote[] = [];
@@ -74,6 +82,12 @@ class FieldSim {
     for (const f of this.floats) f.age += dt;
     this.floats = this.floats.filter((f) => f.age < FLOAT_LIFETIME);
     return absorbed;
+  }
+
+  /** Spawns the motes that would have appeared over `seconds` while the field wasn't shown, up to the cap. */
+  catchUp(seconds: number, spawnPerSecond: number): void {
+    const missed = Math.min(Math.floor(seconds * spawnPerSecond), MAX_MOTES - this.motes.length);
+    for (let i = 0; i < missed; i++) this.spawnMote();
   }
 
   /** Removes the mote nearest the field's center (the orb), returning where it was. */
@@ -245,12 +259,19 @@ export function QiField({ overlay }: { overlay?: ComponentChildren } = {}) {
     observer.observe(container);
 
     let last = performance.now();
+    if (lastFrameAt !== null)
+      sim.catchUp((last - lastFrameAt) / 1000, game.stats.moteSpawnPerSecond);
     let lastFlush = last;
     let pendingMotes = 0;
     let frame = 0;
     const loop = (now: number) => {
+      // Browsers stop animating hidden tabs; bring back what was missed.
+      if (now - last > MISSED_FRAME_GAP_MS) {
+        sim.catchUp((now - last) / 1000, game.stats.moteSpawnPerSecond);
+      }
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
+      lastFrameAt = now;
       pendingMotes += sim.step(dt, game.stats.moteSpawnPerSecond);
       if (pendingMotes > 0 && sim.pointer && now - lastFlush >= MOTE_FLUSH_MS) {
         const count = pendingMotes;
@@ -326,8 +347,8 @@ export function QiField({ overlay }: { overlay?: ComponentChildren } = {}) {
       </button>
       <div class="field-hint">
         {touch
-          ? 'Drag your finger through drifting qi · tap the dantian to draw it in'
-          : 'Sweep your cursor through drifting qi · click the dantian to draw it in'}
+          ? 'Drag through drifting qi, or tap the dantian'
+          : 'Sweep through drifting qi, or click the dantian'}
       </div>
 
       {encounter && encounterDef && !trialRunning && (
