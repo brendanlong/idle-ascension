@@ -26,7 +26,14 @@ import { GENERATORS, generatorName, type GeneratorDef } from '../src/content/gen
 import { MEMORIES } from '../src/content/memories';
 import { UPGRADES, realmTechniqueCost } from '../src/content/upgrades';
 import { PERKS, type PerkDef } from '../src/content/perks';
-import { REALMS, STAGES, firstStageOfRealm, stageName } from '../src/content/realms';
+import {
+  COST_CURVE,
+  REALMS,
+  STAGES,
+  curveCosts,
+  stageName,
+  type CostCurve,
+} from '../src/content/realms';
 import { MAX_TREASURE_LEVEL, TREASURES } from '../src/content/treasures';
 import {
   attemptBreakthrough,
@@ -129,9 +136,7 @@ const CORE_ORDER: ElementId[] = ['wood', 'fire', 'water', 'earth', 'metal'];
  *   price        multiplies single prices: "up:<technique id>", "stage:<index>",
  *                "gen:<resource>" (base cost)
  *   genQps       multiplies a resource's output
- *   entries      log10 of realm entry costs; every breakthrough lies on a smooth curve
- *                through them (see applyStageCurve)
- *   stageCosts   log10 of every breakthrough's cost, by stage (see setStageCosts)
+ *   curve        overrides COST_CURVE (src/content/realms.ts)
  *   memory       overrides MEMORIES (src/content/memories.ts)
  * SIM_PRICES=1 prints, as JSON, each of those prices the first time the bot
  * paid it: the wait since its previous purchase, and its price in seconds of
@@ -145,14 +150,11 @@ function applyTuning(): void {
     stageGrowth?: Record<string, number>;
     price?: Record<string, number>;
     genQps?: Record<string, number>;
-    entries?: Record<string, number>;
-    stageCosts?: number[];
+    curve?: Partial<CostCurve>;
     memory?: Partial<typeof MEMORIES>;
   };
-  if (tune.stageCosts)
-    setStageCosts(STAGES.map((st, i) => 10 ** (tune.stageCosts![i] ?? Math.log10(st.cost))));
+  if (tune.curve) applyCostCurve(tune.curve);
   Object.assign(MEMORIES, tune.memory);
-  if (tune.entries) applyStageCurve(tune.entries);
   const priceMult: number[] = [];
   REALMS.forEach((r, i) => (priceMult[i] = (priceMult[i - 1] ?? 1) * (tune.shift?.[r.id] ?? 1)));
   const realmIndex = (id: string) => REALMS.findIndex((r) => r.id === id);
@@ -197,20 +199,9 @@ function applyTuning(): void {
   }
 }
 
-/**
- * Replaces every breakthrough cost with a smooth curve through the realm
- * entry costs (log10 of qi, by realm id; Qi Condensation keeps its own), so
- * stages within and between realms grow at a gradually changing rate instead
- * of jumping at realm gates. Everything priced for a realm (its gated
- * resources, at the same output per qi) moves with the realm's entry cost, and
- * realm techniques are repriced from their stages.
- */
-function applyStageCurve(entries: Record<string, number>): void {
-  const knots = [{ x: 1, y: Math.log10(STAGES[1].cost) }];
-  for (const [id, y] of Object.entries(entries)) knots.push({ x: firstStageOfRealm(id), y });
-  knots.sort((p, q) => p.x - q.x);
-  const logCost = monotoneSpline(knots);
-  setStageCosts(STAGES.map((st, i) => (i < 2 ? st.cost : 10 ** logCost(i))));
+function applyCostCurve(curve: Partial<CostCurve>): void {
+  Object.assign(COST_CURVE, curve);
+  setStageCosts(curveCosts(COST_CURVE, STAGES.length));
 }
 
 /**
@@ -239,32 +230,6 @@ function setStageCosts(costs: number[]): void {
   for (const u of UPGRADES)
     if (u.unlock.type === 'realm' && u.realmStage !== undefined)
       (u as { cost: number }).cost = realmTechniqueCost(u.unlock.realm, u.realmStage);
-}
-
-/** Fritsch-Carlson monotone cubic through the knots (sorted by x). */
-function monotoneSpline(knots: { x: number; y: number }[]): (x: number) => number {
-  const n = knots.length;
-  const slope = knots.slice(1).map((k, i) => (k.y - knots[i].y) / (k.x - knots[i].x));
-  const tangent = knots.map((_, i) => {
-    if (i === 0) return slope[0];
-    if (i === n - 1) return slope[n - 2];
-    const [a, b] = [slope[i - 1], slope[i]];
-    const [h0, h1] = [knots[i].x - knots[i - 1].x, knots[i + 1].x - knots[i].x];
-    return a * b <= 0 ? 0 : (3 * (h0 + h1)) / ((2 * h1 + h0) / a + (h1 + 2 * h0) / b);
-  });
-  return (x) => {
-    let i = knots.findIndex((_, j) => j < n - 1 && x <= knots[j + 1].x);
-    if (i < 0) i = n - 2;
-    const [k0, k1] = [knots[i], knots[i + 1]];
-    const h = k1.x - k0.x;
-    const t = (x - k0.x) / h;
-    return (
-      (2 * t ** 3 - 3 * t ** 2 + 1) * k0.y +
-      (t ** 3 - 2 * t ** 2 + t) * h * tangent[i] +
-      (-2 * t ** 3 + 3 * t ** 2) * k1.y +
-      (t ** 3 - t ** 2) * h * tangent[i + 1]
-    );
-  };
 }
 
 /**
@@ -594,7 +559,7 @@ const efficiencyCheckedRealms = new Set<number>();
  * times as much qi/s per qi as the best resource you can buy; each later one
  * in the same realm costs CALIBRATE_TIER_COST times more, at
  * CALIBRATE_TIER_EFFICIENCY times the efficiency. Prints the prices as
- * CALIBRATION {id: [baseCost, baseQps]}.
+ * CALIBRATION {id: [share of the realm's first breakthrough, qi/s per qi]}.
  */
 const CALIBRATE_SECONDS = 60;
 const CALIBRATE_EFFICIENCY = 2;
@@ -620,7 +585,7 @@ function calibrateGatedResources(): void {
     def.baseCost = tierCost / costPerBase;
     def.baseQps =
       (CALIBRATE_EFFICIENCY * CALIBRATE_TIER_EFFICIENCY ** tier * best * tierCost) / qpsPerBase;
-    calibration[g.id] = [def.baseCost, def.baseQps];
+    calibration[g.id] = [def.baseCost / realm.stageCosts[0], def.baseQps / def.baseCost];
   });
 }
 

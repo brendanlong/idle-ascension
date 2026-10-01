@@ -16,10 +16,11 @@ NEVER_REGRESS_HOURS = 8
 REALMS = ['qiCondensation', 'foundation', 'coreFormation', 'nascentSoul', 'spiritSevering',
           'daoSeeking', 'immortalAscension']
 
-def run(job, tune=TUNE):
+def run(job, tune=TUNE, calibrate=False):
+    """calibrate: price realm-gated resources from the economy as they unlock (SIM_CALIBRATE)."""
     player, treasures, regress, seed = job
     env = dict(os.environ, SIM_SEED=str(seed), SIM_PLAYER=player, SIM_TREASURES=treasures,
-               SIM_REGRESS=regress, SIM_SPEC='1', SIM_TUNE=tune)
+               SIM_REGRESS=regress, SIM_SPEC='1', SIM_TUNE=tune, SIM_CALIBRATE='1' if calibrate else '')
     # Never regressing is meant to be tedious: stop at NEVER_REGRESS_HOURS and count it slow enough.
     hours = NEVER_REGRESS_HOURS if regress == 'never' else 40
     out = subprocess.run(['npx', 'tsx', 'scripts/sim.ts', str(hours)], capture_output=True, text=True,

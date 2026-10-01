@@ -23,6 +23,19 @@ python3 scripts/balance/spec.py params.json # grade a SIM_TUNE candidate
   again from the same point barely helps.
 - No bursts where you can suddenly buy everything at once.
 
+## Breakthrough costs are a smooth curve
+
+Each stage costs a fixed multiple of the one before. That multiple blends
+smoothly from an early value to a late one around Core Formation, where
+regression unlocks, so the first life can climb gently and later lives
+steeply (`CostCurve` in `scripts/sim.ts`). Only the curve's few parameters
+get tuned, never individual stages. That way the curve doesn't depend on
+when anyone happens to regress: regressing only resets the sawtooth.
+
+If a stage is off target even though the curve is smooth, the content
+around it is to blame (a burst of income from several upgrades at once, or a
+drought), and that's what to fix.
+
 ## Reference players
 
 Checks are measured on bots that buy whatever pays for itself soonest, and
@@ -139,6 +152,3 @@ Constantly regressing is a fine strategy too, as long as it isn't the only one.
 - **Total length.** It follows from the sawtooth: roughly the number of climbs
   times how long each takes before it gets boring. Adjust the floor, growth
   and boredom threshold to change it.
-- **A separate curve before regression unlocks.** The first life might want
-  its own growth rate, so the early realms feel right and the first plateau
-  lands near Core Formation.

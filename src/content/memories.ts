@@ -9,5 +9,5 @@ export const MEMORIES = {
   first: 10,
   growthPerStage: 1.25,
   /** How much each Memory adds to qi gain, before memoryPower. */
-  weight: 2.5,
+  weight: 1.67,
 };

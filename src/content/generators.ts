@@ -1,3 +1,5 @@
+import { REALMS_BY_ID } from './realms';
+
 export interface GeneratorDef {
   id: string;
   name: string;
@@ -17,6 +19,16 @@ export interface GeneratorDef {
 }
 
 export const GENERATOR_COST_GROWTH = 1.15;
+
+/**
+ * A realm-gated resource: priced at `costShare` times its realm's first
+ * breakthrough, making `qpsPerQi` qi/s for each qi of its price, so it moves
+ * with the breakthrough curve (fit with scripts/balance/calibrate.py).
+ */
+function gated(minRealm: string, costShare: number, qpsPerQi: number) {
+  const baseCost = REALMS_BY_ID.get(minRealm)!.stageCosts[0] * costShare;
+  return { minRealm, baseCost, baseQps: baseCost * qpsPerQi };
+}
 
 export const GENERATORS: readonly GeneratorDef[] = [
   {
@@ -124,9 +136,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     name: 'Founded Sect',
     icon: '🏯',
     description: 'A mountain, a gate, and a thousand disciples who call you Patriarch.',
-    minRealm: 'spiritSevering',
-    baseCost: 3e19,
-    baseQps: 2.2e11,
+    ...gated('spiritSevering', 0.042, 1.7e-12),
     upgradeName: 'Sect Charter',
     revival: { name: 'The Sect That Rules the Continent' },
   },
@@ -135,9 +145,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     name: 'Bound True Dragon',
     icon: '🐉',
     description: 'A true dragon, bound by oath. It exhales qi and inhales mountains.',
-    minRealm: 'spiritSevering',
-    baseCost: 4.4e20,
-    baseQps: 1.6e12,
+    ...gated('spiritSevering', 0.64, 8.7e-13),
     upgradeName: 'Dragon Pearl',
     revival: { name: 'Ancestor of Dragons' },
   },
@@ -146,9 +154,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     name: 'Inner Small World',
     icon: '🌍',
     description: 'A world inside your body, with its own sun, rivers and spirit veins.',
-    minRealm: 'daoSeeking',
-    baseCost: 5.9e23,
-    baseQps: 2.5e15,
+    ...gated('daoSeeking', 0.2, 1.1e-14),
     upgradeName: 'World Seed',
     revival: { name: 'A World That Cultivates' },
   },
@@ -157,9 +163,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     name: 'Star River',
     icon: '🌌',
     description: 'You pluck stars from the sky and drink their light.',
-    minRealm: 'daoSeeking',
-    baseCost: 8.7e24,
-    baseQps: 1.8e16,
+    ...gated('daoSeeking', 3, 0.575),
     upgradeName: 'Star Map',
     revival: { name: 'Master of the Firmament' },
   },
@@ -168,9 +172,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     name: 'Incense of Ten Thousand Worlds',
     icon: '🛕',
     description: 'Mortals in countless worlds burn incense to you. Their faith becomes qi.',
-    minRealm: 'immortalAscension',
-    baseCost: 2.5e30,
-    baseQps: 9.8e21,
+    ...gated('immortalAscension', 0.57, 6.1e-15),
     upgradeName: 'Wayside Shrines',
     revival: { name: 'Worshipped Across Eternity' },
   },
@@ -179,9 +181,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     name: 'Seat in the Heavenly Court',
     icon: '🏛️',
     description: 'A throne among the immortals, and a share of heaven itself.',
-    minRealm: 'immortalAscension',
-    baseCost: 3.3e31,
-    baseQps: 7.1e22,
+    ...gated('immortalAscension', 9, 3e-15),
     upgradeName: 'Jade Tablet of Office',
   },
   {
@@ -189,9 +189,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
     name: 'Shard of Primordial Chaos',
     icon: '🌑',
     description: 'A fragment of the nothing that came before heaven and earth.',
-    minRealm: 'immortalAscension',
-    baseCost: 5.4e32,
-    baseQps: 5.4e23,
+    ...gated('immortalAscension', 130, 1.5e-15),
     upgradeName: 'Touching the Void',
   },
 ];
