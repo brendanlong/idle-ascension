@@ -105,10 +105,10 @@ const OPTIONAL_TRIAL_SCORE = 0.7;
 /**
  * SIM_REGRESS: when the bot regresses.
  *   efficient (default)  once bored (the next stage is more than the spec's
- *                        sawtooth.boredSeconds away) and regressing pays:
- *                        replaying this life and then reaching the next stage
- *                        with the new Memories would be REGRESS_PAYOFF times
- *                        sooner than waiting
+ *                        sawtooth.boredSeconds away), if regressing would
+ *                        multiply the Memory bonus by REGRESS_AT_GAIN: what a
+ *                        player does when a big number tempts them (the spec's
+ *                        payoff check says whether it was worth it)
  *   never                never, to check regression is optional
  *   eager                also whenever nothing new has been bought for
  *                        STUCK_SECONDS (3 minutes), for any gain
@@ -117,13 +117,7 @@ const REGRESS_MODE = process.env.SIM_REGRESS ?? 'efficient';
 const NO_CORES = !!process.env.SIM_NO_CORES;
 const STUCK_SECONDS = 3 * 60;
 const REGRESS_WHEN_STUCK_AT_GAIN = 1.1;
-/**
- * After regressing with the Memory bonus multiplied by G, replaying this life
- * takes about its length ÷ G (but no less than the last replay did) and the
- * wait for the next stage about wait ÷ G. The bot regresses when that's this
- * many times sooner than waiting.
- */
-const REGRESS_PAYOFF = 2;
+const REGRESS_AT_GAIN = 3;
 /**
  * An action: buying a technique, core or breakthrough, regressing, or buying
  * resources worth this much more passive qi/s since the last action.
@@ -431,13 +425,6 @@ function repeatRegressionStages(pending: number): number {
   return (
     Math.log(memoryMult(2 * pending) / memoryMult(pending)) / Math.log(BALANCE_SPEC.sawtooth.growth)
   );
-}
-
-function regressionPays(memoryGain: number): boolean {
-  const life = time - Math.max(0, lastRegression);
-  const replay = Math.max(life / memoryGain, replayTimes.at(-1) ?? 0);
-  const wait = secondsToNextStage();
-  return wait > REGRESS_PAYOFF * (replay + wait / memoryGain);
 }
 
 function secondsToNextStage(): number {
@@ -896,9 +883,7 @@ while (time < maxHours * 3600) {
     REGRESS_MODE !== 'never' &&
     memorySettledFraction(state) >= 1 &&
     ((REGRESS_MODE === 'eager' && stuck && memoryGain >= REGRESS_WHEN_STUCK_AT_GAIN) ||
-      (memoryGain > REGRESS_PAYOFF &&
-        secondsToNextStage() > BALANCE_SPEC.sawtooth.boredSeconds &&
-        regressionPays(memoryGain)))
+      (memoryGain >= REGRESS_AT_GAIN && secondsToNextStage() > BALANCE_SPEC.sawtooth.boredSeconds))
   ) {
     if (stuck) stuckRegressions++;
     if (previousLoopStuck && newPurchasesThisLoop === 0) futileRegressions++;

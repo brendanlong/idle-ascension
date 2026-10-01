@@ -28,7 +28,7 @@ START = {'curve': {'early': 0.9, 'late': 0.9, 'mid': 14, 'width': 2}, 'memory': 
          'ladder': {'costShare': 0.1, 'efficiencyStep': 0.5}}
 # (section, parameter, nudge, whether the nudge multiplies)
 NUDGES = [('curve', 'early', 0.1, False), ('curve', 'late', 0.1, False), ('curve', 'mid', 2, False),
-          ('curve', 'width', 1, False), ('memory', 'weight', 1.5, True),
+          ('curve', 'width', 1, False), ('memory', 'weight', 2, True),
           ('ladder', 'costShare', 2, True), ('ladder', 'efficiencyStep', 1.3, True)]
 # Long enough to see where a player who never regresses gets bored.
 LAYER_HOURS = 3

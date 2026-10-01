@@ -61,7 +61,8 @@ evenly spread whatever the curve's numbers are:
 ## Reference players
 
 Checks are measured on bots that buy whatever pays for itself soonest, and
-regress once bored, if it pays off (see `SIM_REGRESS` in `scripts/sim.ts`):
+regress once bored, if regressing would at least triple their Memory bonus
+(see `SIM_REGRESS` in `scripts/sim.ts`):
 
 - **active**: gathers motes the whole time. Pacing targets are set for this
   player, because its progress depends only on prices.
@@ -106,7 +107,8 @@ reach is the deepest stage it regressed from before reaching that stage.
 - Within a life, each stage takes at least `monotoneSlack`× as long as the
   previous one (both players).
 - Players regress once they're bored: when the next stage is more than
-  `boredSeconds` away and regressing pays off. The reference bot does this.
+  `boredSeconds` away and the Memory gain looks big. The reference bot does
+  this.
 - A second regression from the same place moves reach by at most
   `maxRepeatStages` stages.
 
@@ -167,9 +169,9 @@ Constantly regressing is a fine strategy too, as long as it isn't the only one.
 
 - An active player who never regresses is at least `withoutSlowdownAtLeast`×
   slower than the reference player (or doesn't finish within the cap).
-- The reference player regresses only when it pays off. Each regression
-  reaches the next new stage at least `minPayoff`× sooner than waiting would
-  have (estimated from income at the time of regressing).
+- Regressing when bored pays off: each of the reference player's
+  regressions reaches the next new stage at least `minPayoff`× sooner than
+  waiting would have (estimated from income at the time of regressing).
 - Replaying a finished realm takes at most `maxReplayShare` of the time its
   first visit took.
 
