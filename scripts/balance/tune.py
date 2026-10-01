@@ -58,7 +58,8 @@ def fixed_price(key):
 
 def all_keys():
     d = dump_prices()
-    keys = {f'up:{u}' for u in d['up'] if not fixed_price(f'up:{u}')} | {f'form:{i}' for i in range(len(d['form']))}
+    # The last core slot comes only from an insight the idle bot doesn't buy.
+    keys = {f'up:{u}' for u in d['up'] if not fixed_price(f'up:{u}')} | {f'form:{i}' for i in range(len(d['form']) - 1)}
     keys |= {f'grade:{g}' for g in range(1, len(d['grade']) - 1)}  # the last grade is only reachable at Godhood
     return keys
 

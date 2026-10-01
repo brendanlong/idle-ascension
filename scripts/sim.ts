@@ -175,6 +175,18 @@ function applyTuning(): void {
   STAGES.forEach((st, i) => {
     if (i > 1) (st as { cost: number }).cost = Math.max(st.cost, STAGES[i - 1].cost * 1.3);
   });
+  // So must core grades and core slots.
+  CORE_GRADES.forEach((grade, g) => {
+    if (g > 1)
+      scaled(
+        grade,
+        'refineCost',
+        Math.max(1, (CORE_GRADES[g - 1].refineCost * 1.3) / grade.refineCost),
+      );
+  });
+  (CORE_FORM_COSTS as number[]).forEach((cost, n, costs) => {
+    if (n > 0) costs[n] = Math.max(cost, costs[n - 1] * 1.3);
+  });
 }
 
 /**

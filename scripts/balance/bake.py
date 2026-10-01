@@ -37,8 +37,8 @@ ups = read('src/content/upgrades.ts')
 gens = read('src/content/generators.ts')
 gen_ids = set(re.findall(r"^    id: '(\w+)',", gens, re.M))
 for uid, cost in prices['up'].items():
-    if re.match(r'^(\w+)-1$', uid) and uid[:-2] in gen_ids:
-        continue  # resource techniques are priced from the resource's own cost
+    if re.match(r'^(\w+)-[15]$', uid) and uid[:-2] in gen_ids:
+        continue  # resource and revival techniques are priced from the resource's own cost
     pat = re.compile(r"(id: '" + re.escape(uid) + r"',.*?cost: )([^,\n]+)(,)", re.S)
     ups, n = pat.subn(lambda mm: mm.group(1) + lit(cost) + mm.group(3), ups, count=1)
     assert n == 1, uid
