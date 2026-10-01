@@ -1,3 +1,5 @@
+import '@fontsource-variable/noto-serif/wght.css';
+import '@fontsource-variable/noto-serif/wght-italic.css';
 import { render } from 'preact';
 import { App } from './ui/App';
 import { loadAnalytics } from './ui/analytics';
