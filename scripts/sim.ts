@@ -29,7 +29,6 @@ import { MAX_TREASURE_LEVEL, TREASURES } from '../src/content/treasures';
 import {
   attemptBreakthrough,
   breakthroughBlocker,
-  breakthroughCost,
   nextStage,
   recordTribulationTrial,
 } from '../src/engine/breakthrough';
@@ -530,7 +529,7 @@ function candidates(): Candidate[] {
   if (next && (blocker === null || blocker === 'Not enough qi.')) {
     list.push({
       key: `stage:${next.index}`,
-      cost: breakthroughCost(state, next.index),
+      cost: next.cost,
       tryOn: () => {
         state.stage++;
         return () => state.stage--;

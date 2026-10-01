@@ -124,8 +124,10 @@ describe('regression', () => {
   });
 
   it('compounds ordinary perks', () => {
-    expect(perkEffects(PERKS_BY_ID.get('meridians')!, 3)[0].value).toBe(8);
-    expect(perkEffects(PERKS_BY_ID.get('meridians')!, 0)).toEqual([]);
+    expect(perkEffects(PERKS_BY_ID.get('bargain')!, 3)[0].value).toBeCloseTo(0.95 ** 3);
+    expect(perkEffects(PERKS_BY_ID.get('bargain')!, 0)).toEqual([]);
+    // Remembered Meridian Paths grows logarithmically instead: x2, x3 at level 3, x4 at 7.
+    expect(perkEffects(PERKS_BY_ID.get('meridians')!, 3)[0].value).toBe(3);
   });
 
   it('lets uncapped perks be bought past their old caps', () => {

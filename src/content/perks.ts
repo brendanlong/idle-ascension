@@ -41,6 +41,7 @@ export const PERKS: readonly PerkDef[] = [
     maxLevel: Infinity,
     baseCost: 1,
     costGrowth: 3,
+    scaling: 'diminishing',
     effects: [{ type: 'mult', stat: 'moteBaseMult', value: 2 }],
   },
   {

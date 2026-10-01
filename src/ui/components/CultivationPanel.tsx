@@ -4,7 +4,6 @@ import { REALMS, STAGES, stageName, type RealmDef } from '../../content/realms';
 import {
   attemptBreakthrough,
   breakthroughBlocker,
-  breakthroughCost,
   isFamiliarStage,
   nextStage,
   tribulationPassScore,
@@ -31,7 +30,7 @@ export function BreakthroughBox() {
   }
   const nextRealm = REALMS[next.realmIndex];
   const blocker = breakthroughBlocker(state);
-  const cost = breakthroughCost(state, next.index);
+  const cost = next.cost;
   const familiar = isFamiliarStage(state, next.index);
   const progress = Math.min(1, state.qi / cost);
   const tribulation = next.isMajor && !familiar ? nextRealm.tribulation : undefined;
@@ -52,9 +51,9 @@ export function BreakthroughBox() {
           {game.fmt(state.qi)} / {game.fmt(cost)}
         </span>
       </div>
-      {familiar && (
+      {familiar && next.isMajor && nextRealm.tribulation && (
         <div class="muted small">
-          You've walked this path before: it costs far less, and nothing will stand in your way.
+          You've survived this tribulation before. This time it parts before you.
         </div>
       )}
       {eta > 0 && eta < 86400 * 30 && (
