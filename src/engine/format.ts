@@ -39,7 +39,11 @@ function withSuffix(
 export function formatNumber(n: number, style: NumberFormat = 'short'): string {
   if (!Number.isFinite(n)) return n > 0 ? '∞' : '-∞';
   if (n < 0) return `-${formatNumber(-n, style)}`;
-  if (n < 1000) return n < 10 && !Number.isInteger(n) ? n.toFixed(1) : Math.floor(n).toString();
+  if (n < 10 && !Number.isInteger(n)) {
+    const tenths = n.toFixed(1);
+    return tenths === '10.0' ? '10' : tenths;
+  }
+  if (n < 1000) return Math.floor(n).toString();
 
   const suffixed =
     style === 'myriad'

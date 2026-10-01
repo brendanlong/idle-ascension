@@ -6,6 +6,7 @@ describe('formatNumber', () => {
     expect(formatNumber(5.25)).toBe('5.3');
     expect(formatNumber(999)).toBe('999');
     expect(formatNumber(4.98)).toBe('5.0');
+    expect(formatNumber(9.96)).toBe('10');
     expect(formatNumber(1_500_000)).toBe('1.50M');
     expect(formatNumber(12_345)).toBe('12.3K');
     expect(formatNumber(123_456)).toBe('123K');
