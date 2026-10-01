@@ -70,6 +70,13 @@ def main():
     for it in range(iterations):
         with ThreadPoolExecutor(len(SEEDS)) as ex:
             res = list(ex.map(lambda s: run(params, s), SEEDS))
+        # Keep every evaluated set of prices: the fit is noisy, so pick the best round, not the last.
+        regs = statistics.median(r['loops'] for r in res)
+        futile = statistics.median(r['futile'] for r in res)
+        history = json.load(open(path + '.history')) if os.path.exists(path + '.history') else []
+        history.append({'regressions': regs, 'futile': futile, 'done': sum(r['done'] for r in res),
+                        'hours': statistics.median(r['time'] for r in res) / 3600, 'params': json.loads(json.dumps(params))})
+        json.dump(history, open(path + '.history', 'w'))
         price, gen_qps = params.setdefault('price', {}), params.setdefault('genQps', {})
         errs, by_realm, long_waits = [], {}, []
         for key in set().union(*(r['buys'].keys() for r in res)):

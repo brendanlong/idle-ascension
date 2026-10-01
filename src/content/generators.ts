@@ -110,8 +110,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     icon: '🏯',
     description: 'A mountain, a gate, and a thousand disciples who call you Patriarch.',
     minRealm: 'spiritSevering',
-    baseCost: 5.9e22,
-    baseQps: 3.6e9,
+    baseCost: 1.6e23,
+    baseQps: 5.3e9,
     upgradeName: 'Sect Charter',
   },
   {
@@ -130,8 +130,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     icon: '🌍',
     description: 'A world inside your body, with its own sun, rivers and spirit veins.',
     minRealm: 'daoSeeking',
-    baseCost: 1.2e23,
-    baseQps: 3.9e9,
+    baseCost: 9.7e22,
+    baseQps: 7.1e9,
     upgradeName: 'World Seed',
   },
   {
@@ -140,8 +140,8 @@ export const GENERATORS: readonly GeneratorDef[] = [
     icon: '🌌',
     description: 'You pluck stars from the sky and drink their light.',
     minRealm: 'daoSeeking',
-    baseCost: 4.2e22,
-    baseQps: 5.5e9,
+    baseCost: 2.6e23,
+    baseQps: 5.7e9,
     upgradeName: 'Star Map',
   },
   {

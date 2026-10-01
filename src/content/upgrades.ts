@@ -133,7 +133,7 @@ const scriptureUpgrades: UpgradeDef[] = [
     name: 'Sunflower Manual',
     description:
       '"To practice this art, one must first—" You close the book. You will not be practicing this art.',
-    cost: 7_777,
+    cost: 7_800,
     unlock: { type: 'realm', realm: 'qiCondensation' },
     effects: [{ type: 'mult', stat: 'globalMult', value: 1.01 }],
   },
