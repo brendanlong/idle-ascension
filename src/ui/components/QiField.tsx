@@ -35,6 +35,8 @@ interface FloatText {
 }
 
 const MAX_MOTES = 60;
+const MOTE_MIN_LIFE = 8;
+const MOTE_MAX_LIFE = 14;
 const ABSORB_RADIUS = 46;
 const FLOAT_LIFETIME = 1.1;
 /** Absorbed motes are credited in batches to avoid re-rendering every animation frame. */
@@ -84,10 +86,21 @@ class FieldSim {
     return absorbed;
   }
 
-  /** Spawns the motes that would have appeared over `seconds` while the field wasn't shown, up to the cap. */
+  /**
+   * Brings the field to how it would look after `seconds` more of running
+   * unseen: motes already here age, and motes that would have spawned in
+   * that time appear at the age they'd be now, if they wouldn't have faded yet.
+   */
   catchUp(seconds: number, spawnPerSecond: number): void {
-    const missed = Math.min(Math.floor(seconds * spawnPerSecond), MAX_MOTES - this.motes.length);
-    for (let i = 0; i < missed; i++) this.spawnMote();
+    for (const m of this.motes) m.age += seconds;
+    this.motes = this.motes.filter((m) => m.age < m.life);
+    // Only the last MOTE_MAX_LIFE seconds of spawns can still be alive.
+    const window = Math.min(seconds, MOTE_MAX_LIFE);
+    const expected = window * spawnPerSecond;
+    const count = Math.floor(expected) + (Math.random() < expected % 1 ? 1 : 0);
+    for (let i = 0; i < count && this.motes.length < MAX_MOTES; i++) {
+      this.spawnMote(Math.random() * window);
+    }
   }
 
   /** Removes the mote nearest the field's center (the orb), returning where it was. */
@@ -104,14 +117,17 @@ class FieldSim {
     return { x: mote.x, y: mote.y };
   }
 
-  private spawnMote(): void {
+  /** Adds a mote that spawned `age` seconds ago, unless it would already have faded. */
+  private spawnMote(age = 0): void {
+    const life = MOTE_MIN_LIFE + Math.random() * (MOTE_MAX_LIFE - MOTE_MIN_LIFE);
+    if (age >= life) return;
     this.motes.push({
       x: Math.random() * this.width,
       y: Math.random() * this.height,
       vx: (Math.random() - 0.5) * 12,
       vy: (Math.random() - 0.5) * 12,
-      age: 0,
-      life: 8 + Math.random() * 6,
+      age,
+      life,
     });
   }
 
