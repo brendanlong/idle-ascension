@@ -7,11 +7,7 @@ import { createInitialState, type GameState } from './state';
 import { computeModifiers } from './stats';
 
 const REGRESSION_REALM = 'coreFormation';
-/**
- * Memories gained by regressing from a given stage: exponential in how deep
- * you got, so a regression from somewhere new is a big boost, while
- * regressing again from the same depth only adds a little.
- */
+/** Memories gained by regressing from a given stage: exponential in how deep you got (see MEMORIES). */
 export function memoriesForStage(stage: number): number {
   const first = firstStageOfRealm(REGRESSION_REALM);
   if (stage < first) return 0;

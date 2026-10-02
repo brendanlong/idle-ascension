@@ -155,7 +155,7 @@ export function computeStats(state: GameState, includeBuffs = true): Stats {
   const realmMult = realmMultiplier(state.stage);
   const memoryMult = (1 + MEMORIES.weight * state.prestige.memories) ** mods.memoryPower;
   const cycleMult =
-    GENERATING_CYCLE_BONUS ** generatingPairs(new Set(state.cores.map((c) => c.element)));
+    1 + GENERATING_CYCLE_BONUS * generatingPairs(new Set(state.cores.map((c) => c.element)));
   const coreMult = state.cores.reduce((m, c) => m * CORE_GRADES[c.grade].mult, 1);
   const global = mods.globalMult * realmMult * memoryMult * cycleMult * coreMult;
 

@@ -68,8 +68,8 @@ export const ELEMENTS_BY_ID: ReadonlyMap<ElementId, ElementDef> = new Map(
   ELEMENTS.map((e) => [e.id, e]),
 );
 
-/** Multiplier for each pair of adjacent elements in the generating cycle. */
-export const GENERATING_CYCLE_BONUS = 1.25;
+/** Added to qi gain (+25%) for each pair of adjacent elements in the generating cycle. */
+export const GENERATING_CYCLE_BONUS = 0.25;
 
 export interface CoreGradeDef {
   name: string;
@@ -78,15 +78,16 @@ export interface CoreGradeDef {
   color: string;
 }
 
+/** Each grade doubles the last, so forming or refining a core always doubles qi gain. */
 export const CORE_GRADES: readonly CoreGradeDef[] = [
-  { name: 'Mud', mult: 1.2, color: '#6b5a45' },
-  { name: 'Iron', mult: 1.5, color: '#7d8590' },
-  { name: 'Bronze', mult: 2, color: '#b0773e' },
-  { name: 'Silver', mult: 2.5, color: '#c9d1da' },
-  { name: 'Gold', mult: 3, color: '#f0c24b' },
-  { name: 'Jade', mult: 4, color: '#63c29a' },
-  { name: 'Starsteel', mult: 5, color: '#9fb8ff' },
-  { name: 'Primordial', mult: 7, color: '#f4f0ff' },
+  { name: 'Mud', mult: 2, color: '#6b5a45' },
+  { name: 'Iron', mult: 4, color: '#7d8590' },
+  { name: 'Bronze', mult: 8, color: '#b0773e' },
+  { name: 'Silver', mult: 16, color: '#c9d1da' },
+  { name: 'Gold', mult: 32, color: '#f0c24b' },
+  { name: 'Jade', mult: 64, color: '#63c29a' },
+  { name: 'Starsteel', mult: 128, color: '#9fb8ff' },
+  { name: 'Primordial', mult: 256, color: '#f4f0ff' },
 ];
 
 /**

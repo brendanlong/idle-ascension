@@ -47,11 +47,11 @@ describe('regression', () => {
     );
     expect(byRealm).toEqual({
       coreFormation: 10,
-      nascentSoul: 24,
-      spiritSevering: 59,
-      daoSeeking: 145,
-      immortalAscension: 355,
-      godhood: 867,
+      nascentSoul: 810,
+      spiritSevering: 65_610,
+      daoSeeking: 5_314_410,
+      immortalAscension: 430_467_210,
+      godhood: 34_867_844_010,
     });
   });
 
@@ -133,7 +133,7 @@ describe('regression', () => {
 
   it('lets uncapped perks be bought past their old caps', () => {
     const state = newGame();
-    state.prestige.memories = 1e9;
+    state.prestige.memories = 1e30;
     for (let i = 0; i < 10; i++) expect(buyPerk(state, 'meridians')).toBe(true);
     expect(perkStatus(state, 'meridians')).toBe('available');
   });

@@ -35,7 +35,7 @@
     "neverSlowdownAtLeast": 4,
     "twicePerRealmFaster": [1.3, 1.5],
     "maxReplayShare": 0.2,
-    "maxRepeatGain": 2.5
+    "maxRepeatGain": 1.25
   },
   "treasures": {
     "levelOneGain": [1.2, 3],

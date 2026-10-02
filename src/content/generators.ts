@@ -26,7 +26,7 @@ export const GENERATOR_COST_GROWTH = 1.15;
  * The first tier is priced by hand. Fit with scripts/balance/build_costs.py
  * so a new tier arrives every couple of stages.
  */
-export const RESOURCE_LADDER = { costRatio: 18.2, efficiencyStep: 0.5 };
+export const RESOURCE_LADDER = { costRatio: 13.2, efficiencyStep: 0.5 };
 
 export const GENERATORS: readonly GeneratorDef[] = (
   [

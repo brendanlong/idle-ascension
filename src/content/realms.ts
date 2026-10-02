@@ -40,9 +40,9 @@ const PHASES = ['Early', 'Middle', 'Late', 'Peak'];
  * docs/balance-spec.md) takes the target time for each stage, then smoothed.
  */
 export const STAGE_COSTS: readonly number[] = [
-  0, 54, 85, 170, 470, 1_700, 6_900, 36_000, 210_000, 1_600_000, 1.2e7, 9.3e7, 7.3e8, 5.1e9, 3.5e10,
-  2.9e11, 2.8e12, 5.1e13, 8.9e14, 1.1e16, 9.4e16, 5.8e17, 1.7e18, 4.8e18, 1.4e19, 5e19, 1.7e20,
-  7.1e20, 3.9e21, 4.2e22, 4.2e23, 4.8e24, 5.9e25, 6.8e26, 4.7e27,
+  0, 54, 83, 170, 430, 1_500, 5_600, 26_000, 120_000, 680_000, 3_500_000, 2.1e7, 1.3e8, 7.7e8,
+  4.7e9, 4.5e10, 5.2e11, 1.1e13, 3.2e14, 8e15, 1.4e17, 1.6e18, 7.7e18, 2.7e19, 7.9e19, 2.8e20,
+  6.9e20, 2.3e21, 8e21, 3.6e22, 1.4e23, 8.8e23, 6.1e24, 5e25, 3.7e26,
 ];
 
 const REALM_DEFS: readonly Omit<RealmDef, 'stageCosts'>[] = [

@@ -55,7 +55,10 @@ Content is defined first, and breakthrough costs are built on top of it:
 - **Cores** (`engine/cores.ts`): each realm's new core forms a third of the
   way through its realm and gets its first refine two thirds of the way
   through; every core gains a grade per realm after that, with the older
-  cores' refines spread over the rest of each realm.
+  cores' refines spread over the rest of each realm. Forming or refining a
+  core always doubles qi gain, so cores grow exponentially like Memories and
+  skipping them puts you steadily further behind. The generating cycle adds a
+  small bonus (+25% per adjacent pair).
 
 `build_costs.py` then plays the reference player and prices each stage so it
 takes its target time (a stage takes about its cost ÷ income), smoothing the
@@ -130,9 +133,13 @@ events) can be generous, as long as they multiply idle income only.
 - Replaying a finished realm takes at most `maxReplayShare` of the time its
   first visit took.
 
-Memories are exponential in stage index (`src/content/memories.ts`): each
-stage deeper you regress from yields `growthPerStage` times as many, and
-`weight` sets how much each adds to qi gain.
+Memories are exponential in stage index and qi gain grows logarithmically
+with them (`src/content/memories.ts`): each doubling of your Memories
+multiplies qi by the same small factor. Regressing again from the same stage
+only doubles them, so it's barely worth it, while each stage deeper is worth
+`growthPerStage` ^ `memoryPower`, so regressing a realm later is a good boost.
+The reference player's once-per-realm schedule is what breakthrough costs are
+built around.
 
 ### 6. Treasures (`treasures`)
 

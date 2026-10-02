@@ -70,7 +70,7 @@ export function baseModifiers(): Modifiers {
     offlineEfficiency: 0.5,
     coreSlots: 0,
     coreCostMult: 1,
-    memoryPower: 1,
+    memoryPower: 0.2,
     startingStage: 0,
   };
 }
