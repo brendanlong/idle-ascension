@@ -22,7 +22,7 @@ import json, math, os, statistics, sys
 from concurrent.futures import ThreadPoolExecutor
 
 sys.path.insert(0, os.path.dirname(__file__))
-from spec import SPEC, bored_at, run, sawtooth_ratios
+from spec import SPEC, bored_at, never_regress_ratios, run, sawtooth_ratios, tolerance
 
 START = {'curve': {'early': 0.9, 'late': 0.9, 'mid': 14, 'width': 2}, 'memory': {'weight': 1.67},
          'ladder': {'costShare': 0.1, 'efficiencyStep': 0.5}}
@@ -53,7 +53,15 @@ def score(params, history, path):
     stage_err = {k: statistics.median(v) for k, v in errs.items()}
     # Not reaching Godhood counts as far off for every stage it never reached.
     missing = n - len(stage_err)
-    err = (sum(abs(e) for e in stage_err.values()) + 5 * missing) / n
+    # Early stages only count once they're further off than they're allowed to be.
+    lenient = {k: max(0, abs(e) - math.log2(tolerance(k)) + math.log2(SPEC['sawtooth']['tolerance']))
+               if k <= SPEC['sawtooth']['earlyUntilStage'] else abs(e) for k, e in stage_err.items()}
+    err = (sum(lenient.values()) + 5 * missing) / n
+    # A player who never regresses should keep climbing past the plateau; only climbing too slowly counts.
+    never = results[len(seeds) + 2:len(seeds) + 4]
+    for r in never:
+        for k, ratio in never_regress_ratios(r).items():
+            err += max(0, -math.log2(ratio)) / n / len(never)
     # Each stage a layer gets boring outside its range costs as much as a stage twice off target.
     for key, offset in zip(layers, (len(seeds), len(seeds) + 2)):
         lo, hi = SPEC['layers'][key]

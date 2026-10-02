@@ -62,6 +62,17 @@ def sawtooth_ratios(run, n):
         ratios[k] = (max(1, run['stageSeconds'][k]) / target, reach)
     return ratios
 
+def tolerance(k):
+    """How far stage k's time may be from the sawtooth: early stages are allowed to drag."""
+    st = SPEC['sawtooth']
+    return st['earlyTolerance'] if k <= st['earlyUntilStage'] else st['tolerance']
+
+def never_regress_ratios(run):
+    """Past the plateau, a player who never regresses should climb growth x per stage from boredSeconds."""
+    st, start = SPEC['sawtooth'], SPEC['layers']['neverRegressClimbFrom']
+    return {k: max(1, sec) / (st['boredSeconds'] * st['growth'] ** (k - start))
+            for k, sec in enumerate(run['stageSeconds']) if k > start}
+
 def bored_at(run):
     """The first stage that takes longer than boredSeconds."""
     return next((k for k, sec in enumerate(run['stageSeconds'])
@@ -106,10 +117,11 @@ def main():
     off = []
     for k, xs in sorted(by_stage.items()):
         ratio = statistics.median(x[0] for x in xs)
-        if not 1 / st['tolerance'] <= ratio <= st['tolerance']:
+        if not 1 / tolerance(k) <= ratio <= tolerance(k):
             off.append((k, ratio, statistics.median(x[1] for x in xs)))
     check(f"active stage times are floor ({st['floorFirst']}s rising to {st['floorLast']}s) x "
-          f"{st['growth']} per stage past the deepest regression, within x{st['tolerance']}", not off,
+          f"{st['growth']} per stage past the deepest regression, within x{st['tolerance']} "
+          f"(x{st['earlyTolerance']} up to stage {st['earlyUntilStage']})", not off,
           ', '.join(f'stage {k} x{r:.2f} (reach {reach:g})' for k, r, reach in off))
     for name, rs in [('active', active), ('passive', passive)]:
         faster = []
@@ -135,6 +147,16 @@ def main():
         median = statistics.median(known) if known else None
         check(f'{name}: stages first take over {st["boredSeconds"]}s around stage {lo}-{hi}',
               median is not None and lo <= median <= hi, f'first boring stage per run: {at}')
+
+    climbing = {}
+    for r in runs('active', 'random', 'never'):
+        for k, ratio in never_regress_ratios(r).items():
+            climbing.setdefault(k, []).append(ratio)
+    fast = [(k, statistics.median(v)) for k, v in sorted(climbing.items())
+            if statistics.median(v) < 1 / st['tolerance']]
+    start = SPEC['layers']['neverRegressClimbFrom']
+    check(f"never regressing, stages past {start} keep climbing x{st['growth']} per stage from "
+          f"{st['boredSeconds']}s", not fast, ', '.join(f'stage {k} x{r:.2f}' for k, r in fast))
 
     # 2. Always something new to buy, never a pile at once.
     sb = SPEC['somethingToBuy']

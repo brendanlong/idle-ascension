@@ -9,7 +9,9 @@
     "boredSeconds": 300,
     "maxRepeatStages": 3.5,
     "firstLifeGrowth": 1.11,
-    "lastRealmLonger": 1.5
+    "lastRealmLonger": 1.5,
+    "earlyUntilStage": 9,
+    "earlyTolerance": 5
   },
   "somethingToBuy": {
     "maxGapShareOfStage": 0.6,
@@ -38,6 +40,7 @@
   "upgradeExempt": ["upgrade:sunflower"],
   "layers": {
     "resourcesOnlyBoredBy": [13, 17],
-    "withCoresBoredBy": [17, 21]
+    "withCoresBoredBy": [17, 21],
+    "neverRegressClimbFrom": 19
   }
 }

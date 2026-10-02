@@ -103,7 +103,9 @@ reach is the deepest stage it regressed from before reaching that stage.
 
 - Every stage's time is within `tolerance`× of floor × growth ^ (stages past
   reach), with the last realm's stages `lastRealmLonger`× longer: the final
-  realm should feel a bit long.
+  realm should feel a bit long. The first stages are the most novel, so they
+  may drag and lean on activity: up to `earlyUntilStage` they're allowed
+  `earlyTolerance`×, with targeted tuning if they turn out too slow.
 - Within a life, each stage takes at least `monotoneSlack`× as long as the
   previous one (both players).
 - Players regress once they're bored: when the next stage is more than
@@ -127,6 +129,9 @@ Each system carries the player further before stages get boring (take over
 - **Plus cores** (never regressing): around where the first regression should
   happen, stage `withCoresBoredBy`.
 - **Plus regression:** the whole game stays on the sawtooth.
+- **Without regressing**, from stage `neverRegressClimbFrom` on, stages keep
+  climbing `growth`× per stage from `boredSeconds`, so regressing is what
+  resets the climb.
 
 ### 2. Always something to buy (`somethingToBuy`)
 
