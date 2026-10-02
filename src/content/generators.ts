@@ -40,10 +40,10 @@ export const RESOURCE_LADDER = {
    * are gathering alone), so Spirit Herb Patches are tier 1.
    */
   start: { cost: 15, qps: 0.1 },
-  costRatio: 10.7,
-  costRatioLate: 11.4,
-  efficiencyStep: 0.706,
-  efficiencyStepLate: 0.271,
+  costRatio: 11.9,
+  costRatioLate: 16.9,
+  efficiencyStep: 0.713,
+  efficiencyStepLate: 0.314,
   stagesPerTier: 2,
 };
 
@@ -144,7 +144,6 @@ export const GENERATORS: readonly GeneratorDef[] = (
       name: 'Inner Small World',
       icon: '🌍',
       description: 'A world inside your body, with its own sun, rivers and spirit veins.',
-      minRealm: 'spiritSevering',
       upgradeName: 'World Seed',
       revival: { name: 'A World That Cultivates' },
     },
@@ -162,7 +161,6 @@ export const GENERATORS: readonly GeneratorDef[] = (
       name: 'Incense of Ten Thousand Worlds',
       icon: '🛕',
       description: 'Mortals in countless worlds burn incense to you. Their faith becomes qi.',
-      minRealm: 'daoSeeking',
       upgradeName: 'Wayside Shrines',
       revival: { name: 'Worshipped Across Eternity' },
     },
@@ -179,7 +177,6 @@ export const GENERATORS: readonly GeneratorDef[] = (
       name: 'Shard of Primordial Chaos',
       icon: '🌑',
       description: 'A fragment of the nothing that came before heaven and earth.',
-      minRealm: 'immortalAscension',
       upgradeName: 'Touching the Void',
     },
   ] as Omit<GeneratorDef, 'baseCost' | 'baseQps'>[]

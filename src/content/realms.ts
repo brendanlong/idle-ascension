@@ -42,7 +42,7 @@ const PHASES = ['Early', 'Middle', 'Late', 'Peak'];
  * the reference player, with resources and techniques alone, takes about the
  * target time for each stage.
  */
-export const BASE_COST_CURVE: number[] = [1.09834, 0.350391, 0.0256109, -0.000500479];
+export const BASE_COST_CURVE: number[] = [0.596299, 0.571405, 0.0157934, -0.000380759];
 
 /** BASE_COST_CURVE at every stage (call again if it changes). */
 export const BASE_STAGE_COSTS: number[] = [];
