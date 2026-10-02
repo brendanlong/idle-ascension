@@ -29,13 +29,11 @@ export const PRICING = { layered: true };
 export const CORE_CURVE = { from: 15 + 1 / 3, perStage: 0.85 };
 
 /**
- * The Memory equation: the reference player regresses every `interval`
- * stages (once per realm), from `firstRealm` on. On average it's half an
- * interval past its last regression, so its Memory bonus at stage k is the
- * game's Memory formula for having regressed from k - interval / 2, and every
- * interval before that.
+ * The regression equation: from the start of `firstRealm`, prices grow
+ * `perStage` times per stage on top of everything else. MEMORIES is fit to it
+ * (see fitMemories), not the other way round.
  */
-export const REGRESSION_CURVE = { firstRealm: 'nascentSoul', interval: 4 };
+export const REGRESSION_CURVE = { firstRealm: 'nascentSoul', perStage: 1.5, lag: 2 };
 
 function firstStage(layout: readonly RealmLayout[], realmIndex: number): number {
   return layout.slice(0, realmIndex).reduce((n, r) => n + r.stages, 0);
@@ -99,15 +97,25 @@ export function coreSchedule(layout: readonly RealmLayout[]): CoreEvent[] {
 
 /** Memories from regressing at a stage: exponential in how deep you got (see MEMORIES). */
 export function memoriesAt(layout: readonly RealmLayout[], stage: number): number {
-  return Math.floor(memoriesAtDepth(layout, stage));
-}
-
-/** memoriesAt without rounding, for fractional stages. */
-function memoriesAtDepth(layout: readonly RealmLayout[], stage: number): number {
   const first = firstStage(layout, realmIndex(layout, 'coreFormation'));
   if (stage < first) return 0;
   const last = firstStage(layout, layout.length) - 1;
-  return MEMORIES.first * MEMORIES.growthPerStage ** (Math.min(stage, last) - first);
+  return Math.floor(MEMORIES.first * MEMORIES.growthPerStage ** (Math.min(stage, last) - first));
+}
+
+/**
+ * Sets the Memory bonus's power and weight so that regressing from stage r
+ * multiplies qi gain by about REGRESSION_CURVE at r + lag: a player who
+ * regresses about once per realm keeps up with prices, and one who never
+ * does falls further behind every stage.
+ */
+export function fitMemories(layout: readonly RealmLayout[]): void {
+  const { firstRealm, perStage, lag } = REGRESSION_CURVE;
+  const growth = MEMORIES.growthPerStage;
+  const first = firstStage(layout, realmIndex(layout, 'coreFormation'));
+  const from = firstStage(layout, realmIndex(layout, firstRealm));
+  MEMORIES.power = Math.log(perStage) / Math.log(growth);
+  MEMORIES.weight = growth ** (first + lag - from) / MEMORIES.first;
 }
 
 /**
@@ -142,22 +150,8 @@ export function progressMultipliers(layout: readonly RealmLayout[]): number[] {
     );
   };
 
-  const { interval } = REGRESSION_CURVE;
-  const first = firstStage(layout, realmIndex(layout, REGRESSION_CURVE.firstRealm));
-  // The last regression is on entering the last realm before the final one.
-  const last = firstStage(layout, layout.length - 2);
-  /** The Memory bonus for having regressed every interval stages up to `reach`. */
-  const bonusLog = (reach: number) => {
-    let memories = 0;
-    for (let s = reach; s >= first; s -= interval) memories += memoriesAtDepth(layout, s);
-    return MEMORIES.power * Math.log(1 + MEMORIES.weight * memories);
-  };
-  const memoryLog = (k: number) => {
-    // The first regression is spread over the interval around it, like the rest.
-    if (k <= first - interval / 2) return 0;
-    if (k < first + interval / 2) return (bonusLog(first) * (k - first + interval / 2)) / interval;
-    return bonusLog(Math.min(k - interval / 2, last));
-  };
+  const from = firstStage(layout, realmIndex(layout, REGRESSION_CURVE.firstRealm));
+  const memoryLog = (k: number) => Math.log(REGRESSION_CURVE.perStage) * Math.max(0, k - from);
 
   return Array.from({ length: stages }, (_, k) => Math.exp(coreLog(k) + memoryLog(k)));
 }

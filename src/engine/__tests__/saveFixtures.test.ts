@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { deserialize } from '../save';
+import { REMOVED_UPGRADES, deserialize } from '../save';
 import { SAVE_VERSION } from '../state';
 
 /**
  * Real saves from each released SAVE_VERSION. If one of these stops loading
  * with its progress intact, a change broke old saves: add a migration in
- * save.ts rather than editing the fixture.
+ * save.ts rather than editing the fixture. Techniques removed from the game
+ * (REMOVED_UPGRADES) are the only progress a save may lose.
  */
 const fixtureFiles = import.meta.glob<string>('./fixtures/*.json', {
   query: '?raw',
@@ -33,7 +34,8 @@ describe('save fixtures', () => {
       expect(loaded.prestige.memories).toBe(original.prestige.memories);
       expect(loaded.prestige.loops).toBe(original.prestige.loops);
       expect(count(loaded.prestige.perks)).toBe(count(original.prestige.perks));
-      expect(count(loaded.upgrades)).toBe(count(original.upgrades));
+      const kept = Object.keys(original.upgrades).filter((id) => !REMOVED_UPGRADES.includes(id));
+      expect(count(loaded.upgrades)).toBe(kept.length);
       expect(count(loaded.treasures)).toBe(count(original.treasures));
       expect(loaded.cores).toHaveLength(original.cores.length);
       const owned = (g: Record<string, number>) => Object.values(g).reduce((a, b) => a + b, 0);

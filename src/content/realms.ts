@@ -1,6 +1,6 @@
 import type { Condition } from '../engine/conditions';
 import type { Effect } from '../engine/effects';
-import { progressMultipliers, type RealmLayout } from './progress';
+import { fitMemories, progressMultipliers, type RealmLayout } from './progress';
 
 export interface TribulationDef {
   name: string;
@@ -196,6 +196,7 @@ export function priceStages(): void {
     (REALMS[st.realmIndex].stageCosts as number[])[st.stageInRealm] = st.cost;
   }
 }
+fitMemories(STAGE_LAYOUT);
 priceStages();
 
 export function stageName(stage: number): string {

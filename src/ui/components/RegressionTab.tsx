@@ -66,7 +66,7 @@ export function RegressionTab({ onRegressed }: { onRegressed: (story: string[]) 
         </dd>
       </dl>
       <p class="muted small">
-        Memories permanently multiply qi gain by (1 + {MEMORIES.weight} × Memories)
+        Memories permanently multiply qi gain by (1 + {MEMORIES.weight.toPrecision(2)} × Memories)
         <sup>{stats.mods.memoryPower.toFixed(2)}</sup>, even after you spend them on insights below.
         Returning from deeper than ever before is worth far more than returning from the same place
         again. Regressing resets your realm, qi, resources, techniques, cores and treasures (except

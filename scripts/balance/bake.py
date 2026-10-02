@@ -15,13 +15,18 @@ def num(x):
     return f'{float(f"{x:.3g}"):g}'
 
 def write_object(path, name, values):
+    """Sets top-level number fields of an exported object literal (`name = { ... };`)."""
     full = os.path.join(ROOT, path)
     s = open(full).read()
+    start = s.index(name)
+    end = s.index('\n};', start)
+    body = s[start:end]
     for key, value in values.items():
-        pattern = re.compile(r'(' + name + r'[^=]*= \{[^}]*?\b' + key + r': )([^,\n}]+)', re.S)
-        s, n = pattern.subn(lambda m: m.group(1) + num(value), s, count=1)
+        if not isinstance(value, (int, float)):
+            continue
+        body, n = re.subn(r'(\n  ' + key + r': )([^,\n]+)', lambda m: m.group(1) + num(value), body, count=1)
         assert n == 1, (name, key)
-    open(full, 'w').write(s)
+    open(full, 'w').write(s[:start] + body + s[end:])
 
 if 'baseCurve' in params:
     full = os.path.join(ROOT, 'src/content/realms.ts')

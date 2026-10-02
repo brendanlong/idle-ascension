@@ -23,19 +23,25 @@ export const GENERATOR_COST_GROWTH = 1.15;
 
 /**
  * Resources form a fixed ladder (breakthrough costs are built on top of it,
- * see docs/balance-spec.md): each tier costs `costRatio` times the one before
- * and makes a step's worth as much qi/s per qi, the step blending from
- * `efficiencyStep` for the second tier to `efficiencyStepLate` for the last
- * (each new tier is up against more older ones, so may need to be relatively
- * stronger). The first tier is
- * priced by hand. Tier n is meant to arrive around stage `stagesPerTier` x n,
+ * see docs/balance-spec.md): each tier costs a ratio times the one before
+ * and makes a step's worth as much qi/s per qi. The ratio blends from
+ * `costRatio` for the second tier to `costRatioLate` for the last (early
+ * income grows faster per stage, so early tiers need to be further apart in
+ * price), and the step from `efficiencyStep` to `efficiencyStepLate` (each new
+ * tier is up against more older ones), from `start`. Tier n is meant to arrive around stage `stagesPerTier` x n,
  * and its price is multiplied by the progress there (cores and Memories, see
  * content/progress.ts), so new resources feel the same whatever those add
  * (they multiply its output and your income alike).
  * Fit with scripts/balance/build_costs.py.
  */
 export const RESOURCE_LADDER = {
+  /**
+   * Where the ladder starts: tier 0, which has no resource (the first stages
+   * are gathering alone), so Spirit Herb Patches are tier 1.
+   */
+  start: { cost: 15, qps: 0.1 },
   costRatio: 10.5,
+  costRatioLate: 10.5,
   efficiencyStep: 0.623,
   efficiencyStepLate: 0.269,
   stagesPerTier: 2,
@@ -43,16 +49,6 @@ export const RESOURCE_LADDER = {
 
 export const GENERATORS: readonly GeneratorDef[] = (
   [
-    {
-      id: 'cushion',
-      name: 'Meditation Cushion',
-      icon: '🧘',
-      description: 'A worn straw cushion. Sit, breathe, and let qi seep in.',
-      baseCost: 15,
-      baseQps: 0.1,
-      upgradeName: 'Lotus Posture',
-      revival: { name: 'Sitting Through Kalpas' },
-    },
     {
       id: 'herb',
       name: 'Spirit Herb Patch',
@@ -192,15 +188,17 @@ export const GENERATORS: readonly GeneratorDef[] = (
 /** Prices every resource after the first from RESOURCE_LADDER (call again if it changes). */
 export function priceResources(): void {
   const progress = progressMultipliers(STAGE_LAYOUT);
-  const { costRatio, efficiencyStep, efficiencyStepLate, stagesPerTier } = RESOURCE_LADDER;
-  const [first, ...rest] = GENERATORS as GeneratorDef[];
-  let efficiency = first.baseQps / first.baseCost;
-  rest.forEach((g, i) => {
+  const { start, costRatio, costRatioLate, efficiencyStep, efficiencyStepLate, stagesPerTier } =
+    RESOURCE_LADDER;
+  const tiers = GENERATORS as GeneratorDef[];
+  let efficiency = start.qps / start.cost;
+  let baseCost = start.cost;
+  tiers.forEach((g, i) => {
     const tier = i + 1;
-    const blend = rest.length > 1 ? i / (rest.length - 1) : 0;
+    const blend = tiers.length > 1 ? i / (tiers.length - 1) : 0;
     efficiency *= efficiencyStep * (efficiencyStepLate / efficiencyStep) ** blend;
+    baseCost *= costRatio * (costRatioLate / costRatio) ** blend;
     const stage = Math.min(stagesPerTier * tier, progress.length - 1);
-    const baseCost = first.baseCost * costRatio ** tier;
     g.baseCost = baseCost * progress[stage];
     // Output needn't scale: cores and Memories already multiply it.
     g.baseQps = baseCost * efficiency;

@@ -30,7 +30,7 @@ describe('regression', () => {
   });
 
   it('awards Memories by realm as tuned, so changing the Memory curve is a deliberate choice', () => {
-    // MEMORIES (content/memories.ts) sets these; re-run scripts/balance/spec.py if they move.
+    // MEMORIES (content/memories.ts) and REGRESSION_CURVE (content/progress.ts) set these; re-run scripts/balance/spec.py if they move.
     const byRealm = Object.fromEntries(
       REALMS.filter((r) => firstStageOfRealm(r.id) >= CORE_FORMATION).map((r) => [
         r.id,
@@ -39,11 +39,11 @@ describe('regression', () => {
     );
     expect(byRealm).toEqual({
       coreFormation: 10,
-      nascentSoul: 810,
-      spiritSevering: 65_610,
-      daoSeeking: 5_314_410,
-      immortalAscension: 430_467_210,
-      godhood: 34_867_844_010,
+      nascentSoul: 2_560,
+      spiritSevering: 655_360,
+      daoSeeking: 167_772_160,
+      immortalAscension: 42_949_672_960,
+      godhood: 10_995_116_277_760,
     });
   });
 
@@ -82,19 +82,16 @@ describe('regression', () => {
     const next = regress(state, 0)!;
     // Soul-Bound level 2 keeps treasures at up to level 2.
     expect(next.treasures).toEqual({ ring: 2, pendant: 1 });
-    expect(next.generators.cushion).toBe(10);
+    expect(next.generators.herb).toBe(10);
     expect(next.generators.array).toBe(10);
     expect(next.stage).toBe(3);
   });
 
   it('describes what special perks give', () => {
     const stash = PERKS_BY_ID.get('stash')!;
-    expect(describeSpecialPerk(stash, 1)).toBe(
-      'Start each loop with 10 Meditation Cushions, 5 Spirit Herb Patches',
-    );
+    expect(describeSpecialPerk(stash, 1)).toBe('Start each loop with 10 Spirit Herb Patches');
     expect(stashGenerators(3)).toEqual({
-      cushion: 10,
-      herb: 5,
+      herb: 10,
       array: 10,
       furnace: 11,
       disciple: 5,

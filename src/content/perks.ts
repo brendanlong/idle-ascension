@@ -32,7 +32,7 @@ export interface PerkDef {
 
 /** Generators granted at the start of each loop by the Buried Stash perk, per level (cumulative). */
 export const STASH_GENERATORS: readonly Record<string, number>[] = [
-  { cushion: 10, herb: 5 },
+  { herb: 10 },
   { array: 10, furnace: 1 },
   { furnace: 10, disciple: 5 },
   { disciple: 10, beast: 5 },

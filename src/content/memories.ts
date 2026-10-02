@@ -10,9 +10,12 @@
 export const MEMORIES = {
   /** From regressing at the first stage where it's allowed (Core Formation). */
   first: 10,
-  growthPerStage: 3,
-  /** How much each Memory adds to qi gain, before the power. */
-  weight: 25,
-  /** The base memoryPower: each doubling of your Memories multiplies qi by about 2 ^ power. */
-  power: 0.25,
+  growthPerStage: 4,
+  /** How much each Memory adds to qi gain, before the power. Set by fitMemories. */
+  weight: 0,
+  /**
+   * The base memoryPower: each doubling of your Memories multiplies qi by
+   * about 2 ^ power. Set by fitMemories in content/progress.ts.
+   */
+  power: 0,
 };

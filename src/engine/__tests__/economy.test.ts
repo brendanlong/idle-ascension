@@ -34,18 +34,18 @@ describe('generators', () => {
   it('computes the max affordable count exactly', () => {
     const state = newGame({ qi: 12_345 });
     const { mods } = computeStats(state);
-    const n = maxAffordable(state, mods, 'cushion');
-    expect(generatorCost(state, mods, 'cushion', n)).toBeLessThanOrEqual(state.qi);
-    expect(generatorCost(state, mods, 'cushion', n + 1)).toBeGreaterThan(state.qi);
+    const n = maxAffordable(state, mods, 'herb');
+    expect(generatorCost(state, mods, 'herb', n)).toBeLessThanOrEqual(state.qi);
+    expect(generatorCost(state, mods, 'herb', n + 1)).toBeGreaterThan(state.qi);
   });
 
   it('spends qi and adds generators, refusing when too poor', () => {
-    const state = newGame({ qi: 20 });
+    const state = newGame({ qi: GENERATORS_BY_ID.get('herb')!.baseCost + 5 });
     const { mods } = computeStats(state);
-    expect(buyGenerator(state, mods, 'cushion')).toBe(true);
-    expect(state.generators.cushion).toBe(1);
+    expect(buyGenerator(state, mods, 'herb')).toBe(true);
+    expect(state.generators.herb).toBe(1);
     expect(state.qi).toBeCloseTo(5);
-    expect(buyGenerator(state, mods, 'cushion')).toBe(false);
+    expect(buyGenerator(state, mods, 'herb')).toBe(false);
   });
 
   it('locks realm-gated generators until their realm', () => {
@@ -163,14 +163,14 @@ describe('log messages', () => {
 
   it('sizes a revival when learned so its resource leads the best one by half again', () => {
     const state = newGame({ qi: 1e12 });
-    Object.assign(state.generators, { cushion: 20, herb: 40, array: 30 });
-    expect(buyUpgrade(state, 'cushion-5')).toBe(true);
+    Object.assign(state.generators, { herb: 20, array: 40, furnace: 30 });
+    expect(buyUpgrade(state, 'herb-5')).toBe(true);
     const stats = computeStats(state, false);
     const total = (id: string) => stats.generatorUnitQps[id] * state.generators[id];
-    expect(total('cushion') / Math.max(total('herb'), total('array'))).toBeCloseTo(1.5, 1);
+    expect(total('herb') / Math.max(total('array'), total('furnace'))).toBeCloseTo(1.5, 1);
     // Later growth doesn't resize it.
-    const mult = state.revivals.cushion;
+    const mult = state.revivals.herb;
     state.generators.array = 300;
-    expect(computeStats(state, false).mods.generatorMult.cushion).toBe(mult);
+    expect(computeStats(state, false).mods.generatorMult.herb).toBe(mult);
   });
 });

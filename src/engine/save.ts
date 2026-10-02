@@ -26,7 +26,26 @@ type RawSave = Record<string, unknown>;
  * the old ones: the fixture test loads every one of them). Never lower
  * SAVE_VERSION: newer saves are refused, not overwritten.
  */
-const migrations: Record<number, (save: RawSave) => RawSave> = {};
+const migrations: Record<number, (save: RawSave) => RawSave> = {
+  // Meditation Cushions are gone: they become Spirit Herb Patches, and their techniques go.
+  3: (save) => {
+    const generators = isPlainObject(save.generators) ? save.generators : {};
+    const cushions = typeof generators.cushion === 'number' ? generators.cushion : 0;
+    const herbs = typeof generators.herb === 'number' ? generators.herb : 0;
+    const { cushion: _, ...rest } = generators;
+    const upgrades = isPlainObject(save.upgrades) ? save.upgrades : {};
+    return {
+      ...save,
+      generators: { ...rest, herb: herbs + cushions },
+      upgrades: Object.fromEntries(
+        Object.entries(upgrades).filter(([id]) => !REMOVED_UPGRADES.includes(id)),
+      ),
+    };
+  },
+};
+
+/** Techniques removed from the game; saves that owned them lose them. */
+export const REMOVED_UPGRADES: readonly string[] = ['cushion-1', 'cushion-5'];
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);

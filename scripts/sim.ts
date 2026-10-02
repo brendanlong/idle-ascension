@@ -36,8 +36,15 @@ import {
 import { MEMORIES } from '../src/content/memories';
 import { UPGRADES, priceUpgrades } from '../src/content/upgrades';
 import { PERKS, type PerkDef } from '../src/content/perks';
-import { PRICING } from '../src/content/progress';
-import { BASE_COST_CURVE, REALMS, STAGES, priceStages, stageName } from '../src/content/realms';
+import { PRICING, REGRESSION_CURVE, fitMemories } from '../src/content/progress';
+import {
+  BASE_COST_CURVE,
+  REALMS,
+  STAGES,
+  STAGE_LAYOUT,
+  priceStages,
+  stageName,
+} from '../src/content/realms';
 import { MAX_TREASURE_LEVEL, TREASURES } from '../src/content/treasures';
 import {
   attemptBreakthrough,
@@ -153,6 +160,7 @@ const CORE_ORDER: ElementId[] = ['wood', 'fire', 'water', 'earth', 'metal'];
  *   baseCurve    overrides BASE_COST_CURVE (src/content/realms.ts)
  *   memory       overrides MEMORIES (src/content/memories.ts)
  *   ladder       overrides RESOURCE_LADDER (src/content/generators.ts)
+ *   regression   overrides REGRESSION_CURVE (src/content/progress.ts)
  * SIM_PRICES=1 prints, as JSON, each of those prices the first time the bot
  * paid it: the wait since its previous purchase, and its price in seconds of
  * passive qi/s.
@@ -172,7 +180,9 @@ function applyTuning(): void {
     baseCurve?: number[];
     memory?: Partial<typeof MEMORIES>;
     ladder?: Partial<typeof RESOURCE_LADDER>;
+    regression?: Partial<typeof REGRESSION_CURVE>;
   };
+  Object.assign(REGRESSION_CURVE, tune.regression);
   if (tune.baseCurve) BASE_COST_CURVE.splice(0, BASE_COST_CURVE.length, ...tune.baseCurve);
   Object.assign(MEMORIES, tune.memory);
   Object.assign(RESOURCE_LADDER, tune.ladder);
@@ -223,6 +233,7 @@ function applyTuning(): void {
 
 /** Re-prices everything that follows base costs, the ladder or progress. */
 function reprice(): void {
+  fitMemories(STAGE_LAYOUT);
   priceStages();
   priceResources();
   priceUpgrades();

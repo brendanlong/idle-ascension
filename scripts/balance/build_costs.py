@@ -12,8 +12,8 @@ cost by how far its time is off target (a stage takes about cost ÷ income,
 so twice as long needs twice the cost), fits BASE_COST_CURVE (a cubic in
 log cost) to those costs so it's smooth and doesn't follow one bot's quirks,
 and nudges the resource ladder: its cost
-ratio so a new resource arrives about every stagesPerTier stages, and its
-early and late efficiency steps so each one, with its first technique and a
+ratios (early and late) so a new resource arrives about every stagesPerTier
+stages, and its early and late efficiency steps so each one, with its first technique and a
 minute of income, makes about as much as all the others combined. Every round is kept
 in params.json.history.
 
@@ -50,6 +50,7 @@ def main():
     params.setdefault('ladder', {'costRatio': 13, 'efficiencyStep': 0.5, 'efficiencyStepLate': 0.5,
                                  'stagesPerTier': 2})
     params['ladder'].setdefault('efficiencyStepLate', params['ladder']['efficiencyStep'])
+    params['ladder'].setdefault('costRatioLate', params['ladder']['costRatio'])
     history = json.load(open(path + '.history')) if os.path.exists(path + '.history') else []
     seeds = SPEC['seeds']
     for it in range(rounds):
@@ -72,7 +73,12 @@ def main():
         # In order of arrival: the ladder's tiers, cheapest first.
         tiers = sorted(statistics.median(v) for v in arrivals.values())
         spacing = params['ladder']['stagesPerTier']
-        late = statistics.mean(stage - spacing * tier for tier, stage in enumerate(tiers)) if tiers else 0
+        # The ladder's tier 0 has no resource, so the first resource is tier 1.
+        lateness = [stage - spacing * tier for tier, stage in enumerate(tiers, start=1)]
+        half = len(lateness) // 2
+        late = statistics.mean(lateness) if lateness else 0
+        late_early = statistics.mean(lateness[:half]) if half else 0
+        late_late = statistics.mean(lateness[half:]) if lateness[half:] else 0
         # How strong each new resource is when it arrives, against all the others (log2, 0 is
         # right), for the earlier and later halves of the ladder.
         by_tier = {}
@@ -92,7 +98,8 @@ def main():
         json.dump(history, open(path + '.history', 'w'))
         print(f"#{it} |log2 err| {err:.2f}  {history[-1]['hours']:.2f}h  regressions {history[-1]['regressions']}"
               f"  resources {late:+.1f} stages late, x{2 ** strong_early:.2g} / x{2 ** strong_late:.2g} the others"
-              f" (ratio {params['ladder']['costRatio']:.3g}, step {params['ladder']['efficiencyStep']:.2g}"
+              f" (ratio {params['ladder']['costRatio']:.3g} to {params['ladder']['costRatioLate']:.3g},"
+              f" step {params['ladder']['efficiencyStep']:.2g}"
               f" to {params['ladder']['efficiencyStepLate']:.2g})  | "
               + ' '.join(f'{k}:{x:.2g}' for k, x in ratios.items()), flush=True)
 
@@ -103,7 +110,8 @@ def main():
         stages = range(1, n + 1)
         params['baseCurve'] = list(np.polyfit(list(stages), [costs[k] for k in stages], 3)[::-1])
         # Resources arriving late should be cheaper relative to each other.
-        params['ladder']['costRatio'] *= 1.5 ** (-DAMPING * late / spacing / 4)
+        params['ladder']['costRatio'] *= 1.5 ** (-DAMPING * late_early / spacing / 4)
+        params['ladder']['costRatioLate'] *= 1.5 ** (-DAMPING * late_late / spacing / 4)
         # Too strong on arrival means each tier should be less efficient than the last.
         params['ladder']['efficiencyStep'] *= 1.3 ** (-DAMPING * strong_early)
         params['ladder']['efficiencyStepLate'] *= 1.3 ** (-DAMPING * strong_late)
