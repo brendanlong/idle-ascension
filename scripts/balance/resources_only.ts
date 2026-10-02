@@ -6,37 +6,23 @@
  * schedule (the ramp), it reports how income grows each stage, when each tier
  * arrives, what gets bought, and the longest wait between purchases.
  *
- * Usage: npx tsx scripts/balance/resources_only.ts
+ * Usage: [RO_LADDER='{...}'] npx tsx scripts/balance/resources_only.ts
  */
-import { readFileSync } from 'node:fs';
 import { GENERATORS, RESOURCE_LADDER, priceResources } from '../../src/content/generators';
-import { PRICING } from '../../src/content/progress';
+import { PRICING, stageSeconds } from '../../src/content/progress';
+import { STAGE_LAYOUT, STAGES as STAGE_DEFS } from '../../src/content/realms';
 import { generatorCost } from '../../src/engine/economy';
 import { activeQps, computeModifiers, computeStats } from '../../src/engine/stats';
 import { createInitialState } from '../../src/engine/state';
 
-const SPEC = JSON.parse(readFileSync(new URL('./spec.json', import.meta.url), 'utf8'));
-const STAGES = 35;
+const STAGES = STAGE_DEFS.length;
 
 PRICING.layered = false;
+/** RO_LADDER='{"costRatio": 7}' tries changes to RESOURCE_LADDER. */
+Object.assign(RESOURCE_LADDER, JSON.parse(process.env.RO_LADDER ?? '{}'));
 priceResources();
-/** RO_PAYBACK=q RO_RATIO=r: try a ladder where tier n costs r^n x the start and pays for itself in q x its stage's target time. */
-if (process.env.RO_PAYBACK) {
-  const q = Number(process.env.RO_PAYBACK);
-  const r = Number(process.env.RO_RATIO ?? RESOURCE_LADDER.costRatio);
-  GENERATORS.forEach((g, i) => {
-    const tier = i + 1;
-    (g as { baseCost: number }).baseCost = RESOURCE_LADDER.start.cost * r ** tier;
-    (g as { baseQps: number }).baseQps =
-      g.baseCost / (q * ramp(Math.min(RESOURCE_LADDER.stagesPerTier * tier, STAGES - 1)));
-  });
-}
 
-function ramp(k: number): number {
-  const { first, last, flatUntil } = SPEC.ramp;
-  if (k <= flatUntil) return first;
-  return first + ((last - first) * (k - flatUntil)) / (STAGES - 1 - flatUntil);
-}
+const ramp = (k: number) => stageSeconds(STAGE_LAYOUT, k);
 /** When each stage is meant to be reached. */
 const schedule = [0];
 for (let k = 1; k < STAGES; k++) schedule.push(schedule[k - 1] + ramp(k));

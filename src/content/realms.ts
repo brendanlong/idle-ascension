@@ -18,8 +18,6 @@ export interface RealmDef {
   stageNames: readonly string[];
   /** Qi cost of breaking through into each stage (see priceStages). */
   stageCosts: readonly number[];
-  /** Multiplier to all qi gain granted by each stage reached in this realm. */
-  stageMultiplier: number;
   tribulation?: TribulationDef;
   requirement?: Condition;
   /** Applied once while at or beyond this realm. */
@@ -42,7 +40,7 @@ const PHASES = ['Early', 'Middle', 'Late', 'Peak'];
  * the reference player, with resources and techniques alone, takes about the
  * target time for each stage.
  */
-export const BASE_COST_CURVE: number[] = [0.596299, 0.571405, 0.0157934, -0.000380759];
+export const BASE_COST_CURVE: number[] = [0.186043, 0.885072, -0.01216, 7.46619e-05];
 
 /** BASE_COST_CURVE at every stage (call again if it changes). */
 export const BASE_STAGE_COSTS: number[] = [];
@@ -60,7 +58,6 @@ const REALM_DEFS: readonly Omit<RealmDef, 'stageCosts'>[] = [
     color: '#8a8175',
     description: 'Blocked meridians. The clan elders call you trash.',
     stageNames: [''],
-    stageMultiplier: 1,
   },
   {
     id: 'qiCondensation',
@@ -68,7 +65,6 @@ const REALM_DEFS: readonly Omit<RealmDef, 'stageCosts'>[] = [
     color: '#b9c7d6',
     description: 'You draw qi into your body and compress it, layer by layer.',
     stageNames: LAYERS,
-    stageMultiplier: 1.2,
   },
   {
     id: 'foundation',
@@ -76,7 +72,6 @@ const REALM_DEFS: readonly Omit<RealmDef, 'stageCosts'>[] = [
     color: '#7fc4a4',
     description: 'Your qi turns liquid, laying the foundation of your Dao.',
     stageNames: PHASES,
-    stageMultiplier: 1.5,
     requirement: {
       type: 'generator',
       id: 'furnace',
@@ -91,7 +86,6 @@ const REALM_DEFS: readonly Omit<RealmDef, 'stageCosts'>[] = [
     color: '#e0b64a',
     description: 'Your liquid qi condenses into a solid core within your dantian.',
     stageNames: PHASES,
-    stageMultiplier: 1.6,
     tribulation: { name: 'Minor Thunder Tribulation', trials: 1, passScore: 0.5 },
     effects: [{ type: 'add', stat: 'coreSlots', value: 1 }],
     coreGradeCap: 2,
@@ -103,7 +97,6 @@ const REALM_DEFS: readonly Omit<RealmDef, 'stageCosts'>[] = [
     color: '#d7738a',
     description: 'Your core cracks open and a tiny soul is born, cultivating beside you.',
     stageNames: PHASES,
-    stageMultiplier: 1.7,
     tribulation: { name: 'Crimson Thunder Tribulation', trials: 1, passScore: 0.55 },
     effects: [
       { type: 'add', stat: 'moteAutoCollect', value: 0.05 },
@@ -118,7 +111,6 @@ const REALM_DEFS: readonly Omit<RealmDef, 'stageCosts'>[] = [
     color: '#9a7fd1',
     description: 'You cut away mortal attachments. Your emotions grow distant.',
     stageNames: PHASES,
-    stageMultiplier: 1.8,
     tribulation: { name: 'Heart Demon Tribulation', trials: 2, passScore: 0.6 },
     effects: [{ type: 'add', stat: 'coreSlots', value: 1 }],
     coreGradeCap: 4,
@@ -129,7 +121,6 @@ const REALM_DEFS: readonly Omit<RealmDef, 'stageCosts'>[] = [
     color: '#5aa6d6',
     description: 'You begin to perceive the laws of heaven and earth directly.',
     stageNames: PHASES,
-    stageMultiplier: 2,
     tribulation: { name: 'Nine Heavens Thunder Tribulation', trials: 2, passScore: 0.65 },
     effects: [{ type: 'add', stat: 'coreSlots', value: 1 }],
     coreGradeCap: 5,
@@ -140,7 +131,6 @@ const REALM_DEFS: readonly Omit<RealmDef, 'stageCosts'>[] = [
     color: '#f2e6c4',
     description: 'Mortal flesh falls away. You stand at the threshold of the heavens.',
     stageNames: PHASES,
-    stageMultiplier: 2.2,
     tribulation: { name: 'Immortal Severing Tribulation', trials: 3, passScore: 0.7 },
     coreGradeCap: 6,
   },
@@ -150,7 +140,6 @@ const REALM_DEFS: readonly Omit<RealmDef, 'stageCosts'>[] = [
     color: '#ffd76a',
     description: 'The heavens themselves bow. You have ascended.',
     stageNames: [''],
-    stageMultiplier: 3,
     tribulation: { name: 'Nine-Nine Heavenly Tribulation', trials: 3, passScore: 0.75 },
     coreGradeCap: 7,
   },

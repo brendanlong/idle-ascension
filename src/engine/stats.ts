@@ -19,7 +19,6 @@ import type { GameState } from './state';
 
 export interface Stats {
   mods: Modifiers;
-  realmMult: number;
   memoryMult: number;
   cycleMult: number;
   /** Qi/s produced by a single unit of each generator, after all bonuses. */
@@ -68,12 +67,6 @@ export function moteSpawnRate(spawnPerSecond: number, motesOnField: number): num
  */
 const MOTE_BASE_VALUE = 5;
 const MOTE_QPS_SECONDS = 1;
-
-export function realmMultiplier(stage: number): number {
-  let mult = 1;
-  for (let i = 1; i <= stage; i++) mult *= REALMS[STAGES[i].realmIndex].stageMultiplier;
-  return mult;
-}
 
 export function unlockedCoreSlots(state: GameState, mods: Modifiers): number {
   return state.stage >= firstStageOfRealm('coreFormation') ? mods.coreSlots : 0;
@@ -125,12 +118,11 @@ export function computeModifiers(state: GameState, includeBuffs = true): Modifie
 
 export function computeStats(state: GameState, includeBuffs = true): Stats {
   const mods = computeModifiers(state, includeBuffs);
-  const realmMult = realmMultiplier(state.stage);
   const memoryMult = (1 + MEMORIES.weight * state.prestige.memories) ** mods.memoryPower;
   const cycleMult =
     1 + GENERATING_CYCLE_BONUS * generatingPairs(new Set(state.cores.map((c) => c.element)));
   const coreMult = state.cores.reduce((m, c) => m * CORE_GRADES[c.grade].mult, 1);
-  const global = mods.globalMult * realmMult * memoryMult * cycleMult * coreMult;
+  const global = mods.globalMult * memoryMult * cycleMult * coreMult;
 
   const generatorUnitQps: Record<string, number> = {};
   let generatorQps = 0;
@@ -147,7 +139,6 @@ export function computeStats(state: GameState, includeBuffs = true): Stats {
 
   return {
     mods,
-    realmMult,
     memoryMult,
     cycleMult,
     generatorUnitQps,

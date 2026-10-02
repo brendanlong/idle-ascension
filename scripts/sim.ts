@@ -36,7 +36,13 @@ import {
 import { MEMORIES } from '../src/content/memories';
 import { UPGRADES, priceUpgrades } from '../src/content/upgrades';
 import { PERKS, type PerkDef } from '../src/content/perks';
-import { PRICING, REGRESSION_CURVE, fitMemories } from '../src/content/progress';
+import {
+  PRICING,
+  REGRESSION_CURVE,
+  STAGE_TIME,
+  fitMemories,
+  stageSeconds as stageTarget,
+} from '../src/content/progress';
 import {
   BASE_COST_CURVE,
   REALMS,
@@ -104,8 +110,7 @@ const BALANCE_SPEC = JSON.parse(
   boredSeconds: number;
   reference: { activeUntilStage: number; idleFromStage: number };
 };
-/** How well the bot plays elemental trials (0-1), for tribulations and optional offers. */
-const TRIBULATION_TRIAL_SCORE = 0.8;
+/** How well the bot plays optional elemental trials (0-1). */
 const OPTIONAL_TRIAL_SCORE = 0.7;
 /**
  * SIM_REGRESS: when the bot regresses.
@@ -298,6 +303,8 @@ if (process.env.SIM_DUMP_PRICES) {
       stage: STAGES.map((st) => st.cost),
       baseCurve: [...BASE_COST_CURVE],
       ladder: RESOURCE_LADDER,
+      stageTime: STAGE_TIME,
+      stageSeconds: STAGES.map((_, k) => stageTarget(STAGE_LAYOUT, k)),
       form: CORE_SLOT_REALMS.map((_, n) => coreFormCost(baseModifiers(), n)),
       gen: Object.fromEntries(GENERATORS.map((g) => [g.id, [g.baseCost, g.baseQps]])),
     }),
@@ -663,7 +670,8 @@ function candidates(): Candidate[] {
       },
       buy: () => {
         if (attemptBreakthrough(state, stats.mods, rng) === 'blocked') return false;
-        while (state.tribulation) recordTribulationTrial(state, TRIBULATION_TRIAL_SCORE);
+        // Tribulations are a mini-game, not pacing: the bot passes them instantly.
+        while (state.tribulation) recordTribulationTrial(state, 1);
         if (state.stage > loopBestStage) loopBestStage = state.stage;
         recordStep();
         return true;

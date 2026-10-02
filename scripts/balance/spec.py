@@ -27,12 +27,21 @@ def run(job, tune=TUNE, hours=None, layer=''):
                          env=env, cwd=ROOT).stdout
     return json.loads(re.search(r'^SPEC (.*)$', out, re.M).group(1))
 
-def ramp(k, n):
-    """Target seconds for stage k of n: flat at first, then rising linearly to last."""
-    r = SPEC['ramp']
-    if k <= r['flatUntil']:
-        return r['first']
-    return r['first'] + (r['last'] - r['first']) * (k - r['flatUntil']) / (n - r['flatUntil'])
+def game_content(tune='{}'):
+    """The game's prices and schedule after SIM_TUNE (SIM_DUMP_PRICES in scripts/sim.ts)."""
+    out = subprocess.run(['npx', 'tsx', 'scripts/sim.ts'], capture_output=True, text=True, cwd=ROOT,
+                         env=dict(os.environ, SIM_DUMP_PRICES='1', SIM_TUNE=tune)).stdout
+    return json.loads(out)
+
+_content = None
+def content():
+    global _content
+    _content = _content or game_content()
+    return _content
+
+def ramp(k, n=None):
+    """Target seconds for stage k (STAGE_TIME in src/content/progress.ts)."""
+    return content()['stageSeconds'][k]
 
 def ramp_ratios(run, n):
     """Each stage's time (within the life that first reached it) ÷ its target."""
@@ -99,14 +108,15 @@ def main():
 
     # 1. The ramp: each stage a bit longer than the last, for the reference player.
     rp = SPEC['ramp']
+    st = content()['stageTime']
     by_stage = {}
     for r in reference:
         for k, ratio in ramp_ratios(r, n).items():
             by_stage.setdefault(k, []).append(ratio)
     off = [(k, statistics.median(v)) for k, v in sorted(by_stage.items())
            if not 1 / rp['tolerance'] <= statistics.median(v) <= rp['tolerance']]
-    check(f"reference stage times follow the ramp ({rp['first']}s, rising from stage {rp['flatUntil']} "
-          f"to {fmt(rp['last'])}) within x{rp['tolerance']}", not off,
+    check(f"reference stage times follow the ramp ({st['first']}s, rising from stage {st['flatUntil']} "
+          f"to {fmt(st['last'])}) within x{rp['tolerance']}", not off,
           ', '.join(f'stage {k} x{x:.2f}' for k, x in off))
     for name in ('reference', 'passive'):
         faster = []

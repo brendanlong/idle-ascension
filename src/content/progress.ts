@@ -18,6 +18,21 @@ export interface RealmLayout {
   coreGradeCap?: number;
 }
 
+/**
+ * How long each stage should take the reference player: `first` seconds up
+ * to stage `flatUntil`, then rising linearly to `last` at the final stage.
+ * Everything else is priced to keep to it (see docs/balance-spec.md).
+ */
+export const STAGE_TIME = { first: 15, last: 600, flatUntil: 3 };
+
+/** STAGE_TIME's target for stage k, in seconds. */
+export function stageSeconds(layout: readonly RealmLayout[], k: number): number {
+  const { first, last, flatUntil } = STAGE_TIME;
+  const final = firstStage(layout, layout.length) - 1;
+  if (k <= flatUntil) return first;
+  return first + ((last - first) * (Math.min(k, final) - flatUntil)) / (final - flatUntil);
+}
+
 /** Switch off to price everything as if there were no cores or Memories (for building base costs). */
 export const PRICING = { layered: true };
 

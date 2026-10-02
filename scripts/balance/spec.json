@@ -1,9 +1,6 @@
 {
   "seeds": [1, 2, 3, 4],
   "ramp": {
-    "first": 15,
-    "last": 600,
-    "flatUntil": 3,
     "tolerance": 2,
     "monotoneSlack": 0.9
   },

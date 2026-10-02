@@ -1,11 +1,11 @@
-import { progressMultipliers } from './progress';
+import { progressMultipliers, stageSeconds } from './progress';
 import { STAGE_LAYOUT } from './realms';
 export interface GeneratorDef {
   id: string;
   name: string;
   icon: string;
   description: string;
-  /** Set by priceResources, except for the first tier's. */
+  /** Set by priceResources. */
   baseCost: number;
   baseQps: number;
   /** Realm (by id) required before it can be bought. */
@@ -22,28 +22,23 @@ export interface GeneratorDef {
 export const GENERATOR_COST_GROWTH = 1.15;
 
 /**
- * Resources form a fixed ladder (breakthrough costs are built on top of it,
- * see docs/balance-spec.md): each tier costs a ratio times the one before
- * and makes a step's worth as much qi/s per qi. The ratio blends from
- * `costRatio` for the second tier to `costRatioLate` for the last (early
- * income grows faster per stage, so early tiers need to be further apart in
- * price), and the step from `efficiencyStep` to `efficiencyStepLate` (each new
- * tier is up against more older ones), from `start`. Tier n is meant to arrive around stage `stagesPerTier` x n,
- * and its price is multiplied by the progress there (cores and Memories, see
- * content/progress.ts), so new resources feel the same whatever those add
- * (they multiply its output and your income alike).
- * Fit with scripts/balance/build_costs.py.
+ * Resources form a ladder defined by the stage schedule (see
+ * docs/balance-spec.md): tier n is meant to arrive at stage `stagesPerTier` x n,
+ * costs `firstCost` times the cost ratios so far (sliding from `costRatio`
+ * for the second tier to `costRatioLate` for the last), and pays for itself
+ * in `paybackStages` x STAGE_TIME's target for that stage. So each new
+ * resource pays for itself faster than the old ones, and income from
+ * resources alone keeps to the schedule (check with
+ * scripts/balance/resources_only.ts). Its price is also multiplied by the
+ * progress there (cores and Memories, see content/progress.ts), so new
+ * resources feel the same whatever those add (they multiply its output and
+ * your income alike).
  */
 export const RESOURCE_LADDER = {
-  /**
-   * Where the ladder starts: tier 0, which has no resource (the first stages
-   * are gathering alone), so Spirit Herb Patches are tier 1.
-   */
-  start: { cost: 15, qps: 0.1 },
-  costRatio: 11.9,
-  costRatioLate: 16.9,
-  efficiencyStep: 0.713,
-  efficiencyStepLate: 0.314,
+  firstCost: 100,
+  costRatio: 8,
+  costRatioLate: 4,
+  paybackStages: 1,
   stagesPerTier: 2,
 };
 
@@ -182,23 +177,19 @@ export const GENERATORS: readonly GeneratorDef[] = (
   ] as Omit<GeneratorDef, 'baseCost' | 'baseQps'>[]
 ).map((g) => ({ baseCost: 0, baseQps: 0, ...g }) as GeneratorDef);
 
-/** Prices every resource after the first from RESOURCE_LADDER (call again if it changes). */
+/** Prices every resource from RESOURCE_LADDER (call again if it changes). */
 export function priceResources(): void {
   const progress = progressMultipliers(STAGE_LAYOUT);
-  const { start, costRatio, costRatioLate, efficiencyStep, efficiencyStepLate, stagesPerTier } =
-    RESOURCE_LADDER;
+  const { firstCost, costRatio, costRatioLate, paybackStages, stagesPerTier } = RESOURCE_LADDER;
   const tiers = GENERATORS as GeneratorDef[];
-  let efficiency = start.qps / start.cost;
-  let baseCost = start.cost;
+  let baseCost = firstCost;
   tiers.forEach((g, i) => {
-    const tier = i + 1;
-    const blend = tiers.length > 1 ? i / (tiers.length - 1) : 0;
-    efficiency *= efficiencyStep * (efficiencyStepLate / efficiencyStep) ** blend;
-    baseCost *= costRatio * (costRatioLate / costRatio) ** blend;
-    const stage = Math.min(stagesPerTier * tier, progress.length - 1);
+    if (i > 0)
+      baseCost *= costRatio * (costRatioLate / costRatio) ** ((i - 1) / (tiers.length - 2));
+    const stage = Math.min(stagesPerTier * (i + 1), progress.length - 1);
     g.baseCost = baseCost * progress[stage];
     // Output needn't scale: cores and Memories already multiply it.
-    g.baseQps = baseCost * efficiency;
+    g.baseQps = baseCost / (paybackStages * stageSeconds(STAGE_LAYOUT, stage));
   });
 }
 priceResources();

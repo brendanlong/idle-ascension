@@ -120,8 +120,6 @@ export function CultivationStats() {
   const { state, stats } = game;
   return (
     <dl class="stat-list">
-      <dt>Realm bonus</dt>
-      <dd>×{game.fmt(stats.realmMult)}</dd>
       {state.prestige.memories > 0 && (
         <>
           <dt>Memories</dt>
