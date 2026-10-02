@@ -17,6 +17,8 @@
  *   SIM_REGRESS=<mode>  efficient (default), never or eager: see REGRESS_MODE
  *   SIM_SPEC=1          print measurements for scripts/balance/spec.py
  *   SIM_NO_CORES=1      never form or refine cores, to see how far the game goes without them
+ *   SIM_LAYER=base      price everything without cores and Memories (content/progress.ts PRICING),
+ *                       for building base breakthrough costs
  *   SIM_TREASURES=<x>   random (default), none (encounters never give treasures), or all
  *                       (every treasure at level 1 as soon as its realm is reached)
  *   SIM_IMPACT=1        also print how much each resource, technique, core and treasure adds
@@ -34,7 +36,8 @@ import {
 import { MEMORIES } from '../src/content/memories';
 import { UPGRADES, priceUpgrades } from '../src/content/upgrades';
 import { PERKS, type PerkDef } from '../src/content/perks';
-import { REALMS, STAGES, stageName } from '../src/content/realms';
+import { PRICING } from '../src/content/progress';
+import { BASE_STAGE_COSTS, REALMS, STAGES, priceStages, stageName } from '../src/content/realms';
 import { MAX_TREASURE_LEVEL, TREASURES } from '../src/content/treasures';
 import {
   attemptBreakthrough,
@@ -148,7 +151,7 @@ const CORE_ORDER: ElementId[] = ['wood', 'fire', 'water', 'earth', 'metal'];
  *   price        multiplies single prices: "up:<technique id>", "stage:<index>",
  *                "gen:<resource>" (base cost)
  *   genQps       multiplies a resource's output
- *   stageCosts   log10 of every breakthrough's cost, by stage (overrides STAGE_COSTS)
+ *   stageCosts   log10 of every breakthrough's base cost, by stage (overrides BASE_STAGE_COSTS)
  *   memory       overrides MEMORIES (src/content/memories.ts)
  *   ladder       overrides RESOURCE_LADDER (src/content/generators.ts)
  * SIM_PRICES=1 prints, as JSON, each of those prices the first time the bot
@@ -156,6 +159,10 @@ const CORE_ORDER: ElementId[] = ['wood', 'fire', 'water', 'earth', 'metal'];
  * passive qi/s.
  */
 function applyTuning(): void {
+  if (process.env.SIM_LAYER === 'base') {
+    PRICING.layered = false;
+    reprice();
+  }
   if (!process.env.SIM_TUNE) return;
   const tune = JSON.parse(process.env.SIM_TUNE) as {
     qps?: number;
@@ -167,11 +174,11 @@ function applyTuning(): void {
     memory?: Partial<typeof MEMORIES>;
     ladder?: Partial<typeof RESOURCE_LADDER>;
   };
-  Object.assign(RESOURCE_LADDER, tune.ladder);
-  priceResources();
-  priceUpgrades();
-  if (tune.stageCosts) setStageCosts(tune.stageCosts.map((c, i) => (i === 0 ? 0 : 10 ** c)));
+  if (tune.stageCosts)
+    tune.stageCosts.forEach((c, i) => (BASE_STAGE_COSTS[i] = i === 0 ? 0 : 10 ** c));
   Object.assign(MEMORIES, tune.memory);
+  Object.assign(RESOURCE_LADDER, tune.ladder);
+  reprice();
   const priceMult: number[] = [];
   REALMS.forEach((r, i) => (priceMult[i] = (priceMult[i - 1] ?? 1) * (tune.shift?.[r.id] ?? 1)));
   const realmIndex = (id: string) => REALMS.findIndex((r) => r.id === id);
@@ -216,14 +223,9 @@ function applyTuning(): void {
   }
 }
 
-/**
- * Sets every breakthrough cost, and re-prices what follows it: resources
- * (priceResources) and techniques (priceUpgrades).
- */
-function setStageCosts(costs: number[]): void {
-  STAGES.forEach((st, i) => ((st as { cost: number }).cost = costs[i]));
-  for (const st of STAGES)
-    (REALMS[st.realmIndex].stageCosts as number[])[st.stageInRealm] = st.cost;
+/** Re-prices everything that follows base costs, the ladder or progress. */
+function reprice(): void {
+  priceStages();
   priceResources();
   priceUpgrades();
 }
@@ -285,6 +287,7 @@ if (process.env.SIM_DUMP_PRICES) {
     JSON.stringify({
       up: Object.fromEntries(UPGRADES.map((u) => [u.id, u.cost])),
       stage: STAGES.map((st) => st.cost),
+      baseStage: [...BASE_STAGE_COSTS],
       form: CORE_SLOT_REALMS.map((_, n) => coreFormCost(baseModifiers(), n)),
       gen: Object.fromEntries(GENERATORS.map((g) => [g.id, [g.baseCost, g.baseQps]])),
     }),

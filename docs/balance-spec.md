@@ -7,7 +7,7 @@ what we actually want, then re-run the tooling until the game meets it.
 
 ```sh
 python3 scripts/balance/spec.py                  # grade the game as it is
-python3 scripts/balance/build_costs.py 20 p.json  # build breakthrough costs from play
+python3 scripts/balance/build_costs.py 20 p.json  # build base breakthrough costs from play
 python3 scripts/balance/bake.py p.json            # write them into src/content
 ```
 
@@ -41,32 +41,44 @@ Other bots check the edges: **active** (gathers all the time) and
 **passive** (only gathers to get started and while replaying). Both regress
 once bored, if regressing would at least triple their Memory bonus.
 
-## Breakthrough costs are built from play
+## Breakthrough costs are built in layers
 
-Content is defined first, and breakthrough costs are built on top of it:
+Content is defined first, and prices are built on top of it:
 
 - **Resources** form a fixed ladder (`RESOURCE_LADDER` in
   `src/content/generators.ts`): each tier a fixed multiple pricier than the
-  last, at a fixed fraction of its qi/s per qi.
+  last, at a fixed fraction of its qi/s per qi, meant to arrive every
+  `stagesPerTier` stages.
 - **A resource's techniques** are priced from the resource (its first
   technique arrives soon after it, its revival later).
 - **Realm techniques** are priced from a stage within their realm, staggered
   so a realm's upgrades arrive one at a time.
-- **Cores** (`engine/cores.ts`): each realm's new core forms a third of the
-  way through its realm and gets its first refine two thirds of the way
+- **Cores** (`content/progress.ts`): each realm's new core forms a third of
+  the way through its realm and gets its first refine two thirds of the way
   through; every core gains a grade per realm after that, with the older
   cores' refines spread over the rest of each realm. Forming or refining a
-  core always doubles qi gain, so cores grow exponentially like Memories and
-  skipping them puts you steadily further behind. The generating cycle adds a
-  small bonus (+25% per adjacent pair).
+  core always doubles qi gain, so cores grow exponentially like Memories. The
+  generating cycle adds a small bonus (+25% per adjacent pair).
 
-`build_costs.py` then plays the reference player and prices each stage so it
-takes its target time (a stage takes about its cost ÷ income), smoothing the
-cost steps so they don't follow one bot's quirks, and fits the resource
-ladder so a new resource arrives about every two stages. Since stage costs
-grow with everything the reference player has (resources, cores, Memories),
-a player without cores or regressions faces the same costs with less income,
-so falls further behind each stage.
+Then the layers:
+
+1. **Base costs** (`BASE_STAGE_COSTS` in `src/content/realms.ts`) come from
+   resources and techniques alone. `build_costs.py` plays the reference
+   player without cores or regressions and prices each stage so it takes its
+   target time (a stage takes about its cost ÷ income), smoothing the cost
+   steps so they don't follow one bot's quirks. It also fits the resource
+   ladder: its cost ratio so a new resource arrives on schedule, and its
+   efficiency step so each one lands at about "all the others combined".
+2. **Progress** (`progressMultipliers` in `content/progress.ts`) is what the
+   reference player's cores and Memories multiply income by at each stage.
+   It follows from their schedules, so it needs no playing: ×2 per scheduled
+   core purchase, plus the Memory bonus from regressing on entering each
+   realm from Nascent Soul on, slid smoothly between regressions.
+3. **Every breakthrough and resource price** is its base price × progress at
+   its stage. Cores, Memories and your income all scale together, so
+   resources and techniques feel the same as they do alone, and the base
+   layer is where to tune them. A player who skips cores or regressions faces
+   prices scaled for a bonus they don't have, and falls steadily behind.
 
 If a stage is still off target, look at the content around it (a burst of
 income from several upgrades at once, or a drought).
@@ -145,7 +157,7 @@ built around.
 
 - Each treasure that changes income adds `levelOneGain`× when found at level
   1. Treasures that affect something else (encounters, tribulations) aren't
-  graded yet.
+     graded yet.
 - Treasure luck matters, but not too much: finishing with every treasure vs
   none changes total time by at most `maxLuckSpread`×.
 

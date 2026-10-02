@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Writes tuned parameters (SIM_TUNE params, as from build_costs.py) into
-src/content: breakthrough costs (STAGE_COSTS in realms.ts), the resource
+src/content: base breakthrough costs (BASE_STAGE_COSTS in realms.ts), the resource
 ladder (RESOURCE_LADDER in generators.ts) and the Memory curve (MEMORIES in
 memories.ts). Everything else is priced from those.
 Usage: bake.py params.json
@@ -33,7 +33,7 @@ if 'stageCosts' in params:
     full = os.path.join(ROOT, 'src/content/realms.ts')
     costs = ['0'] + [lit(10 ** c) for c in params['stageCosts'][1:]]
     s = open(full).read()
-    s, n = re.subn(r'(STAGE_COSTS: readonly number\[\] = \[)[^\]]*(\])', lambda m: m.group(1) + ', '.join(costs) + m.group(2), s)
+    s, n = re.subn(r'(BASE_STAGE_COSTS: number\[\] = \[)[^\]]*(\])', lambda m: m.group(1) + ', '.join(costs) + m.group(2), s)
     assert n == 1
     open(full, 'w').write(s)
 if 'ladder' in params:

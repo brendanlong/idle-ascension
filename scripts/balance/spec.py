@@ -17,10 +17,10 @@ NEVER_REGRESS_HOURS = 12
 REALMS = ['qiCondensation', 'foundation', 'coreFormation', 'nascentSoul', 'spiritSevering',
           'daoSeeking', 'immortalAscension']
 
-def run(job, tune=TUNE, hours=None):
-    """job: (player, treasures, regress mode, 'cores' or 'no cores', seed)."""
+def run(job, tune=TUNE, hours=None, layer=''):
+    """job: (player, treasures, regress mode, 'cores' or 'no cores', seed); layer: SIM_LAYER."""
     player, treasures, regress, cores, seed = job
-    env = dict(os.environ, SIM_SEED=str(seed), SIM_PLAYER=player, SIM_TREASURES=treasures,
+    env = dict(os.environ, SIM_SEED=str(seed), SIM_PLAYER=player, SIM_TREASURES=treasures, SIM_LAYER=layer,
                SIM_REGRESS=regress, SIM_NO_CORES='' if cores == 'cores' else '1', SIM_SPEC='1', SIM_TUNE=tune)
     hours = hours or (NEVER_REGRESS_HOURS if regress == 'never' else 40)
     out = subprocess.run(['npx', 'tsx', 'scripts/sim.ts', str(hours)], capture_output=True, text=True,

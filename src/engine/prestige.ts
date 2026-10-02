@@ -1,7 +1,8 @@
 import { generatorCount } from '../content/generators';
 import { MEMORIES } from '../content/memories';
 import { PERKS, PERKS_BY_ID, STASH_GENERATORS, type PerkDef } from '../content/perks';
-import { FINAL_STAGE, firstStageOfRealm } from '../content/realms';
+import { memoriesAt } from '../content/progress';
+import { STAGE_LAYOUT, firstStageOfRealm } from '../content/realms';
 import { log } from './events';
 import { createInitialState, type GameState } from './state';
 import { computeModifiers } from './stats';
@@ -9,11 +10,7 @@ import { computeModifiers } from './stats';
 const REGRESSION_REALM = 'coreFormation';
 /** Memories gained by regressing from a given stage: exponential in how deep you got (see MEMORIES). */
 export function memoriesForStage(stage: number): number {
-  const first = firstStageOfRealm(REGRESSION_REALM);
-  if (stage < first) return 0;
-  return Math.floor(
-    MEMORIES.first * MEMORIES.growthPerStage ** (Math.min(stage, FINAL_STAGE) - first),
-  );
+  return memoriesAt(STAGE_LAYOUT, stage);
 }
 
 /**

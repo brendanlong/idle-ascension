@@ -1,5 +1,6 @@
 import type { Condition } from '../engine/conditions';
 import type { Effect } from '../engine/effects';
+import { progressMultipliers, type RealmLayout } from './progress';
 
 export interface TribulationDef {
   name: string;
@@ -15,7 +16,7 @@ export interface RealmDef {
   color: string;
   description: string;
   stageNames: readonly string[];
-  /** Qi cost of breaking through into each stage, from STAGE_COSTS. */
+  /** Qi cost of breaking through into each stage (see priceStages). */
   stageCosts: readonly number[];
   /** Multiplier to all qi gain granted by each stage reached in this realm. */
   stageMultiplier: number;
@@ -35,14 +36,15 @@ const LAYERS = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'].m
 const PHASES = ['Early', 'Middle', 'Late', 'Peak'];
 
 /**
- * The qi cost of breaking through into each stage, Mortal (free) first. Built
- * by scripts/balance/build_costs.py: priced so the reference player (see
- * docs/balance-spec.md) takes the target time for each stage, then smoothed.
+ * Breakthrough costs before cores and Memories (see PRICING in
+ * content/progress.ts), Mortal (free) first. Built by
+ * scripts/balance/build_costs.py: priced so the reference player, with
+ * resources and techniques alone, takes the target time for each stage.
  */
-export const STAGE_COSTS: readonly number[] = [
-  0, 54, 83, 170, 430, 1_500, 5_600, 26_000, 120_000, 680_000, 3_500_000, 2.1e7, 1.3e8, 7.7e8,
-  4.7e9, 4.5e10, 5.2e11, 1.1e13, 3.2e14, 8e15, 1.4e17, 1.6e18, 7.7e18, 2.7e19, 7.9e19, 2.8e20,
-  6.9e20, 2.3e21, 8e21, 3.6e22, 1.4e23, 8.8e23, 6.1e24, 5e25, 3.7e26,
+export const BASE_STAGE_COSTS: number[] = [
+  0, 54, 82, 150, 400, 1_200, 3_700, 16_000, 57_000, 240_000, 1_000_000, 5_500_000, 2.1e7, 8.7e7,
+  3.1e8, 1.2e9, 4.2e9, 2.4e10, 1.9e11, 1.8e12, 1.8e13, 1.9e14, 1.5e15, 9.2e15, 4e16, 1.4e17, 4.3e17,
+  1.3e18, 4.3e18, 1.4e19, 4.4e19, 1.4e20, 4.4e20, 1.3e21, 4.5e21,
 ];
 
 const REALM_DEFS: readonly Omit<RealmDef, 'stageCosts'>[] = [
@@ -148,12 +150,12 @@ const REALM_DEFS: readonly Omit<RealmDef, 'stageCosts'>[] = [
   },
 ];
 
-let nextStage = 0;
-export const REALMS: readonly RealmDef[] = REALM_DEFS.map((r) => {
-  const stageCosts = STAGE_COSTS.slice(nextStage, nextStage + r.stageNames.length);
-  nextStage += r.stageNames.length;
-  return { ...r, stageCosts };
-});
+export const STAGE_LAYOUT: readonly RealmLayout[] = REALM_DEFS.map((r) => ({
+  id: r.id,
+  stages: r.stageNames.length,
+}));
+
+export const REALMS: readonly RealmDef[] = REALM_DEFS.map((r) => ({ ...r, stageCosts: [] }));
 
 export const REALMS_BY_ID: ReadonlyMap<string, RealmDef> = new Map(REALMS.map((r) => [r.id, r]));
 
@@ -171,12 +173,22 @@ export const STAGES: readonly StageDef[] = REALMS.flatMap((realm, realmIndex) =>
   realm.stageNames.map((_, stageInRealm) => ({
     realmIndex,
     stageInRealm,
-    cost: realm.stageCosts[stageInRealm],
+    cost: 0,
     isMajor: stageInRealm === 0,
   })),
 ).map((s, index) => ({ ...s, index }));
 
 export const FINAL_STAGE = STAGES.length - 1;
+
+/** Sets every breakthrough cost from its base cost and progress (call again if either changes). */
+export function priceStages(): void {
+  const progress = progressMultipliers(STAGE_LAYOUT);
+  for (const st of STAGES) {
+    (st as { cost: number }).cost = BASE_STAGE_COSTS[st.index] * progress[st.index];
+    (REALMS[st.realmIndex].stageCosts as number[])[st.stageInRealm] = st.cost;
+  }
+}
+priceStages();
 
 export function stageName(stage: number): string {
   const s = STAGES[stage];

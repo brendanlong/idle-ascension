@@ -1,5 +1,6 @@
-import { CORE_GRADES, CORE_SLOT_REALMS, ELEMENTS_BY_ID, type ElementId } from '../content/cores';
-import { FINAL_STAGE, REALMS, STAGES, firstStageOfRealm } from '../content/realms';
+import { CORE_GRADES, ELEMENTS_BY_ID, type ElementId } from '../content/cores';
+import { coreSchedule } from '../content/progress';
+import { FINAL_STAGE, REALMS, STAGES, STAGE_LAYOUT } from '../content/realms';
 import { spendQi } from './economy';
 import type { Modifiers } from './effects';
 import { log } from './events';
@@ -20,38 +21,9 @@ function costAt(position: number): number {
   return STAGES[lo].cost * (STAGES[hi].cost / STAGES[lo].cost) ** (p - lo);
 }
 
-function slotRealmIndex(coreIndex: number): number {
-  const id = CORE_SLOT_REALMS[Math.min(coreIndex, CORE_SLOT_REALMS.length - 1)];
-  return REALMS.findIndex((r) => r.id === id);
-}
-
-/** How far through a realm (0 to 1) lands at that point on the stage axis. */
-function inRealm(realmIndex: number, fraction: number): number {
-  const realm = REALMS[Math.min(realmIndex, REALMS.length - 1)];
-  return firstStageOfRealm(realm.id) + fraction * realm.stageNames.length;
-}
-
-/**
- * Where on the stage axis each core purchase is priced, so the cores spread
- * through the game: each realm's new core forms a third of the way through
- * its realm, and every core gains a grade per realm after that. In a realm,
- * the newest core's refine comes two thirds of the way through, and the older
- * cores' refines are spread over the rest of the realm after the new core.
- */
-export function formPosition(coreIndex: number): number {
-  return inRealm(slotRealmIndex(coreIndex), 1 / 3);
-}
-
-export function refinePosition(coreIndex: number, grade: number): number {
-  const realm = slotRealmIndex(coreIndex) + grade - 1;
-  // Cores already formed by this realm, newest first: the newest refines first.
-  const cores = CORE_SLOT_REALMS.filter(
-    (id) => REALMS.findIndex((r) => r.id === id) <= realm,
-  ).length;
-  const newest = Math.min(cores, CORE_SLOT_REALMS.length) - 1;
-  const order = coreIndex >= newest ? 1 : coreIndex + 2;
-  return inRealm(realm, 1 / 3 + ((2 / 3) * order) / (cores + 1));
-}
+const schedule = coreSchedule(STAGE_LAYOUT);
+export const formPosition = schedule.form;
+export const refinePosition = schedule.refine;
 
 export function coreFormCost(mods: Modifiers, coreIndex: number): number {
   return costAt(formPosition(coreIndex)) * CORE_PRICE_SHARE * mods.coreCostMult;

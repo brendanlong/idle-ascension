@@ -1,3 +1,4 @@
+import { MEMORIES } from '../content/memories';
 import { generatorName } from '../content/generators';
 
 /**
@@ -70,7 +71,7 @@ export function baseModifiers(): Modifiers {
     offlineEfficiency: 0.5,
     coreSlots: 0,
     coreCostMult: 1,
-    memoryPower: 0.2,
+    memoryPower: MEMORIES.power,
     startingStage: 0,
   };
 }

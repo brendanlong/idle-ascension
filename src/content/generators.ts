@@ -1,3 +1,5 @@
+import { progressMultipliers } from './progress';
+import { STAGE_LAYOUT } from './realms';
 export interface GeneratorDef {
   id: string;
   name: string;
@@ -20,13 +22,16 @@ export interface GeneratorDef {
 export const GENERATOR_COST_GROWTH = 1.15;
 
 /**
- * Resources form a fixed ladder, independent of breakthrough costs (which are
- * built on top of it, see docs/balance-spec.md): each tier costs `costRatio`
- * times the one before and makes `efficiencyStep` times as much qi/s per qi.
- * The first tier is priced by hand. Fit with scripts/balance/build_costs.py
- * so a new tier arrives every couple of stages.
+ * Resources form a fixed ladder (breakthrough costs are built on top of it,
+ * see docs/balance-spec.md): each tier costs `costRatio` times the one before
+ * and makes `efficiencyStep` times as much qi/s per qi. The first tier is
+ * priced by hand. Tier n is meant to arrive around stage `stagesPerTier` x n,
+ * and its price is multiplied by the progress there (cores and Memories, see
+ * content/progress.ts), so new resources feel the same whatever those add
+ * (they multiply its output and your income alike).
+ * Fit with scripts/balance/build_costs.py.
  */
-export const RESOURCE_LADDER = { costRatio: 13.2, efficiencyStep: 0.5 };
+export const RESOURCE_LADDER = { costRatio: 11.5, efficiencyStep: 0.449, stagesPerTier: 2 };
 
 export const GENERATORS: readonly GeneratorDef[] = (
   [
@@ -178,13 +183,16 @@ export const GENERATORS: readonly GeneratorDef[] = (
 
 /** Prices every resource after the first from RESOURCE_LADDER (call again if it changes). */
 export function priceResources(): void {
+  const progress = progressMultipliers(STAGE_LAYOUT);
+  const { costRatio, efficiencyStep, stagesPerTier } = RESOURCE_LADDER;
   const [first, ...rest] = GENERATORS as GeneratorDef[];
-  let { baseCost, baseQps } = first;
-  for (const g of rest) {
-    baseCost *= RESOURCE_LADDER.costRatio;
-    baseQps *= RESOURCE_LADDER.costRatio * RESOURCE_LADDER.efficiencyStep;
-    Object.assign(g, { baseCost, baseQps });
-  }
+  rest.forEach((g, i) => {
+    const tier = i + 1;
+    const stage = Math.min(stagesPerTier * tier, progress.length - 1);
+    g.baseCost = first.baseCost * costRatio ** tier * progress[stage];
+    // Output needn't scale: cores and Memories already multiply it.
+    g.baseQps = first.baseQps * (costRatio * efficiencyStep) ** tier;
+  });
 }
 priceResources();
 
