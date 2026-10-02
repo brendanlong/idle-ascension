@@ -44,7 +44,7 @@ import {
   stageSeconds as stageTarget,
 } from '../src/content/progress';
 import {
-  BASE_COST_CURVE,
+  BASE_STAGE_COSTS,
   REALMS,
   STAGES,
   STAGE_LAYOUT,
@@ -162,7 +162,7 @@ const CORE_ORDER: ElementId[] = ['wood', 'fire', 'water', 'earth', 'metal'];
  *   price        multiplies single prices: "up:<technique id>", "stage:<index>",
  *                "gen:<resource>" (base cost)
  *   genQps       multiplies a resource's output
- *   baseCurve    overrides BASE_COST_CURVE (src/content/realms.ts)
+ *   baseCosts    overrides BASE_STAGE_COSTS (src/content/realms.ts)
  *   memory       overrides MEMORIES (src/content/memories.ts)
  *   ladder       overrides RESOURCE_LADDER (src/content/generators.ts)
  *   regression   overrides REGRESSION_CURVE (src/content/progress.ts)
@@ -182,13 +182,13 @@ function applyTuning(): void {
     stageGrowth?: Record<string, number>;
     price?: Record<string, number>;
     genQps?: Record<string, number>;
-    baseCurve?: number[];
+    baseCosts?: number[];
     memory?: Partial<typeof MEMORIES>;
     ladder?: Partial<typeof RESOURCE_LADDER>;
     regression?: Partial<typeof REGRESSION_CURVE>;
   };
   Object.assign(REGRESSION_CURVE, tune.regression);
-  if (tune.baseCurve) BASE_COST_CURVE.splice(0, BASE_COST_CURVE.length, ...tune.baseCurve);
+  if (tune.baseCosts) BASE_STAGE_COSTS.splice(0, BASE_STAGE_COSTS.length, ...tune.baseCosts);
   Object.assign(MEMORIES, tune.memory);
   Object.assign(RESOURCE_LADDER, tune.ladder);
   reprice();
@@ -301,7 +301,7 @@ if (process.env.SIM_DUMP_PRICES) {
     JSON.stringify({
       up: Object.fromEntries(UPGRADES.map((u) => [u.id, u.cost])),
       stage: STAGES.map((st) => st.cost),
-      baseCurve: [...BASE_COST_CURVE],
+      baseCosts: [...BASE_STAGE_COSTS],
       ladder: RESOURCE_LADDER,
       stageTime: STAGE_TIME,
       stageSeconds: STAGES.map((_, k) => stageTarget(STAGE_LAYOUT, k)),

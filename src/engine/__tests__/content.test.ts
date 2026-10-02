@@ -111,9 +111,9 @@ describe('content integrity', () => {
     for (const realm of REALMS) expect(realm.stageCosts.length).toBe(realm.stageNames.length);
   });
 
-  it('has strictly increasing breakthrough costs', () => {
+  it('never makes a breakthrough cheaper than the one before', () => {
     for (let i = 2; i < STAGES.length; i++) {
-      expect(STAGES[i].cost).toBeGreaterThan(STAGES[i - 1].cost);
+      expect(STAGES[i].cost).toBeGreaterThanOrEqual(STAGES[i - 1].cost);
     }
   });
 

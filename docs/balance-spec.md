@@ -6,9 +6,9 @@ this doc explains them. When the game feels wrong, first make this spec say
 what we actually want, then re-run the tooling until the game meets it.
 
 ```sh
-python3 scripts/balance/spec.py                  # grade the game as it is
-python3 scripts/balance/build_costs.py 20 p.json  # build base breakthrough costs from play
-python3 scripts/balance/bake.py p.json            # write them into src/content
+npx tsx scripts/balance/model.ts               # check each layer against the schedule
+MODEL_WRITE=1 npx tsx scripts/balance/model.ts # and write base breakthrough costs
+python3 scripts/balance/spec.py                # grade the whole game with the bots
 ```
 
 ## Overall shape
@@ -43,19 +43,27 @@ once bored, if regressing would at least triple their Memory bonus.
 
 ## Breakthrough costs are built in layers
 
-Content is defined first, and prices are built on top of it. Each layer is
-an equation, so prices are smooth and say plainly what they assume.
+Everything is priced from one schedule: `STAGE_TIME` in
+`src/content/progress.ts`, how long each stage should take (`first` seconds
+up to stage `flatUntil`, then rising linearly to `last`). Layers are added
+one at a time, each checked on its own before the next goes on top, with a
+deterministic model (`scripts/balance/model.ts`) rather than a bot: over each
+stage's target time, the model player puts `BREAKTHROUGH_SHARE` of its income
+towards the breakthrough and spends the rest on whatever pays for itself
+soonest. Breakthroughs are just stages: they don't boost qi, and the sims
+pass tribulations instantly.
 
-1. **Base costs** (`BASE_COST_CURVE` in `src/content/realms.ts`): log cost
-   is a cubic in the stage number. `build_costs.py` fits it by playing the
-   reference player with resources and techniques alone (no cores, no
-   regressions, unscaled prices) and pricing each stage so it takes its
-   target time (a stage takes about its cost ÷ income). It also fits the
-   resource ladder (`RESOURCE_LADDER` in `src/content/generators.ts`): each
-   tier a fixed multiple pricier than the last, its cost ratio set so a new
-   one arrives every `stagesPerTier` stages, and its efficiency (qi/s per qi)
-   stepping down from an early to a late rate set so each new one lands at
-   about "all the others combined".
+1. **Resources and breakthroughs.** The resource ladder (`RESOURCE_LADDER`
+   in `src/content/generators.ts`) follows from the schedule: tier n is due
+   at stage `stagesPerTier` × n, costs a ratio more than the tier before
+   (sliding from `costRatio` to `costRatioLate`), and pays for itself in
+   `paybackStages` of that stage's target time, so each new resource pays
+   for itself faster than the old ones. Base breakthrough costs
+   (`BASE_STAGE_COSTS` in `src/content/realms.ts`) are what the model player
+   put towards each one, written by `MODEL_WRITE=1`. The model checks that
+   each resource arrives when due, income grows every stage, the newest
+   resource gets most purchases with the one or two before it topped up, and
+   there are no long waits.
 2. **Cores** (`CORE_CURVE` in `src/content/progress.ts`): from a third of the
    way into Core Formation, the core bonus doubles a fixed number of times
    per stage, since every core purchase (forming or refining) doubles qi

@@ -38,7 +38,7 @@ export const RESOURCE_LADDER = {
   firstCost: 100,
   costRatio: 8,
   costRatioLate: 4,
-  paybackStages: 1,
+  paybackStages: 0.5,
   stagesPerTier: 2,
 };
 
