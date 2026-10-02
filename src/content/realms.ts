@@ -37,15 +37,21 @@ const PHASES = ['Early', 'Middle', 'Late', 'Peak'];
 
 /**
  * Breakthrough costs before cores and Memories (see PRICING in
- * content/progress.ts), Mortal (free) first. Built by
- * scripts/balance/build_costs.py: priced so the reference player, with
- * resources and techniques alone, takes the target time for each stage.
+ * content/progress.ts): log10 of the cost at stage k is c0 + c1 k + c2 k² +
+ * c3 k³ (Mortal, stage 0, is free). Fit by scripts/balance/build_costs.py so
+ * the reference player, with resources and techniques alone, takes about the
+ * target time for each stage.
  */
-export const BASE_STAGE_COSTS: number[] = [
-  0, 54, 82, 160, 400, 1_300, 4_100, 18_000, 65_000, 270_000, 1_100_000, 5_400_000, 2.1e7, 9.1e7,
-  3e8, 1.1e9, 3.4e9, 1.6e10, 9.6e10, 7.6e11, 6.5e12, 6.1e13, 5.4e14, 4e15, 2.3e16, 1e17, 4.2e17,
-  1.4e18, 4.3e18, 1.5e19, 5.1e19, 1.6e20, 4.8e20, 1.3e21, 3.1e21,
-];
+export const BASE_COST_CURVE: number[] = [1.15018, 0.331843, 0.0248674, -0.000481003];
+
+/** BASE_COST_CURVE at every stage (call again if it changes). */
+export const BASE_STAGE_COSTS: number[] = [];
+export function priceBaseStages(stages: number): void {
+  BASE_STAGE_COSTS.length = 0;
+  BASE_STAGE_COSTS.push(0);
+  for (let k = 1; k < stages; k++)
+    BASE_STAGE_COSTS.push(10 ** BASE_COST_CURVE.reduce((sum, c, power) => sum + c * k ** power, 0));
+}
 
 const REALM_DEFS: readonly Omit<RealmDef, 'stageCosts'>[] = [
   {
@@ -153,6 +159,7 @@ const REALM_DEFS: readonly Omit<RealmDef, 'stageCosts'>[] = [
 export const STAGE_LAYOUT: readonly RealmLayout[] = REALM_DEFS.map((r) => ({
   id: r.id,
   stages: r.stageNames.length,
+  coreGradeCap: r.coreGradeCap,
 }));
 
 export const REALMS: readonly RealmDef[] = REALM_DEFS.map((r) => ({ ...r, stageCosts: [] }));
@@ -182,6 +189,7 @@ export const FINAL_STAGE = STAGES.length - 1;
 
 /** Sets every breakthrough cost from its base cost and progress (call again if either changes). */
 export function priceStages(): void {
+  priceBaseStages(STAGES.length);
   const progress = progressMultipliers(STAGE_LAYOUT);
   for (const st of STAGES) {
     (st as { cost: number }).cost = BASE_STAGE_COSTS[st.index] * progress[st.index];

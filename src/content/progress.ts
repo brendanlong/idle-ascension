@@ -7,17 +7,35 @@ import { MEMORIES } from './memories';
  * and every breakthrough and resource price is multiplied by what the
  * reference player's cores and Memories multiply income by at that stage. So
  * resources feel the same whatever cores and Memories add, and a player who
- * skips either falls steadily behind.
+ * skips either falls steadily behind. Both are equations; the core schedule
+ * follows from its equation.
  */
 
 /** The realms in order, with how many stages each has (Mortal's one stage is stage 0). */
 export interface RealmLayout {
   id: string;
   stages: number;
+  coreGradeCap?: number;
 }
 
 /** Switch off to price everything as if there were no cores or Memories (for building base costs). */
 export const PRICING = { layered: true };
+
+/**
+ * The core equation: from stage `from` (a third of the way into Core
+ * Formation), the core bonus doubles `perStage` times per stage, since every
+ * core purchase doubles qi gain.
+ */
+export const CORE_CURVE = { from: 15 + 1 / 3, perStage: 0.85 };
+
+/**
+ * The Memory equation: the reference player regresses every `interval`
+ * stages (once per realm), from `firstRealm` on. On average it's half an
+ * interval past its last regression, so its Memory bonus at stage k is the
+ * game's Memory formula for having regressed from k - interval / 2, and every
+ * interval before that.
+ */
+export const REGRESSION_CURVE = { firstRealm: 'nascentSoul', interval: 4 };
 
 function firstStage(layout: readonly RealmLayout[], realmIndex: number): number {
   return layout.slice(0, realmIndex).reduce((n, r) => n + r.stages, 0);
@@ -27,104 +45,119 @@ function realmIndex(layout: readonly RealmLayout[], id: string): number {
   return layout.findIndex((r) => r.id === id);
 }
 
-/** A point on the stage axis that far (0 to 1) through a realm. */
-function inRealm(layout: readonly RealmLayout[], index: number, fraction: number): number {
-  const i = Math.min(index, layout.length - 1);
-  return firstStage(layout, i) + fraction * layout[i].stages;
+/** The realm a point on the stage axis falls in. */
+function realmAt(layout: readonly RealmLayout[], position: number): number {
+  let end = 0;
+  for (let r = 0; r < layout.length; r++) {
+    end += layout[r].stages;
+    if (position < end) return r;
+  }
+  return layout.length - 1;
+}
+
+export interface CoreEvent {
+  position: number;
+  core: number;
+  /** The grade it's formed at (0) or refined to. */
+  grade: number;
 }
 
 /**
- * Where on the stage axis each core purchase is scheduled, so the cores spread
- * through the game: each realm's new core forms a third of the way through
- * its realm, and every core gains a grade per realm after that. In a realm,
- * the newest core's refine comes two thirds of the way through, and the older
- * cores' refines are spread over the rest of the realm after the new core.
+ * Every core purchase, evenly spaced by CORE_CURVE: each forms a new core if
+ * a slot is open, else refines the lowest-grade core below its realm's cap.
+ * One that can't happen yet waits for the next realm.
  */
-export function coreSchedule(layout: readonly RealmLayout[]) {
-  const slotRealm = (core: number) =>
-    realmIndex(layout, CORE_SLOT_REALMS[Math.min(core, CORE_SLOT_REALMS.length - 1)]);
-  return {
-    form: (core: number) => inRealm(layout, slotRealm(core), 1 / 3),
-    refine: (core: number, grade: number) => {
-      const realm = slotRealm(core) + grade - 1;
-      // Cores already formed by this realm, newest first: the newest refines first.
-      const cores = CORE_SLOT_REALMS.filter((id) => realmIndex(layout, id) <= realm).length;
-      const newest = Math.min(cores, CORE_SLOT_REALMS.length) - 1;
-      const order = core >= newest ? 1 : core + 2;
-      return inRealm(layout, realm, 1 / 3 + ((2 / 3) * order) / (cores + 1));
-    },
-  };
+export function coreSchedule(layout: readonly RealmLayout[]): CoreEvent[] {
+  const grades: number[] = [];
+  const events: CoreEvent[] = [];
+  const total = CORE_SLOT_REALMS.length * CORE_GRADES.length;
+  let earliest = 0;
+  for (let i = 0; events.length < total; i++) {
+    let position = Math.max(earliest, CORE_CURVE.from + i / CORE_CURVE.perStage);
+    for (;;) {
+      const realm = realmAt(layout, position);
+      const slots = CORE_SLOT_REALMS.filter((id) => realmIndex(layout, id) <= realm).length;
+      const cap = Math.min(layout[realm].coreGradeCap ?? 0, CORE_GRADES.length - 1);
+      if (grades.length < slots) {
+        events.push({ position, core: grades.length, grade: 0 });
+        grades.push(0);
+        break;
+      }
+      const lowest = grades.reduce((best, g, c) => (g < grades[best] ? c : best), 0);
+      if (grades.length && grades[lowest] < cap) {
+        grades[lowest]++;
+        events.push({ position, core: lowest, grade: grades[lowest] });
+        break;
+      }
+      // Nothing can happen in this realm any more: wait for the next one.
+      position = realm === layout.length - 1 ? position + 1 : firstStage(layout, realm + 1);
+    }
+    earliest = position;
+  }
+  return events;
 }
 
 /** Memories from regressing at a stage: exponential in how deep you got (see MEMORIES). */
 export function memoriesAt(layout: readonly RealmLayout[], stage: number): number {
+  return Math.floor(memoriesAtDepth(layout, stage));
+}
+
+/** memoriesAt without rounding, for fractional stages. */
+function memoriesAtDepth(layout: readonly RealmLayout[], stage: number): number {
   const first = firstStage(layout, realmIndex(layout, 'coreFormation'));
   if (stage < first) return 0;
   const last = firstStage(layout, layout.length) - 1;
-  return Math.floor(MEMORIES.first * MEMORIES.growthPerStage ** (Math.min(stage, last) - first));
+  return MEMORIES.first * MEMORIES.growthPerStage ** (Math.min(stage, last) - first);
 }
 
-/** Linear between the knots (sorted by stage), flat before the first and after the last. */
-function slide(knots: readonly { stage: number; log: number }[], k: number): number {
-  if (k <= knots[0].stage) return knots[0].log;
-  const i = knots.findIndex((p) => p.stage >= k);
-  if (i < 0) return knots[knots.length - 1].log;
-  const [a, b] = [knots[i - 1], knots[i]];
-  if (b.stage === a.stage) return b.log;
-  return a.log + ((b.log - a.log) * (k - a.stage)) / (b.stage - a.stage);
+/**
+ * How many of the purchases at these positions are done by stage k, sliding
+ * from one to the next (and into the first over the gap before it).
+ */
+function smoothCount(positions: readonly number[], gap: number, k: number): number {
+  const i = positions.findIndex((p) => p > k);
+  if (i < 0) return positions.length;
+  const previous = i === 0 ? positions[0] - gap : positions[i - 1];
+  return Math.max(0, i + (k - previous) / (positions[i] - previous));
 }
-
-/** The realm the reference player first regresses in (on entering it), then once per realm. */
-const FIRST_REGRESSION_REALM = 'nascentSoul';
 
 /**
  * What the reference player's cores and Memories multiply income by at each
  * stage (1 for every stage when PRICING.layered is off).
- * - Cores: every scheduled core purchase doubles qi gain, plus the small
- *   generating cycle bonus once there are two or more; slid smoothly between
- *   purchases, since players buy them a little before or after schedule.
- * - Memories: it regresses on entering each realm from FIRST_REGRESSION_REALM
- *   on; the bonus slides smoothly between those regressions.
  */
 export function progressMultipliers(layout: readonly RealmLayout[]): number[] {
   const stages = firstStage(layout, layout.length);
   if (!PRICING.layered) return Array(stages).fill(1);
 
-  const schedule = coreSchedule(layout);
-  const events: number[] = [];
-  const formed: number[] = [];
-  CORE_SLOT_REALMS.forEach((_, core) => {
-    formed.push(schedule.form(core));
-    events.push(schedule.form(core));
-    for (let grade = 1; grade < CORE_GRADES.length; grade++)
-      events.push(schedule.refine(core, grade));
-  });
-  const coresFrom = firstStage(layout, realmIndex(layout, CORE_SLOT_REALMS[0]));
-  // How many of the scheduled purchases are done by stage k, sliding between them.
-  const smoothCount = (positions: number[], k: number) =>
-    slide(
-      [
-        { stage: coresFrom, log: 0 },
-        ...[...positions].sort((a, b) => a - b).map((p, i) => ({ stage: p, log: i + 1 })),
-      ],
-      k,
-    );
+  const events = coreSchedule(layout);
+  const gap = 1 / CORE_CURVE.perStage;
+  const purchases = events.map((e) => e.position);
+  const forms = events.filter((e) => e.grade === 0).map((e) => e.position);
   const coreLog = (k: number) => {
-    const cores = smoothCount(formed, k);
+    const cores = smoothCount(forms, gap, k);
     // Cores form in an order that links each new one to the cycle, closing it with the last.
     const pairs = cores >= CORE_SLOT_REALMS.length ? cores : Math.max(0, cores - 1);
-    return smoothCount(events, k) * Math.log(2) + Math.log(1 + GENERATING_CYCLE_BONUS * pairs);
+    return (
+      smoothCount(purchases, gap, k) * Math.log(2) + Math.log(1 + GENERATING_CYCLE_BONUS * pairs)
+    );
   };
 
-  // Memory bonus right after each scheduled regression, as (stage, log of the bonus).
-  const knots = [{ stage: firstStage(layout, realmIndex(layout, 'coreFormation')), log: 0 }];
-  let memories = 0;
-  for (let r = realmIndex(layout, FIRST_REGRESSION_REALM); r < layout.length - 1; r++) {
-    const entry = firstStage(layout, r);
-    memories += memoriesAt(layout, entry);
-    knots.push({ stage: entry, log: MEMORIES.power * Math.log(1 + MEMORIES.weight * memories) });
-  }
-  const memoryLog = (k: number) => slide(knots, k);
+  const { interval } = REGRESSION_CURVE;
+  const first = firstStage(layout, realmIndex(layout, REGRESSION_CURVE.firstRealm));
+  // The last regression is on entering the last realm before the final one.
+  const last = firstStage(layout, layout.length - 2);
+  /** The Memory bonus for having regressed every interval stages up to `reach`. */
+  const bonusLog = (reach: number) => {
+    let memories = 0;
+    for (let s = reach; s >= first; s -= interval) memories += memoriesAtDepth(layout, s);
+    return MEMORIES.power * Math.log(1 + MEMORIES.weight * memories);
+  };
+  const memoryLog = (k: number) => {
+    // The first regression is spread over the interval around it, like the rest.
+    if (k <= first - interval / 2) return 0;
+    if (k < first + interval / 2) return (bonusLog(first) * (k - first + interval / 2)) / interval;
+    return bonusLog(Math.min(k - interval / 2, last));
+  };
 
   return Array.from({ length: stages }, (_, k) => Math.exp(coreLog(k) + memoryLog(k)));
 }

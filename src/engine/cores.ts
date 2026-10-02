@@ -1,4 +1,4 @@
-import { CORE_GRADES, ELEMENTS_BY_ID, type ElementId } from '../content/cores';
+import { CORE_GRADES, CORE_SLOT_REALMS, ELEMENTS_BY_ID, type ElementId } from '../content/cores';
 import { coreSchedule } from '../content/progress';
 import { FINAL_STAGE, REALMS, STAGES, STAGE_LAYOUT } from '../content/realms';
 import { spendQi } from './economy';
@@ -22,8 +22,17 @@ function costAt(position: number): number {
 }
 
 const schedule = coreSchedule(STAGE_LAYOUT);
-export const formPosition = schedule.form;
-export const refinePosition = schedule.refine;
+
+/** Where forming a core is priced: its purchase in the schedule. */
+export function formPosition(coreIndex: number): number {
+  return refinePosition(coreIndex, 0);
+}
+
+/** Where refining a core to a grade is priced: its purchase in the schedule. */
+export function refinePosition(coreIndex: number, grade: number): number {
+  const core = Math.min(coreIndex, CORE_SLOT_REALMS.length - 1);
+  return schedule.find((e) => e.core === core && e.grade === grade)!.position;
+}
 
 export function coreFormCost(mods: Modifiers, coreIndex: number): number {
   return costAt(formPosition(coreIndex)) * CORE_PRICE_SHARE * mods.coreCostMult;

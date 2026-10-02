@@ -35,9 +35,9 @@ export const GENERATOR_COST_GROWTH = 1.15;
  * Fit with scripts/balance/build_costs.py.
  */
 export const RESOURCE_LADDER = {
-  costRatio: 10.1,
-  efficiencyStep: 0.522,
-  efficiencyStepLate: 0.32,
+  costRatio: 10.5,
+  efficiencyStep: 0.623,
+  efficiencyStepLate: 0.269,
   stagesPerTier: 2,
 };
 

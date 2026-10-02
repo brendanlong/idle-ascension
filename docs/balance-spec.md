@@ -43,42 +43,40 @@ once bored, if regressing would at least triple their Memory bonus.
 
 ## Breakthrough costs are built in layers
 
-Content is defined first, and prices are built on top of it:
+Content is defined first, and prices are built on top of it. Each layer is
+an equation, so prices are smooth and say plainly what they assume.
 
-- **Resources** form a fixed ladder (`RESOURCE_LADDER` in
-  `src/content/generators.ts`): each tier a fixed multiple pricier than the
-  last, at a fixed fraction of its qi/s per qi, meant to arrive every
-  `stagesPerTier` stages.
-- **A resource's techniques** are priced from the resource (its first
-  technique arrives soon after it, its revival later).
-- **Realm techniques** are priced from a stage within their realm, staggered
-  so a realm's upgrades arrive one at a time.
-- **Cores** (`content/progress.ts`): each realm's new core forms a third of
-  the way through its realm and gets its first refine two thirds of the way
-  through; every core gains a grade per realm after that, with the older
-  cores' refines spread over the rest of each realm. Forming or refining a
-  core always doubles qi gain, so cores grow exponentially like Memories. The
-  generating cycle adds a small bonus (+25% per adjacent pair).
-
-Then the layers:
-
-1. **Base costs** (`BASE_STAGE_COSTS` in `src/content/realms.ts`) come from
-   resources and techniques alone. `build_costs.py` plays the reference
-   player without cores or regressions and prices each stage so it takes its
-   target time (a stage takes about its cost ÷ income), smoothing the cost
-   steps so they don't follow one bot's quirks. It also fits the resource
-   ladder: its cost ratio so a new resource arrives on schedule, and its
-   efficiency step so each one lands at about "all the others combined".
-2. **Progress** (`progressMultipliers` in `content/progress.ts`) is what the
-   reference player's cores and Memories multiply income by at each stage.
-   It follows from their schedules, so it needs no playing: ×2 per scheduled
-   core purchase, plus the Memory bonus from regressing on entering each
-   realm from Nascent Soul on, slid smoothly between regressions.
-3. **Every breakthrough and resource price** is its base price × progress at
-   its stage. Cores, Memories and your income all scale together, so
-   resources and techniques feel the same as they do alone, and the base
+1. **Base costs** (`BASE_COST_CURVE` in `src/content/realms.ts`): log cost
+   is a cubic in the stage number. `build_costs.py` fits it by playing the
+   reference player with resources and techniques alone (no cores, no
+   regressions, unscaled prices) and pricing each stage so it takes its
+   target time (a stage takes about its cost ÷ income). It also fits the
+   resource ladder (`RESOURCE_LADDER` in `src/content/generators.ts`): each
+   tier a fixed multiple pricier than the last, its cost ratio set so a new
+   one arrives every `stagesPerTier` stages, and its efficiency (qi/s per qi)
+   stepping down from an early to a late rate set so each new one lands at
+   about "all the others combined".
+2. **Cores** (`CORE_CURVE` in `src/content/progress.ts`): from a third of the
+   way into Core Formation, the core bonus doubles a fixed number of times
+   per stage, since every core purchase (forming or refining) doubles qi
+   gain. The schedule follows: purchases are evenly spaced at that rate, each
+   forming a new core when a slot is open, else refining the lowest-grade
+   core below its realm's cap. Each costs half the breakthrough cost at its
+   point. The generating cycle adds a small bonus (+25% per adjacent pair).
+3. **Memories** (`REGRESSION_CURVE`): the reference player regresses once per
+   realm, on entering it, from Nascent Soul on. On average it's half a realm
+   past its last regression, so its Memory bonus at stage k is the game's
+   Memory formula for having regressed from k − 2 (and every realm before).
+   Since Memories grow every stage, players just past a regression are a
+   little ahead of prices and players about to regress a little behind.
+4. **Every breakthrough and resource price** is its base price × the core
+   and Memory bonuses at its stage (a resource at the stage it's meant to
+   arrive; its output isn't scaled, since the bonuses already multiply it).
+   So resources and techniques feel the same as they do alone, and the base
    layer is where to tune them. A player who skips cores or regressions faces
    prices scaled for a bonus they don't have, and falls steadily behind.
+   Other prices follow too: a resource's techniques from the resource, and
+   realm techniques from a stage within their realm.
 
 If a stage is still off target, look at the content around it (a burst of
 income from several upgrades at once, or a drought).
@@ -149,9 +147,9 @@ Memories are exponential in stage index and qi gain grows logarithmically
 with them (`src/content/memories.ts`): each doubling of your Memories
 multiplies qi by the same small factor. Regressing again from the same stage
 only doubles them, so it's barely worth it, while each stage deeper is worth
-`growthPerStage` ^ `memoryPower`, so regressing a realm later is a good boost.
-The reference player's once-per-realm schedule is what breakthrough costs are
-built around.
+`growthPerStage` ^ `power`, so regressing a realm later is a good boost.
+Memories count in full as soon as you regress: the curves, not a waiting
+period, make repeated quick regressions not worth it.
 
 ### 6. Treasures (`treasures`)
 

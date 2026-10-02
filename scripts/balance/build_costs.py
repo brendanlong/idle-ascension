@@ -9,8 +9,9 @@ schedules, so they need no playing.
 
 Each round plays the spec's seeds with the current costs, moves every stage's
 cost by how far its time is off target (a stage takes about cost ÷ income,
-so twice as long needs twice the cost), smooths the cost steps so the curve
-doesn't follow one bot's quirks, and nudges the resource ladder: its cost
+so twice as long needs twice the cost), fits BASE_COST_CURVE (a cubic in
+log cost) to those costs so it's smooth and doesn't follow one bot's quirks,
+and nudges the resource ladder: its cost
 ratio so a new resource arrives about every stagesPerTier stages, and its
 early and late efficiency steps so each one, with its first technique and a
 minute of income, makes about as much as all the others combined. Every round is kept
@@ -29,29 +30,23 @@ from spec import SPEC, ramp, run
 
 ROOT = os.path.join(os.path.dirname(__file__), '..', '..')
 DAMPING = float(os.environ.get('DAMPING', 0.7))
-# Cost steps are averaged over this many stages.
-SMOOTHING = 5
-MIN_STEP = 0.1  # decades
 # Runs stop here; stages not reached get the last reached stage's correction.
 RUN_HOURS = 6
+
+STAGES = 35
 
 def content():
     out = subprocess.run(['npx', 'tsx', 'scripts/sim.ts'], capture_output=True, text=True, cwd=ROOT,
                          env=dict(os.environ, SIM_DUMP_PRICES='1')).stdout
-    costs = json.loads(out)['baseStage']
-    return [None] + [math.log10(c) for c in costs[1:]]
+    return json.loads(out)['baseCurve']
 
-def smooth(log_costs):
-    steps = np.diff(log_costs[1:])
-    pad = SMOOTHING // 2
-    padded = np.concatenate([np.full(pad, steps[0]), steps, np.full(pad, steps[-1])])
-    smoothed = np.maximum(np.convolve(padded, np.ones(SMOOTHING) / SMOOTHING, mode='valid'), MIN_STEP)
-    return [None, log_costs[1]] + list(log_costs[1] + np.cumsum(smoothed))
+def curve(coefficients, k):
+    return sum(c * k ** power for power, c in enumerate(coefficients))
 
 def main():
     rounds, path = int(sys.argv[1]), sys.argv[2]
     params = json.load(open(path)) if os.path.exists(path) else {}
-    params.setdefault('stageCosts', content())
+    params.setdefault('baseCurve', content())
     params.setdefault('ladder', {'costRatio': 13, 'efficiencyStep': 0.5, 'efficiencyStepLate': 0.5,
                                  'stagesPerTier': 2})
     params['ladder'].setdefault('efficiencyStepLate', params['ladder']['efficiencyStep'])
@@ -62,8 +57,8 @@ def main():
         with ThreadPoolExecutor(len(seeds)) as ex:
             runs = list(ex.map(lambda s: run(('reference', 'random', 'never', 'no cores', s), tune,
                                              hours=RUN_HOURS, layer='base'), seeds))
-        costs = params['stageCosts']
-        n = len(costs) - 1
+        n = STAGES - 1
+        costs = [None] + [curve(params['baseCurve'], k) for k in range(1, n + 1)]
         ratios = {k: statistics.median(max(1, r['stageSeconds'][k]) / ramp(k, n)
                                        for r in runs if len(r['stageSeconds']) > k) for k in range(1, n + 1)
                   if any(len(r['stageSeconds']) > k for r in runs)}
@@ -105,7 +100,8 @@ def main():
         last = max(ratios)
         for k in range(1, n + 1):
             costs[k] -= DAMPING * math.log10(ratios.get(k, ratios[last]))
-        params['stageCosts'] = smooth(costs)
+        stages = range(1, n + 1)
+        params['baseCurve'] = list(np.polyfit(list(stages), [costs[k] for k in stages], 3)[::-1])
         # Resources arriving late should be cheaper relative to each other.
         params['ladder']['costRatio'] *= 1.5 ** (-DAMPING * late / spacing / 4)
         # Too strong on arrival means each tier should be less efficient than the last.

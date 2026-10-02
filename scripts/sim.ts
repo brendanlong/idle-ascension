@@ -37,7 +37,7 @@ import { MEMORIES } from '../src/content/memories';
 import { UPGRADES, priceUpgrades } from '../src/content/upgrades';
 import { PERKS, type PerkDef } from '../src/content/perks';
 import { PRICING } from '../src/content/progress';
-import { BASE_STAGE_COSTS, REALMS, STAGES, priceStages, stageName } from '../src/content/realms';
+import { BASE_COST_CURVE, REALMS, STAGES, priceStages, stageName } from '../src/content/realms';
 import { MAX_TREASURE_LEVEL, TREASURES } from '../src/content/treasures';
 import {
   attemptBreakthrough,
@@ -68,7 +68,6 @@ import { formatDuration, formatNumber } from '../src/engine/format';
 import {
   buyPerk,
   perkCost,
-  memorySettledFraction,
   pendingMemories,
   perkStatus,
   regress,
@@ -151,7 +150,7 @@ const CORE_ORDER: ElementId[] = ['wood', 'fire', 'water', 'earth', 'metal'];
  *   price        multiplies single prices: "up:<technique id>", "stage:<index>",
  *                "gen:<resource>" (base cost)
  *   genQps       multiplies a resource's output
- *   stageCosts   log10 of every breakthrough's base cost, by stage (overrides BASE_STAGE_COSTS)
+ *   baseCurve    overrides BASE_COST_CURVE (src/content/realms.ts)
  *   memory       overrides MEMORIES (src/content/memories.ts)
  *   ladder       overrides RESOURCE_LADDER (src/content/generators.ts)
  * SIM_PRICES=1 prints, as JSON, each of those prices the first time the bot
@@ -170,12 +169,11 @@ function applyTuning(): void {
     stageGrowth?: Record<string, number>;
     price?: Record<string, number>;
     genQps?: Record<string, number>;
-    stageCosts?: number[];
+    baseCurve?: number[];
     memory?: Partial<typeof MEMORIES>;
     ladder?: Partial<typeof RESOURCE_LADDER>;
   };
-  if (tune.stageCosts)
-    tune.stageCosts.forEach((c, i) => (BASE_STAGE_COSTS[i] = i === 0 ? 0 : 10 ** c));
+  if (tune.baseCurve) BASE_COST_CURVE.splice(0, BASE_COST_CURVE.length, ...tune.baseCurve);
   Object.assign(MEMORIES, tune.memory);
   Object.assign(RESOURCE_LADDER, tune.ladder);
   reprice();
@@ -287,7 +285,7 @@ if (process.env.SIM_DUMP_PRICES) {
     JSON.stringify({
       up: Object.fromEntries(UPGRADES.map((u) => [u.id, u.cost])),
       stage: STAGES.map((st) => st.cost),
-      baseStage: [...BASE_STAGE_COSTS],
+      baseCurve: [...BASE_COST_CURVE],
       form: CORE_SLOT_REALMS.map((_, n) => coreFormCost(baseModifiers(), n)),
       gen: Object.fromEntries(GENERATORS.map((g) => [g.id, [g.baseCost, g.baseQps]])),
     }),
@@ -643,8 +641,7 @@ function candidates(): Candidate[] {
   const list: Candidate[] = [];
   const next = nextStage(state);
   const blocker = breakthroughBlocker(state);
-  // The per-realm schedules hold at a realm's entrance until they've regressed there.
-  if (next && (blocker === null || blocker === 'Not enough qi.') && !scheduledRegressionDue()) {
+  if (next && (blocker === null || blocker === 'Not enough qi.')) {
     list.push({
       key: `stage:${next.index}`,
       cost: next.cost,
@@ -906,8 +903,6 @@ while (time < maxHours * 3600) {
   const efficientMode = REGRESS_MODE === 'efficient' || REGRESS_MODE === 'eager';
   if (
     canRegress &&
-    // Wait for Memories to settle so the regression is worth its full amount.
-    memorySettledFraction(state) >= 1 &&
     (scheduled !== null ||
       (REGRESS_MODE === 'eager' && stuck && memoryGain >= REGRESS_WHEN_STUCK_AT_GAIN) ||
       (efficientMode &&

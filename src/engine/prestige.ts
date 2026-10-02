@@ -13,18 +13,8 @@ export function memoriesForStage(stage: number): number {
   return memoriesAt(STAGE_LAYOUT, stage);
 }
 
-/**
- * Memories settle over the first part of each life: regressing sooner gives
- * that share of them, so repeated quick regressions can't compound.
- */
-export const MEMORY_SETTLE_SECONDS = 10 * 60;
-
-export function memorySettledFraction(state: GameState): number {
-  return Math.min(1, state.stats.loopTime / MEMORY_SETTLE_SECONDS);
-}
-
 export function pendingMemories(state: GameState): number {
-  return Math.floor(memoriesForStage(state.stage) * memorySettledFraction(state));
+  return memoriesForStage(state.stage);
 }
 
 export function regressionBlocker(state: GameState): string | null {
