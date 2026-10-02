@@ -103,7 +103,7 @@ export const PERKS: readonly PerkDef[] = [
     share: 0.6,
     firstRealm: 'nascentSoul',
     requires: ['foresight'],
-    effects: [{ type: 'add', stat: 'memoryPower', value: 0.02 }],
+    effects: [{ type: 'add', stat: 'memoryPower', value: 0.005 }],
   },
   {
     id: 'patience',

@@ -154,10 +154,10 @@ describe('log messages', () => {
   it('describes treasures when found and when refined', () => {
     const state = newGame();
     expect(logs(() => grantTreasure(state, 'ring'))[0]).toBe(
-      'Obtained rare treasure: Ring of the Old Master! (×1.5 all qi gain)',
+      'Obtained rare treasure: Ring of the Old Master! (×1.3 all qi gain)',
     );
     expect(logs(() => grantTreasure(state, 'ring'))[0]).toBe(
-      'Your Ring of the Old Master absorbs it and grows stronger. Level 2: ×1.75 all qi gain.',
+      'Your Ring of the Old Master absorbs it and grows stronger. Level 2: ×1.45 all qi gain.',
     );
   });
 

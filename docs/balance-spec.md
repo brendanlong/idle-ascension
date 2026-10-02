@@ -155,11 +155,16 @@ built around.
 
 ### 6. Treasures (`treasures`)
 
-- Each treasure that changes income adds `levelOneGain`× when found at level
-  1. Treasures that affect something else (encounters, tribulations) aren't
-     graded yet.
-- Treasure luck matters, but not too much: finishing with every treasure vs
-  none changes total time by at most `maxLuckSpread`×.
+- At level 1, each treasure that changes income adds `levelOneGain`× when
+  found at the right time: the better of entering its realm or reaching the
+  realm's last stage (a resource's treasure matters while that resource is
+  new). Treasures that affect something else (encounters, tribulations)
+  aren't graded yet.
+- No treasure luck is game-breaking: even finding every treasure at level 1
+  the moment it can be found changes total time by at most `maxLuckSpread`×
+  against finding none. Most treasures boost one resource or gathering, which
+  fades as the game moves on; the few that multiply all qi are modest, since
+  those stack.
 
 ## Not yet specified
 

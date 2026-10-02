@@ -195,7 +195,8 @@ def main():
 
     # 5. Regression.
     rg = SPEC['regression']
-    slowdown = total(runs['never']) / total(reference)
+    # A run that didn't finish within the cap counts as slower than any that did.
+    slowdown = statistics.median(r['seconds'] if r['done'] else float('inf') for r in runs['never']) / total(reference)
     check(f"never regressing is at least {rg['neverSlowdownAtLeast']}x slower", slowdown >= rg['neverSlowdownAtLeast'],
           f"x{slowdown:.1f} ({sum(r['done'] for r in runs['never'])}/{len(runs['never'])} finished within "
           f"{NEVER_REGRESS_HOURS}h)")
@@ -220,8 +221,10 @@ def main():
     for r in reference:
         for i in r['impacts']:
             # Treasures that don't change income (encounters, tribulations) aren't graded here.
-            if i['kind'].startswith('treasure') and gain(i) > 1.001:
-                gains.setdefault(i['name'], []).append(gain(i))
+            # At the best point in its realm: on entering it or at its last stage.
+            best = max(gain(i), gain(i['later']) if i.get('later') else 1)
+            if i['kind'].startswith('treasure') and best > 1.001:
+                gains.setdefault(i['name'], []).append(best)
     off = [(name, statistics.median(g)) for name, g in gains.items() if not lo <= statistics.median(g) <= hi]
     check(f'each treasure adds x{lo}-{hi} when found', not off, ', '.join(f'{name} x{g:.2f}' for name, g in off))
     spread = total(runs['noTreasures']) / total(runs['allTreasures'])

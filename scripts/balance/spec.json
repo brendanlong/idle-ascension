@@ -39,7 +39,7 @@
   },
   "treasures": {
     "levelOneGain": [1.2, 3],
-    "maxLuckSpread": 1.5
+    "maxLuckSpread": 3
   },
   "upgradeExempt": ["upgrade:sunflower"]
 }

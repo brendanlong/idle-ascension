@@ -14,5 +14,5 @@ export const MEMORIES = {
   /** How much each Memory adds to qi gain, before the power. */
   weight: 25,
   /** The base memoryPower: each doubling of your Memories multiplies qi by about 2 ^ power. */
-  power: 0.2,
+  power: 0.25,
 };

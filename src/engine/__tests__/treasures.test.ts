@@ -27,10 +27,10 @@ describe('treasures', () => {
     const state = newGame({ stage: firstStageOfRealm('foundation') });
     const base = computeStats(state).mods.globalMult;
     grantTreasure(state, 'ring');
-    expect(computeStats(state).mods.globalMult).toBeCloseTo(base * 1.5);
+    expect(computeStats(state).mods.globalMult).toBeCloseTo(base * 1.3);
     grantTreasure(state, 'ring');
     expect(state.treasures.ring).toBe(2);
-    expect(computeStats(state).mods.globalMult).toBeCloseTo(base * 1.75);
+    expect(computeStats(state).mods.globalMult).toBeCloseTo(base * 1.45);
     for (let i = 0; i < 10; i++) grantTreasure(state, 'ring');
     expect(state.treasures.ring).toBe(MAX_TREASURE_LEVEL);
     expect(findableTreasures(state).map((t) => t.id)).not.toContain('ring');

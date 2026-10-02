@@ -42,9 +42,9 @@ const PHASES = ['Early', 'Middle', 'Late', 'Peak'];
  * resources and techniques alone, takes the target time for each stage.
  */
 export const BASE_STAGE_COSTS: number[] = [
-  0, 54, 82, 150, 400, 1_200, 3_700, 16_000, 57_000, 240_000, 1_000_000, 5_500_000, 2.1e7, 8.7e7,
-  3.1e8, 1.2e9, 4.2e9, 2.4e10, 1.9e11, 1.8e12, 1.8e13, 1.9e14, 1.5e15, 9.2e15, 4e16, 1.4e17, 4.3e17,
-  1.3e18, 4.3e18, 1.4e19, 4.4e19, 1.4e20, 4.4e20, 1.3e21, 4.5e21,
+  0, 54, 82, 160, 400, 1_300, 4_100, 18_000, 65_000, 270_000, 1_100_000, 5_400_000, 2.1e7, 9.1e7,
+  3e8, 1.1e9, 3.4e9, 1.6e10, 9.6e10, 7.6e11, 6.5e12, 6.1e13, 5.4e14, 4e15, 2.3e16, 1e17, 4.2e17,
+  1.4e18, 4.3e18, 1.5e19, 5.1e19, 1.6e20, 4.8e20, 1.3e21, 3.1e21,
 ];
 
 const REALM_DEFS: readonly Omit<RealmDef, 'stageCosts'>[] = [

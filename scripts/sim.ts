@@ -643,7 +643,8 @@ function candidates(): Candidate[] {
   const list: Candidate[] = [];
   const next = nextStage(state);
   const blocker = breakthroughBlocker(state);
-  if (next && (blocker === null || blocker === 'Not enough qi.')) {
+  // The per-realm schedules hold at a realm's entrance until they've regressed there.
+  if (next && (blocker === null || blocker === 'Not enough qi.') && !scheduledRegressionDue()) {
     list.push({
       key: `stage:${next.index}`,
       cost: next.cost,
@@ -1064,6 +1065,7 @@ if (specMode) {
         stage: i.stage,
         passive: i.passiveMult,
         active: i.activeMult,
+        later: i.later ? { passive: i.later.passiveMult, active: i.later.activeMult } : null,
       })),
       realms: realmVisits.map((v, r) =>
         v && r > 0
