@@ -63,12 +63,13 @@ an equation, so prices are smooth and say plainly what they assume.
    forming a new core when a slot is open, else refining the lowest-grade
    core below its realm's cap. Each costs half the breakthrough cost at its
    point. The generating cycle adds a small bonus (+25% per adjacent pair).
-3. **Memories** (`REGRESSION_CURVE`): the reference player regresses once per
-   realm, on entering it, from Nascent Soul on. On average it's half a realm
-   past its last regression, so its Memory bonus at stage k is the game's
-   Memory formula for having regressed from k − 2 (and every realm before).
-   Since Memories grow every stage, players just past a regression are a
-   little ahead of prices and players about to regress a little behind.
+3. **Regression** (`REGRESSION_CURVE`): from the start of Nascent Soul,
+   prices grow a fixed multiple per stage on top of everything else. This is
+   one equation, not a sum over every regression the reference player might
+   make. The Memory formula is fit to it (`fitMemories`): regressing from
+   stage r multiplies qi gain by about the curve at r + 2, so a player who
+   regresses about once per realm keeps up, and one who never does falls
+   further behind every stage.
 4. **Every breakthrough and resource price** is its base price × the core
    and Memory bonuses at its stage (a resource at the stage it's meant to
    arrive; its output isn't scaled, since the bonuses already multiply it).
@@ -147,7 +148,8 @@ Memories are exponential in stage index and qi gain grows logarithmically
 with them (`src/content/memories.ts`): each doubling of your Memories
 multiplies qi by the same small factor. Regressing again from the same stage
 only doubles them, so it's barely worth it, while each stage deeper is worth
-`growthPerStage` ^ `power`, so regressing a realm later is a good boost.
+the regression curve's per-stage multiple, so regressing a realm later is a
+good boost.
 Memories count in full as soon as you regress: the curves, not a waiting
 period, make repeated quick regressions not worth it.
 
