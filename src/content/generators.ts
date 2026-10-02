@@ -1,282 +1,198 @@
+import { progressMultipliers, stageSeconds } from './progress';
+import { STAGE_LAYOUT } from './realms';
 export interface GeneratorDef {
   id: string;
   name: string;
   icon: string;
   description: string;
+  /** Set by priceResources. */
   baseCost: number;
   baseQps: number;
   /** Realm (by id) required before it can be bought. */
   minRealm?: string;
-  /** Names of the technique upgrades unlocked at each ownership milestone. */
-  upgradeNames: readonly [string, string, string, string, string];
+  /** Name of the technique unlocked once you own a few of this resource. */
+  upgradeName: string;
+  /**
+   * A late technique that makes this resource briefly the best again, unlocked
+   * once you own a few of the resource two tiers newer (see revivalMult in content/upgrades.ts).
+   */
+  revival?: { name: string };
 }
 
 export const GENERATOR_COST_GROWTH = 1.15;
 
-export const GENERATORS: readonly GeneratorDef[] = [
-  {
-    id: 'cushion',
-    name: 'Meditation Cushion',
-    icon: '🧘',
-    description: 'A worn straw cushion. Sit, breathe, and let qi seep in.',
-    baseCost: 15,
-    baseQps: 0.1,
-    upgradeNames: [
-      'Lotus Posture',
-      'Cold Jade Cushion',
-      'Thousand-Year Bodhi Mat',
-      'Breath of the Tortoise',
-      'Sitting Through Kalpas',
-    ],
-  },
-  {
-    id: 'herb',
-    name: 'Spirit Herb Patch',
-    icon: '🌿',
-    description: 'Spirit grass that drinks moonlight and exhales qi.',
-    baseCost: 100,
-    baseQps: 1,
-    upgradeNames: [
-      'Spirit Soil',
-      'Moonlight Irrigation',
-      'Thousand-Year Ginseng',
-      'Herb-Nurturing Formation',
-      'Garden of the Queen Mother',
-    ],
-  },
-  {
-    id: 'array',
-    name: 'Qi-Gathering Array',
-    icon: '☯️',
-    description: 'Carved flags and spirit stones that pull qi from the land.',
-    baseCost: 1_100,
-    baseQps: 8,
-    upgradeNames: [
-      'Gathering Sigils',
-      'Five-Element Flags',
-      'Nine Palaces Layout',
-      'Grand Heaven-Earth Array',
-      'Array Embracing the Stars',
-    ],
-  },
-  {
-    id: 'furnace',
-    name: 'Pill Furnace',
-    icon: '⚗️',
-    description: 'Refines herbs into pills. Occasionally explodes. Mostly worth it.',
-    baseCost: 12_000,
-    baseQps: 47,
-    upgradeNames: [
-      'Pill Recipes',
-      'Earth Fire Vent',
-      'Pill Tribulation',
-      'Nine-Revolution Refining',
-      'Eight Trigrams Furnace',
-    ],
-  },
-  {
-    id: 'disciple',
-    name: 'Outer Sect Disciple',
-    icon: '👥',
-    description: 'Hopeful juniors who tithe qi for your "guidance."',
-    baseCost: 130_000,
-    baseQps: 260,
-    upgradeNames: [
-      'Sect Entrance Exam',
-      'Contribution Points',
-      'Inner Sect Promotion',
-      'Grand Sect Tournament',
-      'Ten Thousand Disciples Bow',
-    ],
-  },
-  {
-    id: 'beast',
-    name: 'Tamed Spirit Beast',
-    icon: '🦊',
-    description: 'A nine-tailed fox kit. It hunts qi and brings it home.',
-    baseCost: 1_400_000,
-    baseQps: 1_400,
-    upgradeNames: [
-      'Beast-Taming Collar',
-      'Blood Contract',
-      'Bloodline Awakening',
-      'Beast Tide',
-      'Qilin Descendant',
-    ],
-  },
-  {
-    id: 'vein',
-    name: 'Spirit Vein',
-    icon: '⛰️',
-    description: 'A river of crystallized qi running beneath a mountain.',
-    baseCost: 20_000_000,
-    baseQps: 7_800,
-    upgradeNames: [
-      'Mining Rights',
-      'Vein Nourishment',
-      'Merging Veins',
-      'Dragon Vein',
-      'Heart of the Continent',
-    ],
-  },
-  {
-    id: 'secretRealm',
-    name: 'Secret Realm',
-    icon: '🌀',
-    description: 'A pocket world sealed since antiquity. Now it is yours.',
-    baseCost: 330_000_000,
-    baseQps: 44_000,
-    upgradeNames: [
-      'Realm Key',
-      'Map of Hidden Paths',
-      'Seal-Breaking Talisman',
-      'Folded Space',
-      'A Realm of Your Own',
-    ],
-  },
-  {
-    id: 'inheritance',
-    name: 'Ancient Inheritance',
-    icon: '📜',
-    description: 'The legacy of a fallen immortal, waiting for a worthy heir.',
-    baseCost: 5_100_000_000,
-    baseQps: 260_000,
-    upgradeNames: [
-      'Trial of Worthiness',
-      "Old Master's Remnant Soul",
-      'Inheritance Crystal',
-      'Bloodline Inheritance',
-      'Heir of the Ancients',
-    ],
-  },
-  {
-    id: 'dao',
-    name: 'Fragment of the Heavenly Dao',
-    icon: '✨',
-    description: 'A shard of the law that governs heaven and earth.',
-    baseCost: 75_000_000_000,
-    baseQps: 1_600_000,
-    upgradeNames: [
-      'Glimpse of the Dao',
-      'Dao Comprehension',
-      'Dao Heart',
-      'Dao Domain',
-      'One With the Dao',
-    ],
-  },
-  {
-    id: 'sect',
-    name: 'Founded Sect',
-    icon: '🏯',
-    description: 'A mountain, a gate, and a thousand disciples who call you Patriarch.',
-    minRealm: 'spiritSevering',
-    baseCost: 2e16,
-    baseQps: 1e7,
-    upgradeNames: [
-      'Sect Charter',
-      'Scripture Pavilion',
-      'Protective Mountain Array',
-      'Branch Sects',
-      'The Sect That Rules the Continent',
-    ],
-  },
-  {
-    id: 'dragon',
-    name: 'Bound True Dragon',
-    icon: '🐉',
-    description: 'A true dragon, bound by oath. It exhales qi and inhales mountains.',
-    minRealm: 'spiritSevering',
-    baseCost: 3e17,
-    baseQps: 6.5e7,
-    upgradeNames: [
-      'Dragon Pearl',
-      'Dragon Blood Pact',
-      'Scales of Heaven',
-      'Dragon Transformation',
-      'Ancestor of Dragons',
-    ],
-  },
-  {
-    id: 'smallWorld',
-    name: 'Inner Small World',
-    icon: '🌍',
-    description: 'A world inside your body, with its own sun, rivers and spirit veins.',
-    minRealm: 'daoSeeking',
-    baseCost: 2e22,
-    baseQps: 1.7e9,
-    upgradeNames: [
-      'World Seed',
-      'Heaven and Earth Separate',
-      'Four Seasons Turn',
-      'Mortals Are Born',
-      'A World That Cultivates',
-    ],
-  },
-  {
-    id: 'starRiver',
-    name: 'Star River',
-    icon: '🌌',
-    description: 'You pluck stars from the sky and drink their light.',
-    minRealm: 'daoSeeking',
-    baseCost: 8e22,
-    baseQps: 2.9e9,
-    upgradeNames: [
-      'Star Map',
-      'Constellation Array',
-      'Swallowing the Sun',
-      'River of Stars Reversed',
-      'Master of the Firmament',
-    ],
-  },
-  {
-    id: 'faith',
-    name: 'Incense of Ten Thousand Worlds',
-    icon: '🛕',
-    description: 'Mortals in countless worlds burn incense to you. Their faith becomes qi.',
-    minRealm: 'immortalAscension',
-    baseCost: 5e26,
-    baseQps: 3e10,
-    upgradeNames: [
-      'Wayside Shrines',
-      'Golden Statues',
-      'Pilgrimage Routes',
-      'State Religion',
-      'Worshipped Across Eternity',
-    ],
-  },
-  {
-    id: 'court',
-    name: 'Seat in the Heavenly Court',
-    icon: '🏛️',
-    description: 'A throne among the immortals, and a share of heaven itself.',
-    minRealm: 'immortalAscension',
-    baseCost: 3e28,
-    baseQps: 3e11,
-    upgradeNames: [
-      'Jade Tablet of Office',
-      'Celestial Bureaucracy',
-      'Peach Banquet Invitation',
-      'Minister of Heaven',
-      'The Jade Emperor Consults You',
-    ],
-  },
-  {
-    id: 'primordial',
-    name: 'Shard of Primordial Chaos',
-    icon: '🌑',
-    description: 'A fragment of the nothing that came before heaven and earth.',
-    minRealm: 'immortalAscension',
-    baseCost: 2e30,
-    baseQps: 8e12,
-    upgradeNames: [
-      'Touching the Void',
-      'Chaos Qi',
-      'Before the First Dawn',
-      'Unmaking and Remaking',
-      'Pangu Stirs',
-    ],
-  },
-];
+/**
+ * Resources form a ladder defined by the stage schedule (see
+ * docs/balance-spec.md): tier n is meant to arrive at stage `stagesPerTier` x n,
+ * costs `firstCost` times the cost ratios so far (sliding from `costRatio`
+ * for the second tier to `costRatioLate` for the last), and pays for itself
+ * in `paybackStages` x STAGE_TIME's target for that stage. So each new
+ * resource pays for itself faster than the old ones, and income from
+ * resources alone keeps to the schedule (check with
+ * scripts/balance/resources_only.ts). Its price is also multiplied by the
+ * progress there (cores and Memories, see content/progress.ts), so new
+ * resources feel the same whatever those add (they multiply its output and
+ * your income alike).
+ */
+export const RESOURCE_LADDER = {
+  firstCost: 100,
+  costRatio: 8,
+  costRatioLate: 4,
+  paybackStages: 0.5,
+  stagesPerTier: 2,
+};
+
+export const GENERATORS: readonly GeneratorDef[] = (
+  [
+    {
+      id: 'herb',
+      name: 'Spirit Herb Patch',
+      icon: '🌿',
+      description: 'Spirit grass that drinks moonlight and exhales qi.',
+      upgradeName: 'Spirit Soil',
+      revival: { name: 'Garden of the Queen Mother' },
+    },
+    {
+      id: 'array',
+      name: 'Qi-Gathering Array',
+      icon: '☯️',
+      description: 'Carved flags and spirit stones that pull qi from the land.',
+      upgradeName: 'Gathering Sigils',
+      revival: { name: 'Array Embracing the Stars' },
+    },
+    {
+      id: 'furnace',
+      name: 'Pill Furnace',
+      icon: '⚗️',
+      description: 'Refines herbs into pills. Occasionally explodes. Mostly worth it.',
+      upgradeName: 'Pill Recipes',
+      revival: { name: 'Eight Trigrams Furnace' },
+    },
+    {
+      id: 'disciple',
+      name: 'Outer Sect Disciple',
+      icon: '👥',
+      description: 'Hopeful juniors who tithe qi for your "guidance."',
+      upgradeName: 'Sect Entrance Exam',
+      revival: { name: 'Ten Thousand Disciples Bow' },
+    },
+    {
+      id: 'beast',
+      name: 'Tamed Spirit Beast',
+      icon: '🦊',
+      description: 'A nine-tailed fox kit. It hunts qi and brings it home.',
+      upgradeName: 'Beast-Taming Collar',
+      revival: { name: 'Qilin Descendant' },
+    },
+    {
+      id: 'vein',
+      name: 'Spirit Vein',
+      icon: '⛰️',
+      description: 'A river of crystallized qi running beneath a mountain.',
+      upgradeName: 'Mining Rights',
+      revival: { name: 'Heart of the Continent' },
+    },
+    {
+      id: 'secretRealm',
+      name: 'Secret Realm',
+      icon: '🌀',
+      description: 'A pocket world sealed since antiquity. Now it is yours.',
+      upgradeName: 'Realm Key',
+      revival: { name: 'A Realm of Your Own' },
+    },
+    {
+      id: 'inheritance',
+      name: 'Ancient Inheritance',
+      icon: '📜',
+      description: 'The legacy of a fallen immortal, waiting for a worthy heir.',
+      upgradeName: 'Trial of Worthiness',
+      revival: { name: 'Heir of the Ancients' },
+    },
+    {
+      id: 'dao',
+      name: 'Fragment of the Heavenly Dao',
+      icon: '✨',
+      description: 'A shard of the law that governs heaven and earth.',
+      upgradeName: 'Glimpse of the Dao',
+      revival: { name: 'One With the Dao' },
+    },
+    {
+      id: 'sect',
+      name: 'Founded Sect',
+      icon: '🏯',
+      description: 'A mountain, a gate, and a thousand disciples who call you Patriarch.',
+      minRealm: 'nascentSoul',
+      upgradeName: 'Sect Charter',
+      revival: { name: 'The Sect That Rules the Continent' },
+    },
+    {
+      id: 'dragon',
+      name: 'Bound True Dragon',
+      icon: '🐉',
+      description: 'A true dragon, bound by oath. It exhales qi and inhales mountains.',
+      minRealm: 'spiritSevering',
+      upgradeName: 'Dragon Pearl',
+      revival: { name: 'Ancestor of Dragons' },
+    },
+    {
+      id: 'smallWorld',
+      name: 'Inner Small World',
+      icon: '🌍',
+      description: 'A world inside your body, with its own sun, rivers and spirit veins.',
+      upgradeName: 'World Seed',
+      revival: { name: 'A World That Cultivates' },
+    },
+    {
+      id: 'starRiver',
+      name: 'Star River',
+      icon: '🌌',
+      description: 'You pluck stars from the sky and drink their light.',
+      minRealm: 'daoSeeking',
+      upgradeName: 'Star Map',
+      revival: { name: 'Master of the Firmament' },
+    },
+    {
+      id: 'faith',
+      name: 'Incense of Ten Thousand Worlds',
+      icon: '🛕',
+      description: 'Mortals in countless worlds burn incense to you. Their faith becomes qi.',
+      upgradeName: 'Wayside Shrines',
+      revival: { name: 'Worshipped Across Eternity' },
+    },
+    {
+      id: 'court',
+      name: 'Seat in the Heavenly Court',
+      icon: '🏛️',
+      description: 'A throne among the immortals, and a share of heaven itself.',
+      minRealm: 'immortalAscension',
+      upgradeName: 'Jade Tablet of Office',
+    },
+    {
+      id: 'primordial',
+      name: 'Shard of Primordial Chaos',
+      icon: '🌑',
+      description: 'A fragment of the nothing that came before heaven and earth.',
+      upgradeName: 'Touching the Void',
+    },
+  ] as Omit<GeneratorDef, 'baseCost' | 'baseQps'>[]
+).map((g) => ({ baseCost: 0, baseQps: 0, ...g }) as GeneratorDef);
+
+/** Prices every resource from RESOURCE_LADDER (call again if it changes). */
+export function priceResources(): void {
+  const progress = progressMultipliers(STAGE_LAYOUT);
+  const { firstCost, costRatio, costRatioLate, paybackStages, stagesPerTier } = RESOURCE_LADDER;
+  const tiers = GENERATORS as GeneratorDef[];
+  let baseCost = firstCost;
+  tiers.forEach((g, i) => {
+    if (i > 0)
+      baseCost *= costRatio * (costRatioLate / costRatio) ** ((i - 1) / (tiers.length - 2));
+    const stage = Math.min(stagesPerTier * (i + 1), progress.length - 1);
+    g.baseCost = baseCost * progress[stage];
+    // Output needn't scale: cores and Memories already multiply it.
+    g.baseQps = baseCost / (paybackStages * stageSeconds(STAGE_LAYOUT, stage));
+  });
+}
+priceResources();
 
 export const GENERATORS_BY_ID: ReadonlyMap<string, GeneratorDef> = new Map(
   GENERATORS.map((g) => [g.id, g]),

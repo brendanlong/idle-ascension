@@ -10,8 +10,9 @@ import {
   currentTribulationTrial,
   recordTribulationTrial,
 } from '../../engine/breakthrough';
-import { absorbMotes, click } from '../../engine/economy';
+import { absorbMotes, drawInMote } from '../../engine/economy';
 import { claimEncounter } from '../../engine/encounters';
+import { MAX_MOTES, moteSpawnRate } from '../../engine/stats';
 import { acceptTrial, completeTrial } from '../../engine/trials';
 import { TrialOverlay } from '../trials/TrialOverlay';
 import { game } from '../game';
@@ -34,16 +35,34 @@ interface FloatText {
   color: string;
 }
 
-const MAX_MOTES = 60;
+const MOTE_MIN_LIFE = 8;
+const MOTE_MAX_LIFE = 14;
+const CATCH_UP_STEP = 0.25;
 const ABSORB_RADIUS = 46;
 const FLOAT_LIFETIME = 1.1;
 /** Absorbed motes are credited in batches to avoid re-rendering every animation frame. */
 const MOTE_FLUSH_MS = 150;
 
+/**
+ * When the field last drew a frame. It outlives the component, so motes
+ * missed on another phone tab or a hidden browser tab can be caught up.
+ */
+let lastFrameAt: number | null = null;
+/** game.freshStarts as of that frame: motes from a game that's since been reset are gone. */
+let lastFrameFreshStarts = 0;
+/** A gap between frames longer than this means the field wasn't being shown. */
+const MISSED_FRAME_GAP_MS = 1000;
+
 /** Visual-only simulation: motes live here, but the qi they grant goes through the engine. */
 class FieldSim {
   motes: Mote[] = [];
   floats: FloatText[] = [];
+
+  clear(): void {
+    this.motes = [];
+    this.floats = [];
+    this.spawnAccumulator = 0;
+  }
   pointer: { x: number; y: number } | null = null;
   width = 0;
   height = 0;
@@ -51,7 +70,7 @@ class FieldSim {
   private spawnAccumulator = 0;
 
   step(dt: number, spawnPerSecond: number): number {
-    this.spawnAccumulator += dt * spawnPerSecond;
+    this.spawnAccumulator += dt * moteSpawnRate(spawnPerSecond, this.motes.length);
     while (this.spawnAccumulator >= 1) {
       this.spawnAccumulator--;
       if (this.motes.length < MAX_MOTES) this.spawnMote();
@@ -76,6 +95,44 @@ class FieldSim {
     return absorbed;
   }
 
+  /**
+   * Brings the field to how it would look after `seconds` more of running
+   * unseen. Only the last MOTE_MAX_LIFE seconds matter (older motes would have
+   * faded), so age everything past that, then replay those seconds in small
+   * steps, spawning at the rate for however many motes were waiting.
+   */
+  catchUp(seconds: number, spawnPerSecond: number): void {
+    const window = Math.min(seconds, MOTE_MAX_LIFE);
+    const ageBy = (dt: number) => {
+      for (const m of this.motes) m.age += dt;
+      this.motes = this.motes.filter((m) => m.age < m.life);
+    };
+    ageBy(seconds - window);
+    for (let t = 0; t < window; t += CATCH_UP_STEP) {
+      const dt = Math.min(CATCH_UP_STEP, window - t);
+      this.spawnAccumulator += dt * moteSpawnRate(spawnPerSecond, this.motes.length);
+      while (this.spawnAccumulator >= 1 && this.motes.length < MAX_MOTES) {
+        this.spawnAccumulator--;
+        this.spawnMote();
+      }
+      ageBy(dt);
+    }
+  }
+
+  /** Removes the mote nearest the field's center (the orb), returning where it was. */
+  pullMote(): { x: number; y: number } | null {
+    if (this.motes.length === 0) return null;
+    const cx = this.width / 2;
+    const cy = this.height / 2;
+    let nearest = 0;
+    this.motes.forEach((m, i) => {
+      const best = this.motes[nearest];
+      if (Math.hypot(m.x - cx, m.y - cy) < Math.hypot(best.x - cx, best.y - cy)) nearest = i;
+    });
+    const [mote] = this.motes.splice(nearest, 1);
+    return { x: mote.x, y: mote.y };
+  }
+
   private spawnMote(): void {
     this.motes.push({
       x: Math.random() * this.width,
@@ -83,7 +140,7 @@ class FieldSim {
       vx: (Math.random() - 0.5) * 12,
       vy: (Math.random() - 0.5) * 12,
       age: 0,
-      life: 8 + Math.random() * 6,
+      life: MOTE_MIN_LIFE + Math.random() * (MOTE_MAX_LIFE - MOTE_MIN_LIFE),
     });
   }
 
@@ -231,12 +288,24 @@ export function QiField({ overlay }: { overlay?: ComponentChildren } = {}) {
     observer.observe(container);
 
     let last = performance.now();
+    if (lastFrameAt !== null && lastFrameFreshStarts === game.freshStarts)
+      sim.catchUp((last - lastFrameAt) / 1000, game.stats.moteSpawnPerSecond);
     let lastFlush = last;
     let pendingMotes = 0;
     let frame = 0;
     const loop = (now: number) => {
+      if (game.freshStarts !== lastFrameFreshStarts) {
+        sim.clear();
+        pendingMotes = 0;
+        lastFrameFreshStarts = game.freshStarts;
+      }
+      // Browsers stop animating hidden tabs; bring back what was missed.
+      if (now - last > MISSED_FRAME_GAP_MS) {
+        sim.catchUp((now - last) / 1000, game.stats.moteSpawnPerSecond);
+      }
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
+      lastFrameAt = now;
       pendingMotes += sim.step(dt, game.stats.moteSpawnPerSecond);
       if (pendingMotes > 0 && sim.pointer && now - lastFlush >= MOTE_FLUSH_MS) {
         const count = pendingMotes;
@@ -260,11 +329,13 @@ export function QiField({ overlay }: { overlay?: ComponentChildren } = {}) {
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   };
 
-  const onOrbClick = (e: MouseEvent) => {
-    const gained = game.act((s, stats) => click(s, stats));
-    // Keyboard activation reports (0, 0); float from the orb's center instead.
-    const p = e.detail === 0 ? { x: sim.width / 2, y: sim.height / 2 - 40 } : localPoint(e);
-    sim.addFloat(p.x, p.y, `+${game.fmt(gained)}`);
+  // Pressing the orb draws in the nearest waiting mote, so it's another way to
+  // gather (for keyboards and taps), never faster than motes appear.
+  const onOrbClick = () => {
+    const from = sim.pullMote();
+    if (!from) return;
+    const gained = game.act((s, stats) => drawInMote(s, stats));
+    sim.addFloat(from.x, from.y - 10, `+${game.fmt(gained)}`, '#9ff5da');
   };
 
   const encounter = state.encounter.active;
@@ -303,15 +374,15 @@ export function QiField({ overlay }: { overlay?: ComponentChildren } = {}) {
         onClick={onOrbClick}
         // Holding Enter would otherwise auto-repeat clicks.
         onKeyDown={(e) => e.repeat && e.preventDefault()}
-        aria-label="Cultivate"
-        title="Click to cultivate. Sweep your cursor through drifting qi motes to absorb them."
+        aria-label="Draw in a qi mote"
+        title="Sweep your cursor through drifting qi motes to absorb them, or press the dantian to draw in the nearest one."
       >
         <span class="orb-glyph">气</span>
       </button>
       <div class="field-hint">
         {touch
-          ? 'Tap the dantian · drag your finger through drifting qi'
-          : 'Click the dantian · sweep your cursor through drifting qi'}
+          ? 'Drag through drifting qi, or tap the dantian'
+          : 'Sweep through drifting qi, or click the dantian'}
       </div>
 
       {encounter && encounterDef && !trialRunning && (

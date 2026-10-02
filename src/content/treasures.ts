@@ -47,7 +47,7 @@ export const TREASURES: readonly TreasureDef[] = [
     description: 'A palm technique half-erased by time. The remaining half is plenty.',
     rarity: 'common',
     minRealm: 'qiCondensation',
-    effects: [{ type: 'mult', stat: 'clickMult', value: 3 }],
+    effects: [{ type: 'mult', stat: 'moteBaseMult', value: 2 }],
   },
   {
     id: 'pendant',
@@ -100,10 +100,7 @@ export const TREASURES: readonly TreasureDef[] = [
       'An ancient soul dwells within. He is rude, lazy, and knows ten thousand techniques.',
     rarity: 'rare',
     minRealm: 'foundation',
-    effects: [
-      { type: 'mult', stat: 'globalMult', value: 1.5 },
-      { type: 'add', stat: 'clickQpsFraction', value: 0.01 },
-    ],
+    effects: [{ type: 'mult', stat: 'globalMult', value: 1.3 }],
   },
   {
     id: 'cauldron',
@@ -112,7 +109,7 @@ export const TREASURES: readonly TreasureDef[] = [
     description: 'Pills refined in it come out with cloud patterns. Very prestigious.',
     rarity: 'uncommon',
     minRealm: 'foundation',
-    effects: [{ type: 'generatorMult', generator: 'furnace', value: 5 }],
+    effects: [{ type: 'generatorMult', generator: 'furnace', value: 4 }],
   },
   // --- Core Formation ---
   {
@@ -132,7 +129,7 @@ export const TREASURES: readonly TreasureDef[] = [
     rarity: 'rare',
     minRealm: 'coreFormation',
     fixedEffects: [{ type: 'mult', stat: 'tribulationSlowMult', value: 1.25 }],
-    effects: [{ type: 'mult', stat: 'globalMult', value: 2 }],
+    effects: [{ type: 'mult', stat: 'globalMult', value: 1.3 }],
   },
   // --- Nascent Soul ---
   {
@@ -161,7 +158,7 @@ export const TREASURES: readonly TreasureDef[] = [
     description: 'It shows your past lives. There are more of them than you remembered.',
     rarity: 'rare',
     minRealm: 'spiritSevering',
-    effects: [{ type: 'add', stat: 'memoryBonus', value: 0.01 }],
+    effects: [{ type: 'add', stat: 'memoryPower', value: 0.015 }],
   },
   {
     id: 'lamp',
@@ -169,7 +166,7 @@ export const TREASURES: readonly TreasureDef[] = [
     icon: '🪔',
     description: 'Its flame has burned since before the first sunrise.',
     rarity: 'uncommon',
-    minRealm: 'spiritSevering',
+    minRealm: 'nascentSoul',
     effects: [{ type: 'generatorMult', generator: 'dao', value: 4 }],
   },
   // --- Dao Seeking ---
@@ -189,10 +186,10 @@ export const TREASURES: readonly TreasureDef[] = [
     id: 'whisk',
     name: "Immortal's Horsetail Whisk",
     icon: '🪶',
-    description: 'Every flick carries a trace of everything you cultivate.',
+    description: 'Every flick sweeps drifting qi your way.',
     rarity: 'uncommon',
     minRealm: 'daoSeeking',
-    effects: [{ type: 'add', stat: 'clickQpsFraction', value: 0.05 }],
+    effects: [{ type: 'mult', stat: 'moteValueMult', value: 1.5 }],
   },
   {
     id: 'seal',
@@ -201,7 +198,7 @@ export const TREASURES: readonly TreasureDef[] = [
     description: 'Nine dragons coil around its handle. Emperors went to war over lesser seals.',
     rarity: 'rare',
     minRealm: 'daoSeeking',
-    effects: [{ type: 'mult', stat: 'globalMult', value: 2 }],
+    effects: [{ type: 'mult', stat: 'globalMult', value: 1.3 }],
   },
   // --- Immortal Ascension ---
   {
@@ -230,7 +227,7 @@ export const TREASURES: readonly TreasureDef[] = [
     description: "From the Queen Mother's own orchard. It ripens once every three thousand years.",
     rarity: 'rare',
     minRealm: 'immortalAscension',
-    effects: [{ type: 'add', stat: 'autoClicksPerSecond', value: 5 }],
+    effects: [{ type: 'mult', stat: 'globalMult', value: 1.3 }],
   },
   {
     id: 'chaosStone',
@@ -240,7 +237,7 @@ export const TREASURES: readonly TreasureDef[] = [
     rarity: 'legendary',
     minRealm: 'immortalAscension',
     effects: [
-      { type: 'mult', stat: 'globalMult', value: 3 },
+      { type: 'mult', stat: 'globalMult', value: 1.5 },
       { type: 'mult', stat: 'coreCostMult', value: 0.5 },
     ],
   },

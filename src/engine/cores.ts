@@ -1,24 +1,47 @@
-import { CORE_FORM_COSTS, CORE_GRADES, ELEMENTS_BY_ID, type ElementId } from '../content/cores';
-import { REALMS, STAGES } from '../content/realms';
+import { CORE_GRADES, CORE_SLOT_REALMS, ELEMENTS_BY_ID, type ElementId } from '../content/cores';
+import { coreSchedule } from '../content/progress';
+import { FINAL_STAGE, REALMS, STAGES, STAGE_LAYOUT } from '../content/realms';
 import { spendQi } from './economy';
 import type { Modifiers } from './effects';
 import { log } from './events';
 import type { GameState } from './state';
 import { unlockedCoreSlots } from './stats';
 
-export function coreFormCost(mods: Modifiers, coreIndex: number): number {
-  const costs = CORE_FORM_COSTS;
-  return costs[Math.min(coreIndex, costs.length - 1)] * mods.coreCostMult;
-}
+/** Core purchases cost this share of the breakthrough cost where they're scheduled. */
+const CORE_PRICE_SHARE = 0.5;
 
 /**
- * A grade's own price, but never less than forming this core: a core formed in
- * a later realm doesn't catch up to the grade cap for free.
+ * The breakthrough cost at a point on the stage axis, with fractional stages
+ * interpolated along the curve (geometrically).
  */
+function costAt(position: number): number {
+  const p = Math.min(Math.max(position, 1), FINAL_STAGE);
+  const lo = Math.floor(p);
+  const hi = Math.min(lo + 1, FINAL_STAGE);
+  return STAGES[lo].cost * (STAGES[hi].cost / STAGES[lo].cost) ** (p - lo);
+}
+
+const schedule = coreSchedule(STAGE_LAYOUT);
+
+/** Where forming a core is priced: its purchase in the schedule. */
+export function formPosition(coreIndex: number): number {
+  return refinePosition(coreIndex, 0);
+}
+
+/** Where refining a core to a grade is priced: its purchase in the schedule. */
+export function refinePosition(coreIndex: number, grade: number): number {
+  const core = Math.min(coreIndex, CORE_SLOT_REALMS.length - 1);
+  return schedule.find((e) => e.core === core && e.grade === grade)!.position;
+}
+
+export function coreFormCost(mods: Modifiers, coreIndex: number): number {
+  return costAt(formPosition(coreIndex)) * CORE_PRICE_SHARE * mods.coreCostMult;
+}
+
 export function coreRefineCost(state: GameState, mods: Modifiers, coreIndex: number): number {
-  const next = CORE_GRADES[state.cores[coreIndex].grade + 1];
-  if (!next) return Infinity;
-  return Math.max(next.refineCost * mods.coreCostMult, coreFormCost(mods, coreIndex));
+  const grade = state.cores[coreIndex].grade + 1;
+  if (!CORE_GRADES[grade]) return Infinity;
+  return costAt(refinePosition(coreIndex, grade)) * CORE_PRICE_SHARE * mods.coreCostMult;
 }
 
 export function canFormCore(state: GameState, mods: Modifiers, element: ElementId): boolean {

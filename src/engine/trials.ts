@@ -14,6 +14,7 @@ import {
   TRIAL_TREASURE_CHANCE,
   TRIAL_TREASURE_SCORE,
 } from '../content/trials';
+import { qiEventCap } from './breakthrough';
 import { addBuff, describeBuff, gainQi, grantTreasure, pickRandomTreasure } from './economy';
 import { log } from './events';
 import { formatNumber } from './format';
@@ -77,7 +78,7 @@ export function completeTrial(
   if (state.trial.active === element) state.trial.active = null;
   const affinity = state.cores.some((c) => c.element === element) ? TRIAL_AFFINITY_MULT : 1;
   const seconds = TRIAL_REWARD_BASE_SECONDS + TRIAL_REWARD_SECONDS_PER_SCORE * clamped;
-  const qi = (stats.qps * seconds + stats.clickPower * 20) * affinity;
+  const qi = Math.min((stats.qps * seconds + stats.moteValue * 20) * affinity, qiEventCap(state));
   gainQi(state, qi);
   state.stats.trialsCompleted++;
 

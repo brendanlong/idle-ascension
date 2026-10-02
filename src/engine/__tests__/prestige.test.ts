@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PERKS_BY_ID } from '../../content/perks';
+import { PERKS, PERKS_BY_ID } from '../../content/perks';
 import { REALMS, firstStageOfRealm } from '../../content/realms';
 import {
   availableMemories,
@@ -7,6 +7,7 @@ import {
   describeSpecialPerk,
   memoriesForStage,
   pendingMemories,
+  perkCost,
   perkStatus,
   regress,
   regressionBlocker,
@@ -28,8 +29,8 @@ describe('regression', () => {
     expect(regress(newGame({ stage: CORE_FORMATION - 1 }), 0)).toBeNull();
   });
 
-  it('awards Memories by realm as tuned, so changing breakthrough costs is a deliberate choice', () => {
-    // memoriesForStage follows breakthrough costs; re-run the sim if these move.
+  it('awards Memories by realm as tuned, so changing the Memory curve is a deliberate choice', () => {
+    // MEMORIES (content/memories.ts) and REGRESSION_CURVE (content/progress.ts) set these; re-run scripts/balance/spec.py if they move.
     const byRealm = Object.fromEntries(
       REALMS.filter((r) => firstStageOfRealm(r.id) >= CORE_FORMATION).map((r) => [
         r.id,
@@ -37,12 +38,12 @@ describe('regression', () => {
       ]),
     );
     expect(byRealm).toEqual({
-      coreFormation: 3,
-      nascentSoul: 5,
-      spiritSevering: 16,
-      daoSeeking: 70,
-      immortalAscension: 261,
-      godhood: 1039,
+      coreFormation: 10,
+      nascentSoul: 2_560,
+      spiritSevering: 655_360,
+      daoSeeking: 167_772_160,
+      immortalAscension: 42_949_672_960,
+      godhood: 10_995_116_277_760,
     });
   });
 
@@ -81,19 +82,16 @@ describe('regression', () => {
     const next = regress(state, 0)!;
     // Soul-Bound level 2 keeps treasures at up to level 2.
     expect(next.treasures).toEqual({ ring: 2, pendant: 1 });
-    expect(next.generators.cushion).toBe(10);
+    expect(next.generators.herb).toBe(10);
     expect(next.generators.array).toBe(10);
     expect(next.stage).toBe(3);
   });
 
   it('describes what special perks give', () => {
     const stash = PERKS_BY_ID.get('stash')!;
-    expect(describeSpecialPerk(stash, 1)).toBe(
-      'Start each loop with 10 Meditation Cushions, 5 Spirit Herb Patches',
-    );
+    expect(describeSpecialPerk(stash, 1)).toBe('Start each loop with 10 Spirit Herb Patches');
     expect(stashGenerators(3)).toEqual({
-      cushion: 10,
-      herb: 5,
+      herb: 10,
       array: 10,
       furnace: 11,
       disciple: 5,
@@ -110,13 +108,15 @@ describe('regression', () => {
   });
 
   it('compounds ordinary perks', () => {
-    expect(perkEffects(PERKS_BY_ID.get('meridians')!, 3)[0].value).toBe(8);
-    expect(perkEffects(PERKS_BY_ID.get('meridians')!, 0)).toEqual([]);
+    expect(perkEffects(PERKS_BY_ID.get('daoHeart')!, 2)[0].value).toBe(6);
+    expect(perkEffects(PERKS_BY_ID.get('daoHeart')!, 0)).toEqual([]);
+    // Remembered Meridian Paths grows logarithmically instead: x2, x3 at level 3, x4 at 7.
+    expect(perkEffects(PERKS_BY_ID.get('meridians')!, 3)[0].value).toBe(3);
   });
 
   it('lets uncapped perks be bought past their old caps', () => {
     const state = newGame();
-    state.prestige.memories = 1e9;
+    state.prestige.memories = 1e30;
     for (let i = 0; i < 10; i++) expect(buyPerk(state, 'meridians')).toBe(true);
     expect(perkStatus(state, 'meridians')).toBe('available');
   });
@@ -127,6 +127,33 @@ describe('regression', () => {
     expect(buyPerk(state, 'foresight')).toBe(false);
     expect(buyPerk(state, 'meridians')).toBe(true);
     expect(buyPerk(state, 'foresight')).toBe(true);
-    expect(availableMemories(state)).toBe(10 - 1 - 3);
+    const firstLevel = (id: string) => perkCost(PERKS_BY_ID.get(id)!, 0);
+    expect(availableMemories(state)).toBe(10 - firstLevel('meridians') - firstLevel('foresight'));
+  });
+
+  it('prices insights so one regression buys a few of them, not all', () => {
+    // At each realm, with a level of each perk per realm since its first: no single
+    // insight costs more than regressing from there, and all of them cost a few regressions.
+    const index = (id: string) => REALMS.findIndex((r) => r.id === id);
+    for (const realm of REALMS.slice(index('coreFormation'), index('godhood'))) {
+      const regression = memoriesForStage(firstStageOfRealm(realm.id));
+      const costs = PERKS.filter((p) => index(p.firstRealm) <= index(realm.id))
+        .map((p) => ({ p, level: index(realm.id) - index(p.firstRealm) }))
+        .filter(({ p, level }) => level < p.maxLevel)
+        .map(({ p, level }) => perkCost(p, level));
+      for (const cost of costs) expect(cost).toBeLessThan(regression);
+      const total = costs.reduce((a, b) => a + b, 0);
+      expect(total).toBeGreaterThan(2 * regression);
+      expect(total).toBeLessThan(6 * regression);
+    }
+  });
+
+  it('keeps realm-gated insights locked until you have reached the realm', () => {
+    const state = newGame();
+    state.prestige.memories = 1e9;
+    state.prestige.perks.foresight = 1;
+    expect(perkStatus(state, 'soulbound')).toBe('locked');
+    state.stats.bestStage = firstStageOfRealm('spiritSevering');
+    expect(perkStatus(state, 'soulbound')).toBe('available');
   });
 });

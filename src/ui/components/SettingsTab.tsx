@@ -104,7 +104,7 @@ export function SettingsTab() {
         <dd>{game.fmt(state.qiEarnedTotal)}</dd>
         <dt>Qi gathered (this life)</dt>
         <dd>{game.fmt(state.qiEarnedThisLoop)}</dd>
-        <dt>Clicks</dt>
+        <dt>Dantian presses</dt>
         <dd>{game.fmt(s.totalClicks)}</dd>
         <dt>Qi motes absorbed</dt>
         <dd>{game.fmt(s.motesAbsorbed)}</dd>

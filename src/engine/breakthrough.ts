@@ -22,23 +22,22 @@ const MIN_PASS_SCORE = 0.25;
 /** Slowdown can't make trials slower than this speed. */
 const MIN_TRIAL_SPEED = 0.5;
 
-/**
- * Stages you've reached in an earlier loop cost this much of their usual
- * price, and their tribulations pass on their own, so realms you've already
- * finished go quickly after a regression while new ones still take their full time.
- */
-export const FAMILIAR_STAGE_COST_MULT = 0.001;
-
 export function nextStage(state: GameState): StageDef | null {
   return state.stage < FINAL_STAGE ? STAGES[state.stage + 1] : null;
 }
 
+/** A stage reached in an earlier life: its tribulation lets you pass. */
 export function isFamiliarStage(state: GameState, stage: number): boolean {
   return stage <= state.stats.bestStage;
 }
 
-export function breakthroughCost(state: GameState, stage: number): number {
-  return STAGES[stage].cost * (isFamiliarStage(state, stage) ? FAMILIAR_STAGE_COST_MULT : 1);
+/**
+ * A single qi event (an encounter windfall or a trial) can be worth at most
+ * the next breakthrough's full price, so luck carries you a stage at most.
+ */
+export function qiEventCap(state: GameState): number {
+  const next = nextStage(state);
+  return next ? next.cost : Infinity;
 }
 
 /** Why the player can't break through right now, or null if they can. */
@@ -51,7 +50,7 @@ export function breakthroughBlocker(state: GameState): string | null {
   if (next.isMajor && requirement && !meetsCondition(state, requirement)) {
     return describeCondition(requirement);
   }
-  if (state.qi < breakthroughCost(state, next.index)) return 'Not enough qi.';
+  if (state.qi < next.cost) return 'Not enough qi.';
   return null;
 }
 
@@ -96,7 +95,7 @@ export function attemptBreakthrough(
 ): BreakthroughResult {
   const next = nextStage(state);
   if (!next || breakthroughBlocker(state) !== null) return 'blocked';
-  spendQi(state, breakthroughCost(state, next.index));
+  spendQi(state, next.cost);
   const trib = REALMS[next.realmIndex].tribulation;
   if (next.isMajor && trib && isFamiliarStage(state, next.index)) {
     log(`You have survived the ${trib.name} before. This time it parts before you.`, 'good');
@@ -207,7 +206,7 @@ function finishTribulation(state: GameState, passed: boolean): void {
   } else {
     state.stats.tribulationsFailed++;
     // Refunds shouldn't count as newly earned qi.
-    state.qi += breakthroughCost(state, t.targetStage) * FAILURE_REFUND;
+    state.qi += STAGES[t.targetStage].cost * FAILURE_REFUND;
     addBuff(state, 'injured');
     log(
       `The tribulation overwhelms you (${average}%, needed ${needed}%). Your breakthrough fails and your meridians are scorched.`,

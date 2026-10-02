@@ -1,6 +1,7 @@
 import { BUFFS_BY_ID } from '../content/buffs';
 import { CORE_GRADES, ELEMENTS, ELEMENTS_BY_ID, GENERATING_CYCLE_BONUS } from '../content/cores';
 import { GENERATORS } from '../content/generators';
+import { MEMORIES } from '../content/memories';
 import { PERKS, type PerkDef } from '../content/perks';
 import { REALMS, STAGES, firstStageOfRealm } from '../content/realms';
 import { TREASURES_BY_ID, type TreasureDef } from '../content/treasures';
@@ -18,14 +19,11 @@ import type { GameState } from './state';
 
 export interface Stats {
   mods: Modifiers;
-  realmMult: number;
   memoryMult: number;
   cycleMult: number;
   /** Qi/s produced by a single unit of each generator, after all bonuses. */
   generatorUnitQps: Record<string, number>;
   generatorQps: number;
-  clickPower: number;
-  autoClickQps: number;
   /** Qi/s from motes gathered automatically. */
   autoMoteQps: number;
   /** Total passive qi/s. */
@@ -35,20 +33,40 @@ export interface Stats {
 }
 
 const BASE_MOTE_SPAWN_PER_SECOND = 1;
+/** Most motes the field holds at once. */
+export const MAX_MOTES = 60;
 /**
- * A mote is worth this fraction of a click's flat power (not the part that
- * comes from qi/s), or this many seconds of resource qi/s if that's more,
- * before mote multipliers. Early on motes track clicks; later they track
- * production. Auto-clicks are left out so click bonuses don't also raise motes.
+ * Motes appear faster on an emptier field: this many times the usual rate when
+ * it's empty, fading logarithmically to nothing at MAX_MOTES (about the usual
+ * rate at 10 waiting). Gathering keeps the field low, so it stays lively,
+ * while a field left alone fills up less the faster motes spawn.
  */
-const MOTE_CLICK_FRACTION = 1;
-const MOTE_QPS_SECONDS = 0.15;
+const MOTE_EMPTY_FIELD_BOOST = 3;
 
-export function realmMultiplier(stage: number): number {
-  let mult = 1;
-  for (let i = 1; i <= stage; i++) mult *= REALMS[STAGES[i].realmIndex].stageMultiplier;
-  return mult;
+/**
+ * An attentive gatherer catches about this share of motes while keeping about
+ * MOTES_LEFT_WHILE_GATHERING waiting on the field (so it refills faster).
+ */
+const ATTENTIVE_MOTE_CATCH = 0.4;
+const MOTES_LEFT_WHILE_GATHERING = 5;
+
+/** Qi/s while actively gathering motes: what qi events are measured in. */
+export function activeQps(stats: Stats): number {
+  const motes = moteSpawnRate(stats.moteSpawnPerSecond, MOTES_LEFT_WHILE_GATHERING);
+  return stats.qps + motes * ATTENTIVE_MOTE_CATCH * stats.moteValue;
 }
+
+export function moteSpawnRate(spawnPerSecond: number, motesOnField: number): number {
+  const room = Math.log((MAX_MOTES + 1) / (Math.min(motesOnField, MAX_MOTES) + 1));
+  return (spawnPerSecond * MOTE_EMPTY_FIELD_BOOST * room) / Math.log(MAX_MOTES + 1);
+}
+/**
+ * A mote is worth this much qi times all qi multipliers, or this many seconds
+ * of resource qi/s if that's more, before mote multipliers. Early on the base
+ * value carries you; later motes track production.
+ */
+const MOTE_BASE_VALUE = 5;
+const MOTE_QPS_SECONDS = 1;
 
 export function unlockedCoreSlots(state: GameState, mods: Modifiers): number {
   return state.stage >= firstStageOfRealm('coreFormation') ? mods.coreSlots : 0;
@@ -100,12 +118,11 @@ export function computeModifiers(state: GameState, includeBuffs = true): Modifie
 
 export function computeStats(state: GameState, includeBuffs = true): Stats {
   const mods = computeModifiers(state, includeBuffs);
-  const realmMult = realmMultiplier(state.stage);
-  const memoryMult = 1 + state.prestige.memories * mods.memoryBonus;
+  const memoryMult = (1 + MEMORIES.weight * state.prestige.memories) ** mods.memoryPower;
   const cycleMult =
-    GENERATING_CYCLE_BONUS ** generatingPairs(new Set(state.cores.map((c) => c.element)));
+    1 + GENERATING_CYCLE_BONUS * generatingPairs(new Set(state.cores.map((c) => c.element)));
   const coreMult = state.cores.reduce((m, c) => m * CORE_GRADES[c.grade].mult, 1);
-  const global = mods.globalMult * realmMult * memoryMult * cycleMult * coreMult;
+  const global = mods.globalMult * memoryMult * cycleMult * coreMult;
 
   const generatorUnitQps: Record<string, number> = {};
   let generatorQps = 0;
@@ -115,26 +132,19 @@ export function computeStats(state: GameState, includeBuffs = true): Stats {
     generatorQps += unit * (state.generators[g.id] ?? 0);
   }
 
-  const flatClickPower = mods.clickFlat * mods.clickMult * global;
-  const clickPower = flatClickPower + mods.clickQpsFraction * generatorQps;
-  const autoClickQps = mods.autoClicksPerSecond * clickPower;
-  const moteValue =
-    Math.max(flatClickPower * MOTE_CLICK_FRACTION, generatorQps * MOTE_QPS_SECONDS) *
-    mods.moteValueMult;
+  const baseMoteValue = MOTE_BASE_VALUE * mods.moteBaseMult * global;
+  const moteValue = Math.max(baseMoteValue, generatorQps * MOTE_QPS_SECONDS) * mods.moteValueMult;
   const moteSpawnPerSecond = BASE_MOTE_SPAWN_PER_SECOND * mods.moteSpawnMult;
   const autoMoteQps = moteSpawnPerSecond * Math.min(1, mods.moteAutoCollect) * moteValue;
 
   return {
     mods,
-    realmMult,
     memoryMult,
     cycleMult,
     generatorUnitQps,
     generatorQps,
-    clickPower,
-    autoClickQps,
     autoMoteQps,
-    qps: generatorQps + autoClickQps + autoMoteQps,
+    qps: generatorQps + autoMoteQps,
     moteValue,
     moteSpawnPerSecond,
   };

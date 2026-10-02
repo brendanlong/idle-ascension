@@ -1,0 +1,92 @@
+{
+  "saveVersion": 4,
+  "qi": 123000000000,
+  "qiEarnedThisLoop": 450000000000,
+  "qiEarnedTotal": 670000000000000,
+  "stage": 19,
+  "generators": {
+    "herb": 230,
+    "array": 90,
+    "furnace": 70,
+    "disciple": 50,
+    "beast": 30,
+    "vein": 12,
+    "secretRealm": 4,
+    "inheritance": 0,
+    "dao": 0,
+    "sect": 0,
+    "dragon": 0,
+    "smallWorld": 0,
+    "starRiver": 0,
+    "faith": 0,
+    "court": 0,
+    "primordial": 0
+  },
+  "upgrades": {
+    "palm-1": true,
+    "palm-2": true,
+    "herb-1": true,
+    "scripture-1": true
+  },
+  "cores": [
+    {
+      "element": "fire",
+      "grade": 3
+    },
+    {
+      "element": "water",
+      "grade": 1
+    }
+  ],
+  "treasures": {
+    "ring": 2,
+    "jadeSlip": 1
+  },
+  "buffs": [
+    {
+      "id": "epiphany",
+      "remaining": 30
+    }
+  ],
+  "encounter": {
+    "nextIn": 45,
+    "active": null
+  },
+  "trial": {
+    "nextIn": 90,
+    "offer": null,
+    "active": null
+  },
+  "tribulation": null,
+  "prestige": {
+    "memories": 42,
+    "perks": {
+      "meridians": 3,
+      "stash": 1,
+      "soulbound": 1
+    },
+    "loops": 4
+  },
+  "stats": {
+    "totalClicks": 5000,
+    "loopClicks": 0,
+    "motesAbsorbed": 0,
+    "playTime": 0,
+    "loopTime": 0,
+    "encountersClaimed": 0,
+    "trialsCompleted": 0,
+    "tribulationsSurvived": 0,
+    "tribulationsFailed": 0,
+    "bestStage": 22
+  },
+  "flags": {
+    "introSeen": true,
+    "ascended": false,
+    "victorySeen": false
+  },
+  "settings": {
+    "numberFormat": "myriad",
+    "trialAssist": "off"
+  },
+  "lastTick": 1790000000000
+}

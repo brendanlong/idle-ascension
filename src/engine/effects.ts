@@ -1,3 +1,4 @@
+import { MEMORIES } from '../content/memories';
 import { generatorName } from '../content/generators';
 
 /**
@@ -11,10 +12,8 @@ export interface Modifiers {
   globalMult: number;
   generatorMult: Record<string, number>;
   generatorCostMult: number;
-  clickMult: number;
-  clickFlat: number;
-  /** Fraction of qi/s added to each click. */
-  clickQpsFraction: number;
+  /** Multiplies a mote's base value (what it's worth before you have much qi/s). */
+  moteBaseMult: number;
   moteValueMult: number;
   moteSpawnMult: number;
   /** Fraction of spawning motes gathered automatically, on top of the ones you catch. */
@@ -24,19 +23,18 @@ export interface Modifiers {
   tribulationLeniency: number;
   /** Tribulation trials run this many times slower. */
   tribulationSlowMult: number;
-  autoClicksPerSecond: number;
   offlineCapHours: number;
   offlineEfficiency: number;
   coreSlots: number;
   coreCostMult: number;
-  memoryBonus: number;
+  memoryPower: number;
   startingStage: number;
 }
 
 export type MultStat =
   | 'globalMult'
   | 'generatorCostMult'
-  | 'clickMult'
+  | 'moteBaseMult'
   | 'moteValueMult'
   | 'moteSpawnMult'
   | 'encounterRateMult'
@@ -44,15 +42,12 @@ export type MultStat =
   | 'coreCostMult';
 
 export type AddStat =
-  | 'clickFlat'
-  | 'clickQpsFraction'
   | 'moteAutoCollect'
   | 'tribulationLeniency'
-  | 'autoClicksPerSecond'
   | 'offlineCapHours'
   | 'offlineEfficiency'
   | 'coreSlots'
-  | 'memoryBonus'
+  | 'memoryPower'
   | 'startingStage';
 
 export type Effect =
@@ -65,21 +60,18 @@ export function baseModifiers(): Modifiers {
     globalMult: 1,
     generatorMult: {},
     generatorCostMult: 1,
-    clickMult: 1,
-    clickFlat: 1,
-    clickQpsFraction: 0,
+    moteBaseMult: 1,
     moteValueMult: 1,
     moteSpawnMult: 1,
     moteAutoCollect: 0,
     encounterRateMult: 1,
     tribulationLeniency: 0,
     tribulationSlowMult: 1,
-    autoClicksPerSecond: 0,
     offlineCapHours: 4,
     offlineEfficiency: 0.5,
     coreSlots: 0,
     coreCostMult: 1,
-    memoryBonus: 0.02,
+    memoryPower: MEMORIES.power,
     startingStage: 0,
   };
 }
@@ -106,30 +98,22 @@ export function applyEffects(mods: Modifiers, effects: readonly Effect[]): void 
 const STAT_LABELS: Record<MultStat | AddStat, string> = {
   globalMult: 'all qi gain',
   generatorCostMult: 'resource costs',
-  clickMult: 'cultivation (click) power',
+  moteBaseMult: 'base qi mote value',
   moteValueMult: 'qi mote value',
   moteSpawnMult: 'qi mote frequency',
   encounterRateMult: 'fortuitous encounter frequency',
   tribulationSlowMult: 'tribulation slowdown',
   coreCostMult: 'core costs',
-  clickFlat: 'base click power',
-  clickQpsFraction: 'of qi/s added to each click',
   moteAutoCollect: 'of qi motes gathered automatically',
   tribulationLeniency: 'tribulation pass marks',
-  autoClicksPerSecond: 'automatic clicks per second',
   offlineCapHours: 'hours of closed-door cultivation (offline cap)',
   offlineEfficiency: 'closed-door cultivation efficiency',
   coreSlots: 'core slot',
-  memoryBonus: 'qi gain per Memory',
+  memoryPower: 'power of Memories over qi gain',
   startingStage: 'starting cultivation stage after regression',
 };
 
-const PERCENT_ADD_STATS: ReadonlySet<AddStat> = new Set([
-  'clickQpsFraction',
-  'moteAutoCollect',
-  'offlineEfficiency',
-  'memoryBonus',
-]);
+const PERCENT_ADD_STATS: ReadonlySet<AddStat> = new Set(['moteAutoCollect', 'offlineEfficiency']);
 
 function trimNumber(n: number): string {
   return Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)));

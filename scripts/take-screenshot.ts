@@ -19,7 +19,7 @@ const HEIGHT = 800;
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 function demoSave(): string {
-  const fixture = path.join(root, 'src/engine/__tests__/fixtures/save-v3.json');
+  const fixture = path.join(root, 'src/engine/__tests__/fixtures/save-v4.json');
   const s = deserialize(readFileSync(fixture, 'utf8'));
   s.stage = firstStageOfRealm('nascentSoul') + 2;
   s.stats.bestStage = s.stage;
@@ -31,7 +31,6 @@ function demoSave(): string {
     { element: 'water', grade: 5 },
   ] as GameState['cores'];
   Object.assign(s.generators, {
-    cushion: 250,
     herb: 240,
     array: 220,
     furnace: 200,

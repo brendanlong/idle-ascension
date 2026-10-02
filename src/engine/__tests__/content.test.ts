@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { BUFFS_BY_ID } from '../../content/buffs';
-import { CORE_GRADES } from '../../content/cores';
 import { ENCOUNTERS } from '../../content/encounters';
 import { REGRESSION_STORY } from '../../content/lore';
 import { NAME_TABLES } from '../../content/names';
 import { GENERATORS, GENERATORS_BY_ID } from '../../content/generators';
 import { PERKS, PERKS_BY_ID } from '../../content/perks';
-import { REALMS, REALMS_BY_ID, STAGES } from '../../content/realms';
+import { FINAL_STAGE, REALMS, REALMS_BY_ID, STAGES } from '../../content/realms';
 import { TREASURES } from '../../content/treasures';
 import { UPGRADES } from '../../content/upgrades';
 import type { Effect } from '../effects';
+import { formPosition, refinePosition } from '../cores';
 import { placeholders } from '../text';
 
 function expectUniqueIds(items: readonly { id: string }[]) {
@@ -107,17 +107,23 @@ describe('content integrity', () => {
     expect(share.buff).toBeGreaterThan(share.treasure);
   });
 
-  it('has strictly increasing breakthrough costs', () => {
+  it('has a breakthrough cost for every stage', () => {
+    for (const realm of REALMS) expect(realm.stageCosts.length).toBe(realm.stageNames.length);
+  });
+
+  it('never makes a breakthrough cheaper than the one before', () => {
     for (let i = 2; i < STAGES.length; i++) {
-      expect(STAGES[i].cost).toBeGreaterThan(STAGES[i - 1].cost);
+      expect(STAGES[i].cost).toBeGreaterThanOrEqual(STAGES[i - 1].cost);
     }
   });
 
-  it('prices each core grade above the entry cost of the realm that unlocks it', () => {
-    CORE_GRADES.forEach((grade, i) => {
-      if (i === 0) return;
-      const realm = REALMS.find((r) => (r.coreGradeCap ?? -1) >= i)!;
-      expect(grade.refineCost).toBeGreaterThan(realm.firstStageCost);
-    });
+  it('schedules each core after the last and each grade after the last', () => {
+    for (let core = 0; core < 5; core++) {
+      if (core > 0) expect(formPosition(core)).toBeGreaterThan(formPosition(core - 1));
+      expect(refinePosition(core, 1)).toBeGreaterThan(formPosition(core));
+      // Grades past the last realm all land at Godhood, where the game ends.
+      for (let grade = 2; refinePosition(core, grade) < FINAL_STAGE; grade++)
+        expect(refinePosition(core, grade)).toBeGreaterThan(refinePosition(core, grade - 1));
+    }
   });
 });

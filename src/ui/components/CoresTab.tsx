@@ -107,7 +107,8 @@ export function CoresTab() {
       <h3>The Generating Cycle</h3>
       <p class="muted small">
         {ELEMENTS.map((e) => e.name).join(' → ')} → {ELEMENTS[0].name}. Each pair of your cores
-        adjacent in this cycle grants ×{GENERATING_CYCLE_BONUS} all qi gain. Active pairs: {pairs}.
+        adjacent in this cycle adds {GENERATING_CYCLE_BONUS * 100}% to all qi gain. Active pairs:{' '}
+        {pairs}.
       </p>
     </div>
   );

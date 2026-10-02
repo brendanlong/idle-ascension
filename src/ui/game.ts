@@ -18,6 +18,8 @@ class GameController {
   stats: Stats = computeStats(this.state);
   log: LogEntry[] = [];
   offlineReport: OfflineReport | null = null;
+  /** Counts fresh starts, so views keeping their own world (like drifting motes) can clear it. */
+  freshStarts = 0;
   /** Set when this tab must stop running, e.g. because another tab took over the save. */
   haltReason: string | null = null;
   private listeners = new Set<() => void>();
@@ -99,6 +101,7 @@ class GameController {
   replaceState(state: GameState, { freshStart = false } = {}): void {
     state.lastTick = Date.now();
     if (freshStart) {
+      this.freshStarts++;
       this.log = [];
       this.offlineReport = null;
     }

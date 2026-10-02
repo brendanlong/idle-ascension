@@ -10,12 +10,13 @@ import {
 } from '../content/encounters';
 import { firstStageOfRealm } from '../content/realms';
 import { TREASURES_BY_ID } from '../content/treasures';
+import { qiEventCap } from './breakthrough';
 import { addBuff, describeBuff, gainQi, grantTreasure, pickRandomTreasure } from './economy';
 import { log } from './events';
 import { formatNumber } from './format';
 import { pick, randomBetween, weightedPick, type Rng } from './rng';
 import type { GameState } from './state';
-import type { Stats } from './stats';
+import { activeQps, type Stats } from './stats';
 import { fillTemplate } from './text';
 
 export function tickEncounters(state: GameState, stats: Stats, dt: number, rng: Rng): void {
@@ -65,8 +66,8 @@ export function windfallAmount(
   reward: WindfallReward,
   rng: Rng,
 ): number {
-  const seconds = randomBetween(rng, reward.qpsSeconds[0], reward.qpsSeconds[1]);
-  return Math.min(state.qi * reward.bankFraction, stats.qps * seconds) + stats.clickPower * 10;
+  const seconds = randomBetween(rng, reward.activeSeconds[0], reward.activeSeconds[1]);
+  return Math.min(activeQps(stats) * seconds, qiEventCap(state));
 }
 
 export function claimEncounter(state: GameState, stats: Stats, rng: Rng): boolean {

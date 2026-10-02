@@ -1,25 +1,16 @@
 import { generatorCount } from '../content/generators';
-import { PERKS, PERKS_BY_ID, STASH_GENERATORS, perkCost, type PerkDef } from '../content/perks';
-import { FINAL_STAGE, STAGES, firstStageOfRealm } from '../content/realms';
+import { MEMORIES } from '../content/memories';
+import { PERKS, PERKS_BY_ID, STASH_GENERATORS, type PerkDef } from '../content/perks';
+import { memoriesAt } from '../content/progress';
+import { STAGE_LAYOUT, firstStageOfRealm } from '../content/realms';
 import { log } from './events';
 import { createInitialState, type GameState } from './state';
 import { computeModifiers } from './stats';
 
 const REGRESSION_REALM = 'coreFormation';
-const BASE_MEMORIES = 3;
-/**
- * Memories grow with the breakthrough cost of the stage reached, to this
- * power. Stages in early realms are cheap steps apart, so early regressions
- * gain little; late realms' steep stages make each regression count.
- */
-const MEMORY_COST_EXPONENT = 0.1;
-
-/** Memories gained by regressing from a given stage. */
+/** Memories gained by regressing from a given stage: exponential in how deep you got (see MEMORIES). */
 export function memoriesForStage(stage: number): number {
-  const first = firstStageOfRealm(REGRESSION_REALM);
-  if (stage < first) return 0;
-  const ratio = STAGES[Math.min(stage, FINAL_STAGE)].cost / STAGES[first].cost;
-  return Math.floor(BASE_MEMORIES * ratio ** MEMORY_COST_EXPONENT);
+  return memoriesAt(STAGE_LAYOUT, stage);
 }
 
 export function pendingMemories(state: GameState): number {
@@ -106,6 +97,28 @@ export function describeSpecialPerk(perk: PerkDef, level: number): string | null
   }
 }
 
+/** Stages in a realm after Qi Condensation, for pricing perk levels. */
+const STAGES_PER_REALM = 4;
+
+/**
+ * Each level of a perk costs as much more than the last as a regression
+ * yields one realm deeper, so regressing once per realm buys about a level of
+ * each perk.
+ */
+function perkLevelGrowth(): number {
+  return MEMORIES.growthPerStage ** STAGES_PER_REALM;
+}
+
+/**
+ * Perks are priced from the Memories a regression yields, so at any depth the
+ * next level of every perk costs a share of one regression there: you choose
+ * a few each time, and regressing again from the same depth buys the rest.
+ */
+export function perkCost(perk: PerkDef, currentLevel: number): number {
+  const memories = memoriesForStage(firstStageOfRealm(perk.firstRealm));
+  return Math.ceil(perk.share * memories * perkLevelGrowth() ** currentLevel);
+}
+
 export function spentMemories(state: GameState): number {
   let spent = 0;
   for (const perk of PERKS) {
@@ -126,6 +139,7 @@ export function perkStatus(state: GameState, perkId: string): PerkStatus {
   const level = state.prestige.perks[perkId] ?? 0;
   if (level >= perk.maxLevel) return 'maxed';
   if (perk.requires?.some((r) => !(state.prestige.perks[r] ?? 0))) return 'locked';
+  if (perk.minRealm && state.stats.bestStage < firstStageOfRealm(perk.minRealm)) return 'locked';
   if (availableMemories(state) < perkCost(perk, level)) return 'unaffordable';
   return 'available';
 }

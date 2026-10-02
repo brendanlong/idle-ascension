@@ -1,0 +1,42 @@
+{
+  "seeds": [1, 2, 3, 4],
+  "ramp": {
+    "tolerance": 2,
+    "monotoneSlack": 0.9
+  },
+  "reference": {
+    "activeUntilStage": 3,
+    "idleFromStage": 14
+  },
+  "boredSeconds": 300,
+  "layers": {
+    "resourcesOnlySlowFrom": [13, 17],
+    "withCoresSlowFrom": [17, 21]
+  },
+  "somethingToBuy": {
+    "maxGapShareOfStage": 0.6,
+    "minGapSeconds": 20,
+    "maxBurst": 2
+  },
+  "minUpgradeGain": 1.3,
+  "newResource": {
+    "spendSeconds": 60,
+    "shareOfOthers": [0.5, 2]
+  },
+  "activeRatio": {
+    "first": 20,
+    "last": 2,
+    "tolerance": 1.5
+  },
+  "regression": {
+    "neverSlowdownAtLeast": 4,
+    "twicePerRealmFaster": [1.3, 1.5],
+    "maxReplayShare": 0.2,
+    "maxRepeatGain": 1.25
+  },
+  "treasures": {
+    "levelOneGain": [1.2, 3],
+    "maxLuckSpread": 3
+  },
+  "upgradeExempt": ["upgrade:sunflower"]
+}
