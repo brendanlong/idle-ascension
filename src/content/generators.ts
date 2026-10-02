@@ -1,5 +1,3 @@
-import { STAGES } from './realms';
-
 export interface GeneratorDef {
   id: string;
   name: string;
@@ -22,14 +20,13 @@ export interface GeneratorDef {
 export const GENERATOR_COST_GROWTH = 1.15;
 
 /**
- * Resources form a ladder over the breakthrough curve, so there's a new one
- * every few stages all game (see "Content follows the curve" in
- * docs/balance-spec.md). Tier n (from 0) arrives around stage
- * `stagesPerTier` x n, costing `costShare` of that stage's breakthrough, and
- * makes `efficiencyStep` times as much qi/s per qi as the tier before. The
- * first tier is priced by hand. Fit with scripts/balance/tune_curve.py.
+ * Resources form a fixed ladder, independent of breakthrough costs (which are
+ * built on top of it, see docs/balance-spec.md): each tier costs `costRatio`
+ * times the one before and makes `efficiencyStep` times as much qi/s per qi.
+ * The first tier is priced by hand. Fit with scripts/balance/build_costs.py
+ * so a new tier arrives every couple of stages.
  */
-export const RESOURCE_LADDER = { stagesPerTier: 2, costShare: 0.1, efficiencyStep: 0.5 };
+export const RESOURCE_LADDER = { costRatio: 18.2, efficiencyStep: 0.5 };
 
 export const GENERATORS: readonly GeneratorDef[] = (
   [
@@ -179,16 +176,15 @@ export const GENERATORS: readonly GeneratorDef[] = (
   ] as Omit<GeneratorDef, 'baseCost' | 'baseQps'>[]
 ).map((g) => ({ baseCost: 0, baseQps: 0, ...g }) as GeneratorDef);
 
-/** Prices every resource after the first from the breakthrough costs (call again if they change). */
+/** Prices every resource after the first from RESOURCE_LADDER (call again if it changes). */
 export function priceResources(): void {
   const [first, ...rest] = GENERATORS as GeneratorDef[];
-  let efficiency = first.baseQps / first.baseCost;
-  rest.forEach((g, i) => {
-    const stage = Math.min(RESOURCE_LADDER.stagesPerTier * (i + 1), STAGES.length - 1);
-    efficiency *= RESOURCE_LADDER.efficiencyStep;
-    g.baseCost = RESOURCE_LADDER.costShare * STAGES[stage].cost;
-    g.baseQps = g.baseCost * efficiency;
-  });
+  let { baseCost, baseQps } = first;
+  for (const g of rest) {
+    baseCost *= RESOURCE_LADDER.costRatio;
+    baseQps *= RESOURCE_LADDER.costRatio * RESOURCE_LADDER.efficiencyStep;
+    Object.assign(g, { baseCost, baseQps });
+  }
 }
 priceResources();
 

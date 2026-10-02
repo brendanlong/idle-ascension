@@ -11,6 +11,8 @@
  *                       1 qi/s) and while replaying after a regression, but buys the moment
  *                       anything is affordable, to show how the economy paces an idle player.
  *                       active: gathers and checks in all the time.
+ *                       reference: what balance targets are set for (docs/balance-spec.md):
+ *                       gathers at first, fading to idle, and regresses once per realm.
  *   SIM_ACTIVE=<0-1>    taper player with a fixed share instead
  *   SIM_REGRESS=<mode>  efficient (default), never or eager: see REGRESS_MODE
  *   SIM_SPEC=1          print measurements for scripts/balance/spec.py
@@ -32,14 +34,7 @@ import {
 import { MEMORIES } from '../src/content/memories';
 import { UPGRADES, priceUpgrades } from '../src/content/upgrades';
 import { PERKS, type PerkDef } from '../src/content/perks';
-import {
-  COST_CURVE,
-  REALMS,
-  STAGES,
-  curveCosts,
-  stageName,
-  type CostCurve,
-} from '../src/content/realms';
+import { REALMS, STAGES, stageName } from '../src/content/realms';
 import { MAX_TREASURE_LEVEL, TREASURES } from '../src/content/treasures';
 import {
   attemptBreakthrough,
@@ -97,23 +92,39 @@ const BALANCE_SPEC = JSON.parse(
   readFileSync(new URL('./balance/spec.json', import.meta.url), 'utf8'),
 ) as {
   newResource: { spendSeconds: number };
-  sawtooth: { growth: number; boredSeconds: number };
+  boredSeconds: number;
+  reference: { activeUntilStage: number; idleFromStage: number };
 };
 /** How well the bot plays elemental trials (0-1), for tribulations and optional offers. */
 const TRIBULATION_TRIAL_SCORE = 0.8;
 const OPTIONAL_TRIAL_SCORE = 0.7;
 /**
  * SIM_REGRESS: when the bot regresses.
- *   efficient (default)  once bored (the next stage is more than the spec's
- *                        sawtooth.boredSeconds away), if regressing would
- *                        multiply the Memory bonus by REGRESS_AT_GAIN: what a
- *                        player does when a big number tempts them (the spec's
- *                        payoff check says whether it was worth it)
- *   never                never, to check regression is optional
+ *   perRealm (the reference player's default)  on first reaching each realm
+ *                        from Nascent Soul on, i.e. after finishing a realm
+ *   twicePerRealm        also halfway through each realm
+ *   efficient (everyone else's default)  once bored (the next stage is more
+ *                        than the spec's boredSeconds away), if regressing
+ *                        would multiply the Memory bonus by REGRESS_AT_GAIN:
+ *                        what a player does when a big number tempts them
+ *   never                never
  *   eager                also whenever nothing new has been bought for
  *                        STUCK_SECONDS (3 minutes), for any gain
  */
-const REGRESS_MODE = process.env.SIM_REGRESS ?? 'efficient';
+const REGRESS_MODE = process.env.SIM_REGRESS ?? (PLAYER === 'reference' ? 'perRealm' : 'efficient');
+/** The first realm the per-realm schedules regress in. */
+const SCHEDULED_REGRESSIONS_FROM = REALMS.findIndex((r) => r.id === 'nascentSoul');
+/** Realms (and halves of realms) the schedule has already regressed for. */
+const scheduledRegressions = new Set<string>();
+function scheduledRegressionDue(): string | null {
+  if (REGRESS_MODE !== 'perRealm' && REGRESS_MODE !== 'twicePerRealm') return null;
+  const best = STAGES[state.stats.bestStage];
+  if (best.realmIndex < SCHEDULED_REGRESSIONS_FROM || state.stage < state.stats.bestStage)
+    return null;
+  const half = REGRESS_MODE === 'twicePerRealm' && best.stageInRealm >= 2 ? 1 : 0;
+  const key = `${best.realmIndex}:${half}`;
+  return scheduledRegressions.has(key) ? null : key;
+}
 const NO_CORES = !!process.env.SIM_NO_CORES;
 const STUCK_SECONDS = 3 * 60;
 const REGRESS_WHEN_STUCK_AT_GAIN = 1.1;
@@ -137,7 +148,7 @@ const CORE_ORDER: ElementId[] = ['wood', 'fire', 'water', 'earth', 'metal'];
  *   price        multiplies single prices: "up:<technique id>", "stage:<index>",
  *                "gen:<resource>" (base cost)
  *   genQps       multiplies a resource's output
- *   curve        overrides COST_CURVE (src/content/realms.ts)
+ *   stageCosts   log10 of every breakthrough's cost, by stage (overrides STAGE_COSTS)
  *   memory       overrides MEMORIES (src/content/memories.ts)
  *   ladder       overrides RESOURCE_LADDER (src/content/generators.ts)
  * SIM_PRICES=1 prints, as JSON, each of those prices the first time the bot
@@ -152,14 +163,14 @@ function applyTuning(): void {
     stageGrowth?: Record<string, number>;
     price?: Record<string, number>;
     genQps?: Record<string, number>;
-    curve?: Partial<CostCurve>;
+    stageCosts?: number[];
     memory?: Partial<typeof MEMORIES>;
     ladder?: Partial<typeof RESOURCE_LADDER>;
   };
   Object.assign(RESOURCE_LADDER, tune.ladder);
   priceResources();
   priceUpgrades();
-  if (tune.curve) applyCostCurve(tune.curve);
+  if (tune.stageCosts) setStageCosts(tune.stageCosts.map((c, i) => (i === 0 ? 0 : 10 ** c)));
   Object.assign(MEMORIES, tune.memory);
   const priceMult: number[] = [];
   REALMS.forEach((r, i) => (priceMult[i] = (priceMult[i - 1] ?? 1) * (tune.shift?.[r.id] ?? 1)));
@@ -203,11 +214,6 @@ function applyTuning(): void {
       );
     if (kind === 'stage') scaled(STAGES[Number(id)], 'cost', factor);
   }
-}
-
-function applyCostCurve(curve: Partial<CostCurve>): void {
-  Object.assign(COST_CURVE, curve);
-  setStageCosts(curveCosts(COST_CURVE, STAGES.length));
 }
 
 /**
@@ -254,10 +260,9 @@ const stageSeconds: number[] = [0];
 let lifeStageAt: number[] = [];
 /**
  * SIM_SPEC: each regression, how long waiting would have taken instead, and
- * how many stages further a second regression from the same place would
- * carry the player (its Memory gain in stages of sawtooth growth).
+ * how much a second regression from the same place would multiply income by.
  */
-const regressions: { t: number; from: number; wait: number; repeatStages: number }[] = [];
+const regressions: { t: number; from: number; wait: number; repeatGain: number }[] = [];
 /** SIM_SPEC: gathering ÷ idle income each minute at the frontier (not replaying), by realm. */
 const frontierRatios: number[][] = REALMS.map(() => []);
 /**
@@ -398,8 +403,19 @@ function inTaperWindow(): boolean {
 }
 
 /** Sweeping motes and claiming encounters and trials. */
+/**
+ * The reference player gathers the whole time for the first few stages, then
+ * fades linearly to idle (spec reference.activeUntilStage to idleFromStage).
+ */
+function referenceActivity(): number {
+  const { activeUntilStage, idleFromStage } = BALANCE_SPEC.reference;
+  const k = state.stats.bestStage;
+  return Math.min(1, Math.max(0, (idleFromStage - k) / (idleFromStage - activeUntilStage)));
+}
+
 function isGathering(): boolean {
   if (PLAYER === 'active') return true;
+  if (PLAYER === 'reference') return isReplaying() || rng() < referenceActivity();
   if (PLAYER === 'passive')
     return isReplaying() || computeStats(state, false).qps < PASSIVE_STARTUP_QPS;
   return inTaperWindow();
@@ -416,15 +432,13 @@ function income(s: GameState): { passive: number; active: number } {
   return { passive: stats.qps, active: activeQps(stats) };
 }
 
-function repeatRegressionStages(pending: number): number {
+function repeatRegressionGain(pending: number): number {
   const memoryMult = (extra: number) => {
     const s = structuredClone(state);
     s.prestige.memories += extra;
     return computeStats(s, false).memoryMult;
   };
-  return (
-    Math.log(memoryMult(2 * pending) / memoryMult(pending)) / Math.log(BALANCE_SPEC.sawtooth.growth)
-  );
+  return memoryMult(2 * pending) / memoryMult(pending);
 }
 
 function secondsToNextStage(): number {
@@ -433,7 +447,14 @@ function secondsToNextStage(): number {
 }
 
 function averageIncome(i: { passive: number; active: number }): number {
-  const share = PLAYER === 'active' ? 1 : PLAYER === 'passive' ? 0 : activeFraction();
+  const share =
+    PLAYER === 'active'
+      ? 1
+      : PLAYER === 'passive'
+        ? 0
+        : PLAYER === 'reference'
+          ? referenceActivity()
+          : activeFraction();
   return i.passive + share * (i.active - i.passive);
 }
 
@@ -877,14 +898,19 @@ while (time < maxHours * 3600) {
   const memoryGain = canRegress
     ? computeStats(regress(structuredClone(state), 0)!).memoryMult / memoryMultBefore
     : 0;
+  const scheduled = canRegress ? scheduledRegressionDue() : null;
+  const efficientMode = REGRESS_MODE === 'efficient' || REGRESS_MODE === 'eager';
   if (
     canRegress &&
     // Wait for Memories to settle so the regression is worth its full amount.
-    REGRESS_MODE !== 'never' &&
     memorySettledFraction(state) >= 1 &&
-    ((REGRESS_MODE === 'eager' && stuck && memoryGain >= REGRESS_WHEN_STUCK_AT_GAIN) ||
-      (memoryGain >= REGRESS_AT_GAIN && secondsToNextStage() > BALANCE_SPEC.sawtooth.boredSeconds))
+    (scheduled !== null ||
+      (REGRESS_MODE === 'eager' && stuck && memoryGain >= REGRESS_WHEN_STUCK_AT_GAIN) ||
+      (efficientMode &&
+        memoryGain >= REGRESS_AT_GAIN &&
+        secondsToNextStage() > BALANCE_SPEC.boredSeconds))
   ) {
+    if (scheduled !== null) scheduledRegressions.add(scheduled);
     if (stuck) stuckRegressions++;
     if (previousLoopStuck && newPurchasesThisLoop === 0) futileRegressions++;
     replayTarget = loopBestStage;
@@ -894,7 +920,7 @@ while (time < maxHours * 3600) {
       t: time,
       from: state.stats.bestStage,
       wait: secondsToNextStage(),
-      repeatStages: repeatRegressionStages(pending),
+      repeatGain: repeatRegressionGain(pending),
     });
     const label = `regress (+${pending} memories${stuck ? `, stuck at ${stageName(state.stage)}` : ''}`;
     state = regress(state, 0)!;

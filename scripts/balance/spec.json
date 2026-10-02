@@ -1,17 +1,20 @@
 {
   "seeds": [1, 2, 3, 4],
-  "sawtooth": {
-    "floorFirst": 10,
-    "floorLast": 90,
-    "growth": 1.25,
-    "tolerance": 2.5,
-    "monotoneSlack": 0.9,
-    "boredSeconds": 300,
-    "maxRepeatStages": 3.5,
-    "firstLifeGrowth": 1.11,
-    "lastRealmLonger": 1.5,
-    "earlyUntilStage": 9,
-    "earlyTolerance": 5
+  "ramp": {
+    "first": 15,
+    "last": 600,
+    "flatUntil": 3,
+    "tolerance": 2,
+    "monotoneSlack": 0.9
+  },
+  "reference": {
+    "activeUntilStage": 3,
+    "idleFromStage": 14
+  },
+  "boredSeconds": 300,
+  "layers": {
+    "resourcesOnlySlowFrom": [13, 17],
+    "withCoresSlowFrom": [17, 21]
   },
   "somethingToBuy": {
     "maxGapShareOfStage": 0.6,
@@ -29,18 +32,14 @@
     "tolerance": 1.5
   },
   "regression": {
-    "withoutSlowdownAtLeast": 4,
-    "minPayoff": 2,
-    "maxReplayShare": 0.2
+    "neverSlowdownAtLeast": 4,
+    "twicePerRealmFaster": [1.3, 1.5],
+    "maxReplayShare": 0.2,
+    "maxRepeatGain": 2.5
   },
   "treasures": {
     "levelOneGain": [1.2, 3],
     "maxLuckSpread": 1.5
   },
-  "upgradeExempt": ["upgrade:sunflower"],
-  "layers": {
-    "resourcesOnlyBoredBy": [13, 17],
-    "withCoresBoredBy": [17, 21],
-    "neverRegressClimbFrom": 19
-  }
+  "upgradeExempt": ["upgrade:sunflower"]
 }

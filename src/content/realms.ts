@@ -15,7 +15,7 @@ export interface RealmDef {
   color: string;
   description: string;
   stageNames: readonly string[];
-  /** Qi cost of breaking through into each stage, from COST_CURVE. */
+  /** Qi cost of breaking through into each stage, from STAGE_COSTS. */
   stageCosts: readonly number[];
   /** Multiplier to all qi gain granted by each stage reached in this realm. */
   stageMultiplier: number;
@@ -35,31 +35,15 @@ const LAYERS = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'].m
 const PHASES = ['Early', 'Middle', 'Late', 'Peak'];
 
 /**
- * Breakthrough costs are a smooth curve (see "Breakthrough costs are a smooth
- * curve" in docs/balance-spec.md): the first costs `first`, and each one after
- * costs 10^step times the one before, where step blends from `early` to
- * `late` around stage `mid`, over about `width` stages. Fit with
- * scripts/balance/tune_curve.py.
+ * The qi cost of breaking through into each stage, Mortal (free) first. Built
+ * by scripts/balance/build_costs.py: priced so the reference player (see
+ * docs/balance-spec.md) takes the target time for each stage, then smoothed.
  */
-export interface CostCurve {
-  first: number;
-  early: number;
-  late: number;
-  mid: number;
-  width: number;
-}
-
-export const COST_CURVE: CostCurve = { first: 59, early: 1, late: 0.79, mid: 14, width: 4 };
-
-/** The cost of every stage, Mortal (free) first. */
-export function curveCosts(curve: CostCurve, stages: number): number[] {
-  const costs = [0, curve.first];
-  for (let k = 2; k < stages; k++) {
-    const blend = 1 / (1 + Math.exp(-(k - curve.mid) / curve.width));
-    costs.push(costs[k - 1] * 10 ** (curve.early + (curve.late - curve.early) * blend));
-  }
-  return costs;
-}
+export const STAGE_COSTS: readonly number[] = [
+  0, 54, 85, 170, 470, 1_700, 6_900, 36_000, 210_000, 1_600_000, 1.2e7, 9.3e7, 7.3e8, 5.1e9, 3.5e10,
+  2.9e11, 2.8e12, 5.1e13, 8.9e14, 1.1e16, 9.4e16, 5.8e17, 1.7e18, 4.8e18, 1.4e19, 5e19, 1.7e20,
+  7.1e20, 3.9e21, 4.2e22, 4.2e23, 4.8e24, 5.9e25, 6.8e26, 4.7e27,
+];
 
 const REALM_DEFS: readonly Omit<RealmDef, 'stageCosts'>[] = [
   {
@@ -164,13 +148,9 @@ const REALM_DEFS: readonly Omit<RealmDef, 'stageCosts'>[] = [
   },
 ];
 
-const COSTS = curveCosts(
-  COST_CURVE,
-  REALM_DEFS.reduce((n, r) => n + r.stageNames.length, 0),
-);
 let nextStage = 0;
 export const REALMS: readonly RealmDef[] = REALM_DEFS.map((r) => {
-  const stageCosts = COSTS.slice(nextStage, nextStage + r.stageNames.length);
+  const stageCosts = STAGE_COSTS.slice(nextStage, nextStage + r.stageNames.length);
   nextStage += r.stageNames.length;
   return { ...r, stageCosts };
 });
