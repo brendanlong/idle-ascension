@@ -81,7 +81,7 @@ import {
   regressionBlocker,
 } from '../src/engine/prestige';
 import { createInitialState, type GameState } from '../src/engine/state';
-import { activeQps, computeStats, revivalMult } from '../src/engine/stats';
+import { activeQps, computeStats } from '../src/engine/stats';
 import { tick } from '../src/engine/tick';
 
 const maxHours = Number(process.argv[2] ?? 48);
@@ -297,6 +297,7 @@ if (process.env.SIM_DUMP_PRICES) {
       up: Object.fromEntries(UPGRADES.map((u) => [u.id, u.cost])),
       stage: STAGES.map((st) => st.cost),
       baseCurve: [...BASE_COST_CURVE],
+      ladder: RESOURCE_LADDER,
       form: CORE_SLOT_REALMS.map((_, n) => coreFormCost(baseModifiers(), n)),
       gen: Object.fromEntries(GENERATORS.map((g) => [g.id, [g.baseCost, g.baseQps]])),
     }),
@@ -674,7 +675,6 @@ function candidates(): Candidate[] {
       key: `up:${u.id}`,
       cost: u.cost,
       tryOn: () => {
-        if (u.revives) state.revivals[u.revives] = revivalMult(state, u.revives);
         state.upgrades[u.id] = true;
         return () => delete state.upgrades[u.id];
       },

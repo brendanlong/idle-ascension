@@ -86,26 +86,6 @@ export const PERKS: readonly PerkDef[] = [
     ],
   },
   {
-    id: 'bargain',
-    name: 'Knowing the True Price',
-    description: 'Merchants cannot fool someone who has already lived this day.',
-    maxLevel: Infinity,
-    share: 0.4,
-    firstRealm: 'nascentSoul',
-    requires: ['stash'],
-    effects: [{ type: 'mult', stat: 'generatorCostMult', value: 0.95 }],
-  },
-  {
-    id: 'insight',
-    name: 'Karmic Insight',
-    description: 'Each Memory weighs more heavily on the scales of fate.',
-    maxLevel: Infinity,
-    share: 0.6,
-    firstRealm: 'nascentSoul',
-    requires: ['foresight'],
-    effects: [{ type: 'add', stat: 'memoryPower', value: 0.005 }],
-  },
-  {
     id: 'patience',
     name: "Old Monster's Patience",
     description: 'You have waited lifetimes. A few more hours is nothing.',
@@ -125,7 +105,7 @@ export const PERKS: readonly PerkDef[] = [
     maxLevel: 3,
     share: 0.5,
     firstRealm: 'nascentSoul',
-    requires: ['bargain'],
+    requires: ['stash'],
     effects: [{ type: 'add', stat: 'startingStage', value: 3 }],
   },
   {
@@ -137,20 +117,9 @@ export const PERKS: readonly PerkDef[] = [
     share: 0.6,
     firstRealm: 'spiritSevering',
     requires: ['foresight'],
+    minRealm: 'spiritSevering',
     effects: [],
     special: 'keepTreasures',
-  },
-  {
-    id: 'echoCore',
-    name: 'Echo of a Past Core',
-    description:
-      'A phantom of a core you once formed. +1 core slot, available from Core Formation.',
-    maxLevel: 1,
-    share: 0.7,
-    firstRealm: 'spiritSevering',
-    requires: ['lightning'],
-    minRealm: 'spiritSevering',
-    effects: [{ type: 'add', stat: 'coreSlots', value: 1 }],
   },
 ];
 

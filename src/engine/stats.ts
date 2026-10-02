@@ -5,7 +5,7 @@ import { MEMORIES } from '../content/memories';
 import { PERKS, type PerkDef } from '../content/perks';
 import { REALMS, STAGES, firstStageOfRealm } from '../content/realms';
 import { TREASURES_BY_ID, type TreasureDef } from '../content/treasures';
-import { UPGRADES_BY_ID, type UpgradeDef } from '../content/upgrades';
+import { UPGRADES_BY_ID } from '../content/upgrades';
 import {
   applyEffects,
   baseModifiers,
@@ -100,7 +100,7 @@ export function computeModifiers(state: GameState, includeBuffs = true): Modifie
   const mods = baseModifiers();
   for (const id of Object.keys(state.upgrades)) {
     const u = UPGRADES_BY_ID.get(id);
-    if (u) applyEffects(mods, upgradeEffects(state, u));
+    if (u) applyEffects(mods, u.effects);
   }
   for (const [id, level] of Object.entries(state.treasures)) {
     const t = TREASURES_BY_ID.get(id);
@@ -121,33 +121,6 @@ export function computeModifiers(state: GameState, includeBuffs = true): Modifie
   const currentRealm = STAGES[state.stage].realmIndex;
   for (let r = 0; r <= currentRealm; r++) applyEffects(mods, REALMS[r].effects ?? []);
   return mods;
-}
-
-/** A revival makes its resource's total output this many times your best resource's. */
-const REVIVAL_LEAD = 1.5;
-/** For revivals learned before they were sized on purchase. */
-const UNSIZED_REVIVAL_MULT = 25;
-
-/**
- * The multiplier a revival of this resource would get if learned now: enough
- * to make its total output REVIVAL_LEAD times the best other resource's,
- * however far behind it has fallen by the time you buy it.
- */
-export function revivalMult(state: GameState, id: string): number {
-  const stats = computeStats(state, false);
-  const total = (g: string) => stats.generatorUnitQps[g] * (state.generators[g] ?? 0);
-  const best = Math.max(...GENERATORS.filter((g) => g.id !== id).map((g) => total(g.id)));
-  const own = stats.generatorUnitQps[id] * Math.max(1, state.generators[id] ?? 0);
-  return Math.max(1, Number(((REVIVAL_LEAD * best) / own).toPrecision(2)));
-}
-
-/** A technique's effects: a revival's, once learned, are what it was sized to then. */
-export function upgradeEffects(state: GameState, u: UpgradeDef): readonly Effect[] {
-  if (!u.revives) return u.effects;
-  const mult = state.upgrades[u.id]
-    ? (state.revivals[u.revives] ?? UNSIZED_REVIVAL_MULT)
-    : revivalMult(state, u.revives);
-  return [{ type: 'generatorMult', generator: u.revives, value: mult }];
 }
 
 export function computeStats(state: GameState, includeBuffs = true): Stats {

@@ -99,11 +99,6 @@ function sanitize(state: GameState): GameState {
   }
   state.generators = generators;
   state.upgrades = knownIds(state.upgrades, UPGRADES_BY_ID);
-  state.revivals = Object.fromEntries(
-    Object.entries(state.revivals).filter(
-      ([id, mult]) => GENERATORS_BY_ID.has(id) && isFiniteNumber(mult) && mult >= 1,
-    ),
-  );
   const treasures: Record<string, number> = {};
   for (const [id, level] of Object.entries(state.treasures)) {
     if (TREASURES_BY_ID.has(id) && isFiniteNumber(level) && level >= 1) {

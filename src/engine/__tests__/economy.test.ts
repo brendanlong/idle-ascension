@@ -161,16 +161,11 @@ describe('log messages', () => {
     );
   });
 
-  it('sizes a revival when learned so its resource leads the best one by half again', () => {
-    const state = newGame({ qi: 1e12 });
-    Object.assign(state.generators, { herb: 20, array: 40, furnace: 30 });
+  it('makes a revived resource as productive per unit as the one two tiers newer', () => {
+    const state = newGame({ qi: 1e30 });
+    Object.assign(state.generators, { herb: 20, furnace: 10 });
     expect(buyUpgrade(state, 'herb-5')).toBe(true);
     const stats = computeStats(state, false);
-    const total = (id: string) => stats.generatorUnitQps[id] * state.generators[id];
-    expect(total('herb') / Math.max(total('array'), total('furnace'))).toBeCloseTo(1.5, 1);
-    // Later growth doesn't resize it.
-    const mult = state.revivals.herb;
-    state.generators.array = 300;
-    expect(computeStats(state, false).mods.generatorMult.herb).toBe(mult);
+    expect(stats.generatorUnitQps.herb / stats.generatorUnitQps.furnace).toBeCloseTo(1, 1);
   });
 });

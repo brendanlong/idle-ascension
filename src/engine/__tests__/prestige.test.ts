@@ -108,8 +108,8 @@ describe('regression', () => {
   });
 
   it('compounds ordinary perks', () => {
-    expect(perkEffects(PERKS_BY_ID.get('bargain')!, 3)[0].value).toBeCloseTo(0.95 ** 3);
-    expect(perkEffects(PERKS_BY_ID.get('bargain')!, 0)).toEqual([]);
+    expect(perkEffects(PERKS_BY_ID.get('daoHeart')!, 2)[0].value).toBe(6);
+    expect(perkEffects(PERKS_BY_ID.get('daoHeart')!, 0)).toEqual([]);
     // Remembered Meridian Paths grows logarithmically instead: x2, x3 at level 3, x4 at 7.
     expect(perkEffects(PERKS_BY_ID.get('meridians')!, 3)[0].value).toBe(3);
   });
@@ -151,9 +151,9 @@ describe('regression', () => {
   it('keeps realm-gated insights locked until you have reached the realm', () => {
     const state = newGame();
     state.prestige.memories = 1e9;
-    state.prestige.perks.lightning = 1;
-    expect(perkStatus(state, 'echoCore')).toBe('locked');
+    state.prestige.perks.foresight = 1;
+    expect(perkStatus(state, 'soulbound')).toBe('locked');
     state.stats.bestStage = firstStageOfRealm('spiritSevering');
-    expect(perkStatus(state, 'echoCore')).toBe('available');
+    expect(perkStatus(state, 'soulbound')).toBe('available');
   });
 });

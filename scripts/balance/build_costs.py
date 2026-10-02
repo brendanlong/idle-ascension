@@ -38,7 +38,7 @@ STAGES = 35
 def content():
     out = subprocess.run(['npx', 'tsx', 'scripts/sim.ts'], capture_output=True, text=True, cwd=ROOT,
                          env=dict(os.environ, SIM_DUMP_PRICES='1')).stdout
-    return json.loads(out)['baseCurve']
+    return json.loads(out)
 
 def curve(coefficients, k):
     return sum(c * k ** power for power, c in enumerate(coefficients))
@@ -46,11 +46,10 @@ def curve(coefficients, k):
 def main():
     rounds, path = int(sys.argv[1]), sys.argv[2]
     params = json.load(open(path)) if os.path.exists(path) else {}
-    params.setdefault('baseCurve', content())
-    params.setdefault('ladder', {'costRatio': 13, 'efficiencyStep': 0.5, 'efficiencyStepLate': 0.5,
-                                 'stagesPerTier': 2})
-    params['ladder'].setdefault('efficiencyStepLate', params['ladder']['efficiencyStep'])
-    params['ladder'].setdefault('costRatioLate', params['ladder']['costRatio'])
+    if 'baseCurve' not in params or 'ladder' not in params:
+        game = content()
+        params.setdefault('baseCurve', game['baseCurve'])
+        params.setdefault('ladder', game['ladder'])
     history = json.load(open(path + '.history')) if os.path.exists(path + '.history') else []
     seeds = SPEC['seeds']
     for it in range(rounds):

@@ -20,7 +20,7 @@ import { describeEffects, type Modifiers } from './effects';
 import { log } from './events';
 import { weightedPick, type Rng } from './rng';
 import type { GameState } from './state';
-import { revivalMult, treasureEffects, upgradeEffects, type Stats } from './stats';
+import { treasureEffects, type Stats } from './stats';
 
 export function gainQi(state: GameState, amount: number): void {
   state.qi += amount;
@@ -109,20 +109,19 @@ function purchaseUpgrade(state: GameState, id: string): UpgradeDef | null {
   const u = UPGRADES_BY_ID.get(id);
   if (!u || state.upgrades[id] || !meetsCondition(state, u.unlock)) return null;
   if (!spendQi(state, u.cost)) return null;
-  if (u.revives) state.revivals[u.revives] = revivalMult(state, u.revives);
   state.upgrades[id] = true;
   return u;
 }
 
 /** "the Iron Palm technique (×2 cultivation (click) power)" */
-function techniqueLabel(state: GameState, u: UpgradeDef): string {
+function techniqueLabel(u: UpgradeDef): string {
   const name = u.name.replace(/^The /, '');
-  return `the ${name} technique (${describeEffects(upgradeEffects(state, u))})`;
+  return `the ${name} technique (${describeEffects(u.effects)})`;
 }
 
 export function buyUpgrade(state: GameState, id: string): boolean {
   const u = purchaseUpgrade(state, id);
-  if (u) log(`You master ${techniqueLabel(state, u)}.`, 'good');
+  if (u) log(`You master ${techniqueLabel(u)}.`, 'good');
   return u !== null;
 }
 
@@ -138,11 +137,9 @@ export function affordableUpgrades(state: GameState): UpgradeDef[] {
 
 export function buyAllUpgrades(state: GameState): number {
   const bought = affordableUpgrades(state).filter((u) => purchaseUpgrade(state, u.id));
-  if (bought.length === 1) log(`You master ${techniqueLabel(state, bought[0])}.`, 'good');
+  if (bought.length === 1) log(`You master ${techniqueLabel(bought[0])}.`, 'good');
   else if (bought.length > 1) {
-    const list = bought
-      .map((u) => `${u.name} (${describeEffects(upgradeEffects(state, u))})`)
-      .join('; ');
+    const list = bought.map((u) => `${u.name} (${describeEffects(u.effects)})`).join('; ');
     log(`You master ${bought.length} techniques: ${list}.`, 'good');
   }
   return bought.length;

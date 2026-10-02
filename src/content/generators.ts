@@ -14,7 +14,7 @@ export interface GeneratorDef {
   upgradeName: string;
   /**
    * A late technique that makes this resource briefly the best again, unlocked
-   * once you own a few of the resource two tiers newer (see revivalMult).
+   * once you own a few of the resource two tiers newer (see revivalMult in content/upgrades.ts).
    */
   revival?: { name: string };
 }
@@ -40,10 +40,10 @@ export const RESOURCE_LADDER = {
    * are gathering alone), so Spirit Herb Patches are tier 1.
    */
   start: { cost: 15, qps: 0.1 },
-  costRatio: 10.5,
-  costRatioLate: 10.5,
-  efficiencyStep: 0.623,
-  efficiencyStepLate: 0.269,
+  costRatio: 10.7,
+  costRatioLate: 11.4,
+  efficiencyStep: 0.706,
+  efficiencyStepLate: 0.271,
   stagesPerTier: 2,
 };
 

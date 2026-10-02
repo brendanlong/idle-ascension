@@ -8,10 +8,7 @@ export interface UpgradeDef {
   name: string;
   description: string;
   cost: number;
-  /**
-   * A revival of this resource: its multiplier is sized when learned (see
-   * revivalMult in engine/stats.ts), so `effects` is empty.
-   */
+  /** A revival of this resource (its effects are set by priceUpgrades, see revivalMult). */
   revives?: string;
   /** For a realm's techniques: the stage of the realm whose breakthrough prices it. */
   realmStage?: number;
@@ -58,7 +55,7 @@ const generatorUpgrades: UpgradeDef[] = GENERATORS.flatMap((gen, i) => {
     resourcePrice: { generator: gen.id, mult: REVIVAL_COST_MULT },
     unlock: { type: 'generator', id: newer.id, count: REVIVAL_NEWER_COUNT },
     revives: gen.id,
-    effects: [],
+    effects: [{ type: 'generatorMult', generator: gen.id, value: revivalMult(gen.id) }],
   };
   return [early, revival];
 });
@@ -282,9 +279,21 @@ export const UPGRADES: readonly UpgradeDef[] = [
   ...generatorUpgrades,
 ];
 
+/**
+ * A revival makes each of its resource's units as productive as one of the
+ * resource two tiers newer (by RESOURCE_LADDER), whatever you own when you
+ * learn it.
+ */
+export function revivalMult(id: string): number {
+  const i = GENERATORS.findIndex((g) => g.id === id);
+  return Number((GENERATORS[i + 2].baseQps / GENERATORS[i].baseQps).toPrecision(2));
+}
+
 /** Re-prices techniques that follow a resource or a breakthrough, after those change. */
 export function priceUpgrades(): void {
   for (const u of UPGRADES as UpgradeDef[]) {
+    if (u.revives)
+      u.effects = [{ type: 'generatorMult', generator: u.revives, value: revivalMult(u.revives) }];
     if (u.resourcePrice) {
       const { generator, mult } = u.resourcePrice;
       u.cost = GENERATORS_BY_ID.get(generator)!.baseCost * mult;
